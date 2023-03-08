@@ -7,6 +7,8 @@
 
 .mainheading {
   text-align: center;
+  margin-top: 1%;
+  margin-bottom: 3%;
 }
 
 .rowhover:hover {

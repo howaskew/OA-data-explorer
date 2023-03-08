@@ -359,6 +359,10 @@ function resolveProperty(value, prop) {
   return value.data && (value.data.superEvent && value.data.superEvent[prop] || value.data[prop]);
 }
 
+function resolveDate(value, prop) {
+    return value.data && (value.data.superEvent.eventSchedule && value.data.superEvent.eventSchedule[prop] || value.data[prop]);
+  }
+
 function renderSchedule(value) {
   if (value.data && value.data.eventSchedule && Array.isArray(value.data.eventSchedule)) {
     return value.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
@@ -429,7 +433,8 @@ function loadRPDEPage(url, storeId, filters) {
                         "    <div id='text" + store.matchingItemCount + "' class='col-md-1 col-sm-2 text-truncate'> " + value.id + "</div>" +
                         "    <div class='col'>" + resolveProperty(value, 'name')  + "</div>" +
                         "    <div class='col'>" + (resolveProperty(value, 'activity') || []).filter(x => x.id || x['@id']).map(x => x.prefLabel).join(', ')  + "</div>" +
-                        "    <div class='col'>" + renderSchedule(value)  + "</div>" +
+                        "    <div class='col'>" + (resolveDate(value, 'startDate') || '')  + "</div>" + 
+                        "    <div class='col'>" + (resolveDate(value, 'endDate') || '')  + "</div>" +                        
                         "    <div class='col'>" + ((value.data && value.data.location && value.data.location.name) || '')  + "</div>" +
                         "    <div class='col'>" +
                         "        <div class='visualise'>" +
@@ -438,7 +443,7 @@ function loadRPDEPage(url, storeId, filters) {
                         //"                    <button id='" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>" +
                         "                    <button id='json" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1 '> JSON</button>" +
                         "                    <button id='validate" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1'>Validate</button>" +
-                        //"                    <button id='richness" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1'>Richness</button>" +
+                        "                    <button id='richness" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1'>Richness</button>" +
                         "                </div>" +
                         "            </div>" +
                         "        </div>" +
@@ -614,7 +619,7 @@ function getRichness(id) {
     if (config.schemaType === "OpenReferral") {
         url = $("#endpoint").val() + "/services/complete/" + id;
     } else {
-        url = $("#endpoint").val() + "/services/" + id;
+        url = $("#endpoint").val() + "/" + id;
     }
     addApiPanel("Get JSON for richness", false);
     addApiPanel(url);

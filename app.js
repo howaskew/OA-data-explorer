@@ -83,7 +83,7 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       const datasetUrls = (await Promise.all(collection.data.hasPart.map(async (url) => {
         try {
           return await axios.get(url, {
-            timeout: 5000
+            timeout: 20000
           });
         }
         catch (error)
@@ -95,7 +95,7 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       const datasetSites = (await Promise.all(datasetUrls.map(async (url) => {
         try {
           return extractJSONLDfromHTML(url, (await axios.get(url, {
-            timeout: 5000
+            timeout: 20000
           })).data)
         }
         catch (error)
@@ -105,17 +105,17 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         }
       }))).filter(x => x);
       datasets =  datasetSites.map(site => ({
-        name: site.name + ' (SessionSeries)',
-        url: (site?.distribution ?? []).filter(x => x.additionalType === 'https://openactive.io/SessionSeries' && x.contentUrl.indexOf('legendonlineservices') < 0).map(x => x.contentUrl)[0]
+        name: site.name,
+        url: (site?.distribution ?? []).map(x => x.contentUrl)[0]
       })).filter(x => x.url && x.name.substr(0,1).trim()).sort((a,b) => ('' + a.name).localeCompare(b.name));
       console.log("Got all dataset sites: " + JSON.stringify(datasets, null, 2));
 
       // Prefetch pages into cache to reduce initial load
-      for (const dataset of datasets) {
-        // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site
-        await sleep(60000);
-        harvest(dataset.url);
-      }
+      //for (const dataset of datasets) {
+      //  // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site
+      //  await sleep(60000);
+      //  harvest(dataset.url);
+      //}
     } else {
       throw new Error('Could not connect to https://openactive.io/data-catalogs/data-catalog-collection.jsonld')
     }
