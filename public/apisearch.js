@@ -283,7 +283,6 @@ function getVisualise(id, VisType) {
   $("#graph").html(`<pre>${JSON.stringify(store.loadedData[id], null, 2)}</pre>`);
 }
 
-
 function executeForm(pageNumber) {
     if (pageNumber === undefined) {
         pageNumber = null;
@@ -452,7 +451,7 @@ function loadRPDEPage(url, storeId, filters) {
                     );
 
                     $("#json" + store.matchingItemCount).on("click", function () {
-                        getJSON(value.id);
+                       getJSON(value.id);
                     });
                     $("#validate" + store.matchingItemCount).on("click", function () {
                         openValidator(value.id);
@@ -497,15 +496,16 @@ function loadRPDEPage(url, storeId, filters) {
           
           const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
           if (url !== data.next) {
-            $("#progress").text(`Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
+            $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
             loadRPDEPage(data.next, storeId, filters);
           } else {
             loadingComplete();
             updateActivityList(store.uniqueActivities);
-            $("#progress").text(`Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
+            $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
             if (data.items.length === 0 && store.matchingItemCount === 0) {
               results.append("<div><p>No results found</p></div>");
             }
+            postQuality();
           }
       })
       .fail(function () {
@@ -539,11 +539,11 @@ function getRawJSON(id) {
 
 function openValidator(id) {
   const jsonString = JSON.stringify(store.loadedData[id], null, 2);
+  console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
-  const win = window.open(url, "_blank");
+  const win = window.open(url, "_blank","height=800,width=1200");
   win.focus();
 }
-
 
 function getValidate(id) {
     $("#resultTab").removeClass("active");
@@ -696,6 +696,11 @@ function postRichness(data) {
 
 }
 
+function postQuality() {
+    $("#summary").empty();
+    $("#summary").append("<h3>Posting!</h3>");
+}
+
 function clearApiPanel() {
   $("#api").empty();
 }
@@ -841,8 +846,6 @@ function setupPageEndpoints() {
         setupPage();
     }
 }
-
-
 
 $(function () {
     setupPage()
