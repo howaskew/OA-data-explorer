@@ -49,7 +49,7 @@ function renderTree(concepts, level, output) {
       "href": "#",
       text: label
     }));
-    
+
     var narrower = concept.getNarrower();
     if (narrower) {
       renderTree(narrower, level + 1, output);
@@ -68,9 +68,9 @@ $(function() {
   $.getJSON('https://openactive.io/activity-list/activity-list.jsonld', function(data) {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
     scheme = new skos.ConceptScheme(data);
-    
+
     renderActivityList(scheme);
-    
+
     // Note: use the below to set dropdown value elsewhere if necessary
     //$('.activity-list-dropdown').setValue("https://openactive.io/activity-list#72d19892-5f55-4e9c-87b0-a5433baa49c8");
   });
@@ -92,21 +92,21 @@ function renderActivityList(localScheme) {
           <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">- Select Activity -</a>
         </div>
       </div>
-      <input name="activity-list-id" id="activity-list-id" readonly="readonly" aria-hidden="true" type="hidden"/> 
+      <input name="activity-list-id" id="activity-list-id" readonly="readonly" aria-hidden="true" type="hidden"/>
     </div>`);
     $('#activity-list-id').val(currentSelectedActivity);
 
     // Render the activity list in a format the HierarchySelect will understand
     $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(localScheme.getTopConcepts(), 1, []));
-  
+
     // Initialise the HierarchySelect using the activity list
     $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
       width: 'auto',
-      
+
       // Set initial dropdown state based on the hidden field's initial value
       initialValueSet: true,
-      
-      // Update other elements when a selection is made 
+
+      // Update other elements when a selection is made
       // (Note the value of the #activity-list-id input is set automatically by HierarchySelect upon selection)
       onChange: function(id) {
         var concept = localScheme.getConceptByID(id);
@@ -423,7 +423,7 @@ function loadRPDEPage(url, storeId, filters) {
                 var itemMatchesGender = !filters.gender ? true : resolveProperty(value, 'genderRestriction') === filters.gender;
                 if (itemMatchesActivity && itemMatchesDay && itemMatchesGender) {
                   store.matchingItemCount++;
-                  
+
                   storeJson(value.id, value.data);
 
                   if (store.matchingItemCount < 100) {
@@ -477,7 +477,7 @@ function loadRPDEPage(url, storeId, filters) {
                       "</div>"
                   );
                   }
-                  
+
                 }
               }
           });
@@ -493,7 +493,7 @@ function loadRPDEPage(url, storeId, filters) {
               lastPage = "disabled='disabled'";
           }
 
-          
+
           const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
           if (url !== data.next) {
             $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
@@ -703,68 +703,78 @@ function postQuality() {
     let keysLoadedData = {};
 
     for (const id in store.loadedData) {
-      for (const keyThisId in store.loadedData[id]) {
-        if (!Object.keys(keysLoadedData).includes(keyThisId)) {
-          keysLoadedData[keyThisId] = 1;
+      for (const key in store.loadedData[id]) {
+        if (!Object.keys(keysLoadedData).includes(key)) {
+          keysLoadedData[key] = 1;
         } else {
-          keysLoadedData[keyThisId] += 1;
+          keysLoadedData[key] += 1;
         }
       }
     }
 
-    tableKeysLoadedData = `<table border="0px">`
-    for (const key in keysLoadedData) {
+    let tableKeysLoadedData = `<table border="0px">\n`;
+    for (const [key,val] of Object.entries(keysLoadedData)) {
       tableKeysLoadedData +=
-        `<tr>
-          <td>${key}</td>
-          <td>${keysLoadedData[key]}</td>
-        </tr>`;
+          `  <tr>\n`
+        + `    <td>${key}</td>\n`
+        + `    <td>${val}</td>\n`
+        + `  </tr>\n`;
     }
-    tableKeysLoadedData += `</table>`
+    tableKeysLoadedData += `</table>\n`;
 
-    tableUniqueActivities = `<table border="0px">`
-    for (const key in store.uniqueActivities) {
+    let tableUniqueActivities = `<table border="0px">\n`;
+    for (const [key,val] of store.uniqueActivities.entries()) {
+      // Keys and vals are currently the same here, so only need one:
       tableUniqueActivities +=
-        `<tr>
-          <td>${key}</td>
-          <td>${store.uniqueActivities[key]}</td>
-        </tr>`;
+          `  <tr>\n`
+        + `    <td><a href="${val}">${val}</a></td>\n`
+        + `  </tr>\n`;
+        // + `  <tr>\n`
+        // + `    <td>${key}</td>\n`
+        // + `    <td>${val}</td>\n`
+        // + `  </tr>\n`;
     }
-    tableUniqueActivities += `</table>`
+    tableUniqueActivities += `</table>\n`;
+
+    let table =
+        `<table border="0px">\n`
+      + `  <tr>\n`
+      + `    <td>currentStoreId</td>\n`
+      + `    <td>${store.currentStoreId}</td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>pagesLoaded</td>\n`
+      + `    <td>${store.pagesLoaded}</td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>itemCount</td>\n`
+      + `    <td>${store.itemCount}</td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>matchingItemCount</td>\n`
+      + `    <td>${store.matchingItemCount}</td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>loadedData length</td>\n`
+      + `    <td>${Object.keys(store.loadedData).length}</td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>loadedData keys</td>\n`
+      + `    <td>\n`
+      + `${tableKeysLoadedData}`
+      + `    </td>\n`
+      + `  </tr>\n`
+      + `  <tr>\n`
+      + `    <td>uniqueActivities</td>\n`
+      + `    <td>\n`
+      + `${tableUniqueActivities}`
+      + `    </td>\n`
+      + `  </tr>\n`
+      + `</table>\n`;
 
     $("#summary").empty();
     // $("#summary").append("<h3>Posting!</h3>");
-    $("#summary").append(
-    `<table border="0px">
-      <tr>
-        <td>currentStoreId</td>
-        <td>${store.currentStoreId}</td>
-      </tr>
-      <tr>
-        <td>itemCount</td>
-        <td>${store.itemCount}</td>
-      </tr>
-      <tr>
-        <td>matchingItemCount</td>
-        <td>${store.matchingItemCount}</td>
-      </tr>
-      <tr>
-        <td>loadedData length</td>
-        <td>${Object.keys(store.loadedData).length}</td>
-      </tr>
-      <tr>
-        <td>loadedData keys</td>
-        <td>${tableKeysLoadedData}</td>
-      </tr>
-      <tr>
-        <td>pagesLoaded</td>
-        <td>${store.pagesLoaded}</td>
-      </tr>
-      <tr>
-        <td>uniqueActivities</td>
-        <td>${tableUniqueActivities}</td>
-      </tr>
-    </table>`);
+    $("#summary").append(table);
 }
 
 function clearApiPanel() {
