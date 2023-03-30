@@ -39,7 +39,7 @@ function renderTree(concepts, level, output) {
     if (concept.hiddenLabel && concept.hiddenLabel.length > 0) {
       hidden = concept.hiddenLabel.join(' / ')
     }
-    
+
     // Use jQuery to escape all values when outputting HTML
     output.push($( "<a/>", {
       "class": "dropdown-item",
@@ -432,8 +432,8 @@ function loadRPDEPage(url, storeId, filters) {
                         "    <div id='text" + store.matchingItemCount + "' class='col-md-1 col-sm-2 text-truncate'> " + value.id + "</div>" +
                         "    <div class='col'>" + resolveProperty(value, 'name')  + "</div>" +
                         "    <div class='col'>" + (resolveProperty(value, 'activity') || []).filter(x => x.id || x['@id']).map(x => x.prefLabel).join(', ')  + "</div>" +
-                        "    <div class='col'>" + (resolveDate(value, 'startDate') || '')  + "</div>" + 
-                        "    <div class='col'>" + (resolveDate(value, 'endDate') || '')  + "</div>" +                        
+                        // "    <div class='col'>" + (resolveDate(value, 'startDate') || '')  + "</div>" +
+                        // "    <div class='col'>" + (resolveDate(value, 'endDate') || '')  + "</div>" +
                         "    <div class='col'>" + ((value.data && value.data.location && value.data.location.name) || '')  + "</div>" +
                         "    <div class='col'>" +
                         "        <div class='visualise'>" +
@@ -697,8 +697,74 @@ function postRichness(data) {
 }
 
 function postQuality() {
+
+    // console.log(store.loadedData);
+
+    let keysLoadedData = {};
+
+    for (const id in store.loadedData) {
+      for (const keyThisId in store.loadedData[id]) {
+        if (!Object.keys(keysLoadedData).includes(keyThisId)) {
+          keysLoadedData[keyThisId] = 1;
+        } else {
+          keysLoadedData[keyThisId] += 1;
+        }
+      }
+    }
+
+    tableKeysLoadedData = `<table border="0px">`
+    for (const key in keysLoadedData) {
+      tableKeysLoadedData +=
+        `<tr>
+          <td>${key}</td>
+          <td>${keysLoadedData[key]}</td>
+        </tr>`;
+    }
+    tableKeysLoadedData += `</table>`
+
+    tableUniqueActivities = `<table border="0px">`
+    for (const key in store.uniqueActivities) {
+      tableUniqueActivities +=
+        `<tr>
+          <td>${key}</td>
+          <td>${store.uniqueActivities[key]}</td>
+        </tr>`;
+    }
+    tableUniqueActivities += `</table>`
+
     $("#summary").empty();
-    $("#summary").append("<h3>Posting!</h3>");
+    // $("#summary").append("<h3>Posting!</h3>");
+    $("#summary").append(
+    `<table border="0px">
+      <tr>
+        <td>currentStoreId</td>
+        <td>${store.currentStoreId}</td>
+      </tr>
+      <tr>
+        <td>itemCount</td>
+        <td>${store.itemCount}</td>
+      </tr>
+      <tr>
+        <td>matchingItemCount</td>
+        <td>${store.matchingItemCount}</td>
+      </tr>
+      <tr>
+        <td>loadedData length</td>
+        <td>${Object.keys(store.loadedData).length}</td>
+      </tr>
+      <tr>
+        <td>loadedData keys</td>
+        <td>${tableKeysLoadedData}</td>
+      </tr>
+      <tr>
+        <td>pagesLoaded</td>
+        <td>${store.pagesLoaded}</td>
+      </tr>
+      <tr>
+        <td>uniqueActivities</td>
+        <td>${tableUniqueActivities}</td>
+      </tr>
+    </table>`);
 }
 
 function clearApiPanel() {
@@ -848,5 +914,5 @@ function setupPageEndpoints() {
 }
 
 $(function () {
-    setupPage()
+    setupPage();
 });
