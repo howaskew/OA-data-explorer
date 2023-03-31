@@ -520,10 +520,10 @@ function loadRPDEPage(url, storeId, filters) {
 }
 
 function populateEndpointsFromJson() {
-    $.getJSON("/datasets", function (data) {
+    $.getJSON("/feeds", function (data) {
         $("#endpoint").empty();
-        $.each(data.endpoints, function (index, item) {
-            $("#endpoint").append("<option value='" + item.url + "'>" + item.name + "</option>");
+        $.each(data.feeds, function (index, item) {
+            $("#endpoint").append("<option value='" + item.url + "'>" + item.name + " - " + item.kind + "</option>");
         });
     }).done(function () {
         setupPageEndpoints();
@@ -905,8 +905,8 @@ function setupPageEndpoints() {
 
     if (getUrlParameter("endpoint") !== undefined) {
         $("#endpoint").val(getUrlParameter("endpoint"));
-        $.getJSON("/datasets", function (data) {
-            $.each(data.endpoints, function (index, item) {
+        $.getJSON("/feeds", function (data) {
+            $.each(data.feeds, function (index, item) {
                 if (item.url === $("#endpoint option:selected").val()) {
                     config = item;
                 }

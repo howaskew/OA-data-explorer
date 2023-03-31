@@ -36,19 +36,19 @@ function extractJSONLDfromHTML(url, html) {
   return jsonld;
 }
 
-const COLLECTION = 'https://openactive.io/data-catalogs/data-catalog-collection.jsonld';
+const catalogueCollectionUrl = 'https://openactive.io/data-catalogs/data-catalog-collection.jsonld';
 
-let datasets = {};
+let feeds = {};
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'))
+app.use(express.static('public'));
 
-let cache = apicache.middleware
+let cache = apicache.middleware;
 
-const onlyStatus200 = (req, res) => res.statusCode === 200
+const onlyStatus200 = (req, res) => res.statusCode === 200;
 
-const cacheSuccesses = cache('48 hours', onlyStatus200)
+const cacheSuccesses = cache('48 hours', onlyStatus200);
 
 // ** Passthrough RPDE fetch **
 // TODO: Restrict with cors and to RPDE only
@@ -73,64 +73,86 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
 
 });
 
-// ** Cache dataset URLs ** 
+// Get all feeds on load
 // Note Heroku is restarted automatically nightly, so this collection is automatically updated each night
 (async () => {
   try {
-    // Get all datasets on load
-    const collection = await axios.get(COLLECTION);
-    if (collection.data && collection.data.hasPart) {
-      const datasetUrls = (await Promise.all(collection.data.hasPart.map(async (url) => {
+
+    const catalogueCollection = await axios.get(catalogueCollectionUrl);
+
+    if (!catalogueCollection.data || !catalogueCollection.data.hasPart) {
+      throw new Error(`Error getting catalogue collection: ${catalogueCollectionUrl}`);
+    }
+    else {
+
+      const datasetUrls = (await Promise.all(catalogueCollection.data.hasPart.map(async (catalogueUrl) => {
         try {
-          return await axios.get(url, {
+          return await axios.get(catalogueUrl, {
             timeout: 20000
           });
         }
         catch (error)
         {
-          console.log("Error getting dataset site catalogue: " + url);
+          console.log("Error getting catalogue: " + catalogueUrl);
           return null;
         }
-      }))).filter(x => x).flatMap(x => x.data.dataset);
-      const datasetSites = (await Promise.all(datasetUrls.map(async (url) => {
+      })))
+      .filter(catalogue => catalogue)
+      .flatMap(catalogue => catalogue.data.dataset);
+
+      const datasets = (await Promise.all(datasetUrls.map(async (datasetUrl) => {
         try {
-          return extractJSONLDfromHTML(url, (await axios.get(url, {
-            timeout: 20000
-          })).data)
+          return extractJSONLDfromHTML(
+            datasetUrl,
+            (await axios.get(datasetUrl, {
+              timeout: 20000
+            })).data
+          );
         }
         catch (error)
         {
-          console.log("Error getting dataset site: " + url);
+          console.log("Error getting dataset: " + datasetUrl);
           return null;
         }
-      }))).filter(x => x);
-      datasets =  datasetSites.map(site => ({
-        name: site.name,
-        url: (site?.distribution ?? []).map(x => x.contentUrl)[0]
-      })).filter(x => x.url && x.name.substr(0,1).trim()).sort((a,b) => ('' + a.name).localeCompare(b.name));
-      console.log("Got all dataset sites: " + JSON.stringify(datasets, null, 2));
+      })))
+      .filter(dataset => dataset);
+
+      feeds = datasets.flatMap(dataset => (
+        (dataset?.distribution ?? []).map(feedInfo => ({
+          name: dataset.name,
+          kind: feedInfo.name,
+          url: feedInfo.contentUrl,
+          datasetUrl: dataset.url,
+          discussionUrl: dataset.discussionUrl,
+          licenseUrl: dataset.license,
+          publisherName: dataset.publisher.name,
+        })
+      )))
+      .filter(feed => feed.url && feed.name.substr(0,1).trim());
+
+      console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
       // Prefetch pages into cache to reduce initial load
-      //for (const dataset of datasets) {
+      //for (const feed of feeds) {
       //  // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site
       //  await sleep(60000);
       //  harvest(dataset.url);
       //}
-    } else {
-      throw new Error('Could not connect to https://openactive.io/data-catalogs/data-catalog-collection.jsonld')
+
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error(error.stack);
     process.exit(1);
   }
 })();
 
-app.get('/datasets', function (req, res) {
-  res.send({"endpoints": datasets});
+app.get('/feeds', function (req, res) {
+  res.send({"feeds": feeds});
 });
 
 async function harvest(url) {
-  console.log(`Prefetch: ${url}`)
+  console.log(`Prefetch: ${url}`);
   const { data } = await axios.get(`http://localhost:${port}/fetch?url=` + encodeURIComponent(url));
   if (!data.next) {
     console.log(`Error prefetching: ${url}`);
@@ -139,10 +161,10 @@ async function harvest(url) {
   }
 }
 
-// ** Error handling ** 
+// ** Error handling **
 
 app.use(function (err, req, res, next) {
-    res.status(500).json({error: err.stack})
+    res.status(500).json({error: err.stack});
     console.error(err.stack);
 })
 
@@ -150,8 +172,7 @@ const server = http.createServer(app);
 server.on('error', onError);
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}
-`);
+  console.log(`Server running on port ${port}`);
 
 });
 
