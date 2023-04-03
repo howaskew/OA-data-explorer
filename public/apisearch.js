@@ -424,7 +424,7 @@ function loadRPDEPage(url, storeId, filters) {
           if (itemMatchesActivity && itemMatchesDay && itemMatchesGender) {
             store.matchingItemCount++;
 
-            storeJson(value.id, value.data);
+            storeJson(value.id, value);
 
             if (store.matchingItemCount < 100) {
               results.append(
@@ -480,6 +480,11 @@ function loadRPDEPage(url, storeId, filters) {
 
           }
         }
+
+        if (value.state === 'deleted') {
+          storeJson(value.id, value);
+        }
+
       });
 
       let pageNo = data.number ? data.number : data.page;
@@ -506,6 +511,7 @@ function loadRPDEPage(url, storeId, filters) {
           results.append("<div><p>No results found</p></div>");
         }
         postText();
+        getQuality();
         postQuality();
       }
     })

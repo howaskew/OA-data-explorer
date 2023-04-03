@@ -7,6 +7,54 @@ function postText() {
         
 }
 
+
+function getQuality() {
+ 
+//Where is the code that implements the logic to sort by id, retain last modified and check updated/deleted status?
+//Seems we're just counting anything with state===updated line 412 in apisearch.js
+
+// Sample data
+const data_x = [
+  { id: 1, modified: '2022-01-01' },
+  { id: 2, modified: '2022-01-02' },
+  { id: 1, modified: '2022-01-03' },
+  { id: 3, modified: '2022-01-04' },
+  { id: 2, modified: '2022-01-05' },
+  { id: 1, modified: '2022-01-06' },
+];
+
+const data = Object.values(store.loadedData);
+
+// Sort the data by id and modified in descending order
+const sortedData = data.sort((a, b) => {
+  if (a.id === b.id) {
+    return new Date(b.modified) - new Date(a.modified);
+  }
+  return a.id - b.id;
+});
+
+// Use reduce() to keep only the last modified for each id
+const finalData = sortedData.reduce((accumulator, currentValue) => {
+  if (!accumulator[currentValue.ID]) {
+    accumulator[currentValue.id] = currentValue;
+  }
+  return accumulator;
+}, {});
+
+// Convert the finalData object back to an array
+const result = Object.values(finalData);
+
+console.log(result);
+
+// Remove any with state === deleted
+const result_filtered = result.filter(d => d.state === 'deleted');
+
+console.log(result_filtered);
+
+console.log(store.loadedData);
+
+}
+
 function postQuality() {
 
     // console.log(store.loadedData);
