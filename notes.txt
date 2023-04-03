@@ -1,0 +1,12 @@
+Notes from Nick on the integration of DQ / validation and test suite:
+
+If anyone’s interested in seeing the existing data quality checks in action, check out this thread:
+https://github.com/openactive/data-catalogs/pull/31
+Points of note as follows:
+The validator has a set of data quality rules baked into it (search “data quality” in https://validator.openactive.io/about)
+Those validator rules are run by the test suite in CI and a validation report is produced with examples of the issues (report attached)
+James has looked at the report and identified the cause of the issues (missing addresses in a couple of venues)
+He’s now correcting the issues so that it can pass CI
+As mentioned previously, one could imagine other data quality metrics being included at the top of the attached validation report, which currently only focusses on required fields
+validation-errors.html
+ 
