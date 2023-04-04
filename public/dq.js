@@ -7,28 +7,46 @@ function postText() {
         
 }
 
-
 function getQuality() {
  
 //Where is the code that implements the logic to sort by id, retain last modified and check updated/deleted status?
 //Seems we're just counting anything with state===updated line 412 in apisearch.js
+//Which is fine unless there are multiple update entries per id
 
-// Sample data
-const data_x = [
-  { id: 1, modified: '2022-01-01' },
-  { id: 2, modified: '2022-01-02' },
-  { id: 1, modified: '2022-01-03' },
-  { id: 3, modified: '2022-01-04' },
-  { id: 2, modified: '2022-01-05' },
-  { id: 1, modified: '2022-01-06' },
-];
+// Sample data for testing id, modified, state handling
+//const data_x = [
+//  { id: 1, modified: '2022-01-01', state: 'updated' },
+//  { id: 2, modified: '2022-01-02', state: 'updated' },
+//  { id: 1, modified: '2022-01-03', state: 'updated' },
+//  { id: 3, modified: '2022-01-04', state: 'updated' },
+//  { id: 2, modified: '2022-01-05', state: 'deleted' },
+//  { id: 1, modified: '2022-01-06', state: 'updated' },
+//];
 
 const data = Object.values(store.loadedData);
 
+//console.log(data);
+
+// Adding a count per id at this stage to provide reassurance
+// that the sort, keep, filter, etc working as expected
+// Use reduce() to get the total count for each id
+const idCount = data.reduce((acc, curr) => {
+  acc[curr.id] = acc[curr.id] ? acc[curr.id] + 1 : 1;
+  return acc;
+}, {});
+
+// Add count to each object in finalData
+const dataWithCount = data.map((obj) => {
+  const count = idCount[obj.id];
+  return { ...obj, count };
+});
+
+//console.log(dataWithCount);
+
 // Sort the data by id and modified in descending order
-const sortedData = data.sort((a, b) => {
+const sortedData = Object.values(dataWithCount).sort((a, b) => {
   if (a.id === b.id) {
-    return new Date(b.modified) - new Date(a.modified);
+    return new Date(a.modified) - new Date(b.modified);
   }
   return a.id - b.id;
 });
@@ -41,17 +59,16 @@ const finalData = sortedData.reduce((accumulator, currentValue) => {
   return accumulator;
 }, {});
 
+
+// Only keep those with state === updated
+const filtered = Object.values(finalData).filter(d => d.state === 'updated');
+
 // Convert the finalData object back to an array
-const result = Object.values(finalData);
+const result = Object.values(filtered);
 
-console.log(result);
-
-// Remove any with state === deleted
-const result_filtered = result.filter(d => d.state === 'deleted');
-
-console.log(result_filtered);
-
-console.log(store.loadedData);
+// Comparing these outputs, something has happened to the format of loadedData 
+//console.log(result);
+//console.log(store.loadedData);
 
 }
 
