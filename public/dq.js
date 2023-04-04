@@ -74,6 +74,20 @@ const result = Object.values(filtered);
 
 function postQuality() {
 
+
+  var options = {
+    chart: {
+        height: 350,
+        type: 'radialBar',
+    },
+    series: [70],
+    labels: ['Progress'],
+  }
+  
+  var chart = new ApexCharts(document.querySelector("#apexchart"), options);
+  
+  chart.render();
+  
     // console.log(store.loadedData);
   
     let keysLoadedData = {};
