@@ -102,6 +102,25 @@ function postQuality() {
   const percent1 = count_future / opps * 100;
   const rounded1 = percent1.toFixed(1);
 
+  //Finding the related API feed to match superEvents to
+
+  const urlStems = dataToChart.reduce((acc, row) => {
+    if (row.data.superEvent) {
+      const lastSlashIndex = row.data.superEvent.lastIndexOf("/");
+      const urlStem = row.data.superEvent.substring(0, lastSlashIndex);
+      acc.push(urlStem);
+    }
+    return acc;
+  }, []);
+
+  const uniqueUrlStems = urlStems.filter((stem, index) => {
+    return urlStems.indexOf(stem) === index;
+  });
+  
+  console.log(`Unique URL stems: ${uniqueUrlStems}`);
+
+
+// This creates dummy data for the spark graph - in time replace with count of opps per day
   var randomizeArray = function (arg) {
     var array = arg.slice();
     var currentIndex = array.length, temporaryValue, randomIndex;
