@@ -510,8 +510,7 @@ function loadRPDEPage(url, storeId, filters) {
         if (data.items.length === 0 && store.matchingItemCount === 0) {
           results.append("<div><p>No results found</p></div>");
         }
-        postText();
-        getQuality();
+        //postText();
         postQuality();
       }
     })
