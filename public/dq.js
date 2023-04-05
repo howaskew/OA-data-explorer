@@ -59,14 +59,13 @@ function getQuality() {
     return accumulator;
   }, {});
 
-
   // Only keep those with state === updated
   const filtered = Object.values(finalData).filter(d => d.state === 'updated');
 
   // Convert the finalData object back to an array
   const result = Object.values(filtered);
 
-  // Comparing these outputs, something has happened to the format of loadedData 
+  // Comparing these outputs, something has happened to the format of loadedData - array vs object?
   //console.log(result);
   //console.log(store.loadedData);
 
@@ -116,11 +115,58 @@ function postQuality() {
   const uniqueUrlStems = urlStems.filter((stem, index) => {
     return urlStems.indexOf(stem) === index;
   });
-  
+
   console.log(`Unique URL stems: ${uniqueUrlStems}`);
 
+  // Count of records with 'where'
 
-// This creates dummy data for the spark graph - in time replace with count of opps per day
+  const ukPostcodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+
+  function getProperty(obj, propertyName) {
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        if (typeof value === 'object') {
+          const prop = getProperty(value, propertyName);
+          if (prop) {
+            return prop;
+          }
+        } else if (key === propertyName) {
+          return value;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Filter the data array to get objects with a valid postcode or geospatial coordinates
+  const validData = dataToChart.filter((obj) => {
+
+    const postcode = getProperty(obj, 'postalCode');
+    const latitude = getProperty(obj, 'latitude')
+    const longitude = getProperty(obj, 'longitude')
+    const hasValidPostcode =
+      postcode &&
+      postcode.length > 0 &&
+      ukPostcodeRegex.test(postcode);
+    const hasValidCoords =
+      latitude &&
+      latitude.length > 0 &&
+      longitude &&
+      longitude.length > 0
+      ;
+    return hasValidPostcode || hasValidCoords;
+  });
+
+  // Get the count of valid data objects
+  const valid_where = validData.length;
+
+  console.log(`Number of records with valid postcode or coordinates: ${valid_where}`);
+
+  const percent2 = valid_where / opps * 100;
+  const rounded2 = percent2.toFixed(1);
+
+  // This creates dummy data for the spark graph - in time replace with count of opps per day
   var randomizeArray = function (arg) {
     var array = arg.slice();
     var currentIndex = array.length, temporaryValue, randomIndex;
@@ -199,13 +245,71 @@ function postQuality() {
       type: 'radialBar',
     },
     series: [rounded1],
-    labels: ['Future dates'],
+    labels: [['Valid','Start Date']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
   }
 
   var chart = new ApexCharts(document.querySelector("#apexchart2"), options_2);
 
   chart.render();
 
+  var options_3 = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded2],
+    labels: [['Valid postcode', 'or coordinates']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+
+  var chart = new ApexCharts(document.querySelector("#apexchart3"), options_3);
+
+  chart.render();
   // console.log(store.loadedData);
 
 }
