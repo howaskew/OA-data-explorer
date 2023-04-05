@@ -16,6 +16,7 @@ let viz1;
 let taxonomys;
 let config;
 let store;
+let new_store;
 
 // This demo is based on https://neofusion.github.io/hierarchy-select/
 
@@ -213,16 +214,21 @@ function clearForm(endpoint) {
 store = {
   currentStoreId: 0
 };
-clearStore();
+clearStore(store);
 
-function clearStore() {
-  store.loadedData = {};
-  store.currentStoreId++;
-  store.itemCount = 0;
-  store.matchingItemCount = 0;
-  store.harvestStart = luxon.DateTime.now();
-  store.pagesLoaded = 0;
-  store.uniqueActivities = new Set();
+new_store = {
+  currentStoreId: 0
+};
+clearStore(new_store);
+
+function clearStore(obj) {
+  obj.loadedData = {};
+  obj.currentStoreId++;
+  obj.itemCount = 0;
+  obj.matchingItemCount = 0;
+  obj.harvestStart = luxon.DateTime.now();
+  obj.pagesLoaded = 0;
+  obj.uniqueActivities = new Set();
 }
 
 loadingTimeout = null;
@@ -251,7 +257,7 @@ function loadingComplete() {
   $("#loading-time").hide();
 }
 
-function storeJson(id, json) {
+function storeJson(id, json,store) {
   store.loadedData[id] = json;
 }
 
@@ -342,7 +348,7 @@ function executeForm(pageNumber) {
   updateScroll();
   $("#results").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
-  clearStore();
+  clearStore(store);
 
   $("#progress").text(`Loading first page...`);
   clearApiPanel();
@@ -350,7 +356,9 @@ function executeForm(pageNumber) {
   loadingStart();
 
   var url = $("#endpoint").val();
-  loadRPDEPage(url, store.currentStoreId, filters);
+  var endpoint = $("#endpoint").val();
+
+  loadRPDEPage(url, store.currentStoreId, filters, endpoint);
 
 }
 
@@ -378,7 +386,8 @@ function getRelevantActivitySet(id) {
   return null;
 }
 
-function loadRPDEPage(url, storeId, filters) {
+function loadRPDEPage(url, storeId, filters, endpoint) {
+
 
   // Another store has been loaded, so do nothing
   if (storeId !== store.currentStoreId) {
@@ -449,7 +458,7 @@ function loadRPDEPage(url, storeId, filters) {
 
           store.matchingItemCount++;
 
-          storeJson(item.id, item);
+          storeJson(item.id, item,store);
 
           if (store.matchingItemCount < 100) {
             results.append(
@@ -512,7 +521,7 @@ function loadRPDEPage(url, storeId, filters) {
 
       }
       else if (item.state === 'deleted') {
-        storeJson(item.id, item);
+        storeJson(item.id, item,store);
       }
 
     }); // We have now finished iterating through all items for this page
@@ -531,7 +540,7 @@ function loadRPDEPage(url, storeId, filters) {
     const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
     if (url !== page.next) {
       $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
-      loadRPDEPage(page.next, storeId, filters);
+      loadRPDEPage(page.next, storeId, filters, endpoint);
     }
     else {
       $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
@@ -541,8 +550,7 @@ function loadRPDEPage(url, storeId, filters) {
       updateActivityList(store.uniqueActivities);
       loadingComplete();
       postText();
-      getQuality();
-      postQuality();
+      postQuality(endpoint);
     }
 
   })

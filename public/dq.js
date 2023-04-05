@@ -7,7 +7,7 @@ function postText() {
 
 }
 
-function getQuality() {
+function getQuality(dataStore) {
 
   //Where is the code that implements the logic to sort by id, retain last modified and check updated/deleted status?
   //Seems we're just counting anything with state===updated line 412 in apisearch.js
@@ -23,7 +23,7 @@ function getQuality() {
   //  { id: 1, modified: '2022-01-06', state: 'updated' },
   //];
 
-  const data = Object.values(store.loadedData);
+  const data = Object.values(dataStore.loadedData);
 
   //console.log(data);
 
@@ -41,7 +41,7 @@ function getQuality() {
     return { ...obj, count };
   });
 
-  //console.log(dataWithCount);
+  console.log(dataWithCount);
 
   // Sort the data by id and modified in descending order
   const sortedData = Object.values(dataWithCount).sort((a, b) => {
@@ -73,9 +73,9 @@ function getQuality() {
 
 }
 
-function postQuality() {
+function postQuality(endpoint) {
 
-  const dataToChart = getQuality();
+  const dataToChart = getQuality(store);
 
   console.log(dataToChart);
 
@@ -103,6 +103,7 @@ function postQuality() {
 
   //Finding the related API feed to match superEvents to
 
+  //Useful code extracts relevant stems but this is not the actual url needed
   const urlStems = dataToChart.reduce((acc, row) => {
     if (row.data.superEvent) {
       const lastSlashIndex = row.data.superEvent.lastIndexOf("/");
@@ -117,6 +118,94 @@ function postQuality() {
   });
 
   console.log(`Unique URL stems: ${uniqueUrlStems}`);
+
+  // Actually that is not the url needed but can use it as a flag 
+  // and then extract from endpoint and try adding required text
+
+  console.log(endpoint);
+
+  if (uniqueUrlStems) {
+    console.log('Load 2nd feed');
+    const newEndpoint = endpoint.replace("scheduled-sessions", "session-series");
+    // Could check these against endpoints from crawler
+    console.log(newEndpoint);
+
+    var filters = {
+      activity: $('#activity-list-id').val(),
+      coverage: $("#Coverage").val(),
+      proximity: $("#Proximity").val(),
+      day: $("#Day").val(),
+      startTime: $("#StartTime").val(),
+      endTime: $("#EndTime").val(),
+      minAge: $("#minAge").val(),
+      maxAge: $("#maxAge").val(),
+      gender: $("#Gender").val(),
+      keywords: $("#Keywords").val(),
+      relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
+    }
+
+    loadRPDEPage_2(newEndpoint, new_store.currentStoreId, filters, newEndpoint);
+
+    console.log('Done 2nd feed')
+
+    console.log(new_store.loadedData);
+
+    //Keep latest modified for each id 
+
+    // Sort the data by id and modified in descending order
+    const sortedData = Object.values(new_store.loadedData).sort((a, b) => {
+      if (a.id === b.id) {
+        return new Date(a.modified) - new Date(b.modified);
+      }
+      return a.id - b.id;
+    });
+
+    // Use reduce() to keep only the last modified for each id
+    const finalData = sortedData.reduce((accumulator, currentValue) => {
+      if (!accumulator[currentValue.ID]) {
+        accumulator[currentValue.id] = currentValue;
+      }
+      return accumulator;
+    }, {});
+
+    // Only keep those with state === updated
+    const filtered = Object.values(finalData).filter(d => d.state === 'updated');
+
+    // Convert the finalData object back to an array
+    const feed_2 = Object.values(filtered);
+
+    // Now joining the 2 feeds...
+
+    // Create a new store to hold the combined data
+    const combinedStore = [];
+
+    // Iterate through the superEvent store
+    for (const superEventItem of dataToChart) {
+      //console.log(superEventItem)
+      if (superEventItem.data.superEvent) {
+        // Get the ID value from the superEvent item
+        const superEventID = superEventItem.data.superEvent;
+        const lastSlashIndex = superEventID.lastIndexOf('/');
+        const idValue = superEventID.substring(lastSlashIndex + 1);
+        //console.log(idValue);
+        // Look up the corresponding item in the ID store
+        const idItem = feed_2.find(item => item.id === idValue);
+        console.log(idItem);
+        // If a matching item was found, add the superEvent item to it as a new property
+        if (idItem) {
+          console.log('Match found');
+          idItem.superEvent = superEventItem;
+          combinedStore.push(idItem);
+        }
+      }
+    }
+    console.log(combinedStore);
+
+
+  }
+
+
+
 
   // Count of records with 'where'
 
@@ -245,7 +334,7 @@ function postQuality() {
       type: 'radialBar',
     },
     series: [rounded1],
-    labels: [['Valid','Start Date']],
+    labels: [['Valid', 'Start Date']],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -496,4 +585,181 @@ function postQuality_original() {
     + `</table>\n`;
 
   $("#summary").append(table);
+}
+
+
+function loadRPDEPage_2(url, storeId, filters, endpoint) {
+
+  // Another store has been loaded, so do nothing
+  if (storeId !== new_store.currentStoreId) {
+    return;
+  }
+
+  new_store.pagesLoaded++;
+  if (new_store.pagesLoaded < 50) {
+    addApiPanel(url, true);
+  } else if (new_store.pagesLoaded === 50) {
+    addApiPanel('Page URLs past this point are hidden for efficiency', false);
+  }
+
+  let results = $("#results");
+
+  $.ajax({
+    async: true,
+    type: 'GET',
+    url: '/fetch?url=' + encodeURIComponent(url),
+    timeout: 30000
+  })
+    .done(function (page) {
+
+      if (new_store.itemCount === 0) {
+        results.empty();
+        results.append("<div id='resultsDiv' class='container-fluid'></div>");
+      }
+
+      results = $("#resultsDiv");
+
+      $.each(page.content ? page.content : page.items, function (_, item) {
+
+        new_store.itemCount++;
+
+        if (item.state === 'updated') {
+
+          // Update activity list
+          var activities = resolveProperty(item, 'activity');
+          if (Array.isArray(activities)) {
+            activities
+              .map(activity => activity.id || activity['@id'])
+              .filter(id => id)
+              .forEach(id => new_store.uniqueActivities.add(id));
+          }
+
+          // Filter
+          var itemMatchesActivity =
+            !filters.relevantActivitySet
+              ? true
+              : (resolveProperty(item, 'activity') || []).filter(activity =>
+                filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+              ).length > 0;
+          var itemMatchesDay =
+            !filters.day
+              ? true
+              : item.data
+              && item.data.eventSchedule
+              && item.data.eventSchedule.filter(x =>
+                x.byDay
+                && x.byDay.includes(filters.day)
+                || x.byDay.includes(filters.day.replace('https', 'http'))
+              ).length > 0;
+          var itemMatchesGender =
+            !filters.gender
+              ? true
+              : resolveProperty(item, 'genderRestriction') === filters.gender;
+          if (itemMatchesActivity && itemMatchesDay && itemMatchesGender) {
+
+            new_store.matchingItemCount++;
+
+            storeJson(item.id, item, new_store);
+
+            if (new_store.matchingItemCount < 100) {
+              results.append(
+                `<div id='col ${new_store.matchingItemCount}' class='row rowhover'>` +
+                `    <div id='text ${new_store.matchingItemCount}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+                `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+                `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+                // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
+                // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+                `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+                `    <div class='col'>` +
+                `        <div class='visualise'>` +
+                `            <div class='row'>` +
+                `                <div class='col' style='text-align: right'>` +
+                // `                    <button id='${new_store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+                `                    <button id='json${new_store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+                `                    <button id='validate${new_store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+                `                    <button id='richness${new_store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                `                </div>` +
+                `            </div>` +
+                `        </div>` +
+                `    </div>` +
+                `</div>`
+              );
+
+              $(`#json${new_store.matchingItemCount}`).on("click", function () {
+                getJSON(item.id);
+              });
+              $(`#validate${new_store.matchingItemCount}`).on("click", function () {
+                openValidator(item.id);
+                //getValidate(item.id);
+              });
+              $(`#richness${new_store.matchingItemCount}`).on("click", function () {
+                getRichness(item.id);
+              });
+
+              if (item.id.length > 8) {
+                $(`#col${new_store.matchingItemCount}`).hover(
+                  function () {
+                    $(`#text${new_store.matchingItemCount}`).removeClass("text-truncate");
+                    $(`#text${new_store.matchingItemCount}`).prop("style", "font-size: 70%");
+                  },
+                  function () {
+                    $(`#text${new_store.matchingItemCount}`).addClass("text-truncate");
+                    $(`#text${new_store.matchingItemCount}`).prop("style", "font-size: 100%");
+                  }
+                );
+              }
+
+            }
+            else if (new_store.matchingItemCount === 100) {
+              results.append(
+                "<div class='row rowhover'>" +
+                "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
+                "</div>"
+              );
+            }
+
+          }
+
+        }
+        else if (item.state === 'deleted') {
+          storeJson(item.id, item, new_store);
+        }
+
+      }); // We have now finished iterating through all items for this page
+
+      let pageNo = page.number ? page.number : page.page;
+      let firstPage = "";
+      if (page.first === true) {
+        firstPage = "disabled='disabled'";
+      }
+
+      let lastPage = "";
+      if (page.last === true) {
+        lastPage = "disabled='disabled'";
+      }
+
+      const elapsed = luxon.DateTime.now().diff(new_store.harvestStart, ['seconds']).toObject().seconds;
+      if (url !== page.next) {
+        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount} in ${elapsed} seconds; Loading...`);
+        loadRPDEPage_2(page.next, storeId, filters, endpoint);
+      }
+      else {
+        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
+        if (page.items.length === 0 && new_store.matchingItemCount === 0) {
+          results.append("<div><p>No results found</p></div>");
+        }
+        updateActivityList(new_store.uniqueActivities);
+        loadingComplete();
+      }
+
+    })
+    .fail(function () {
+      const elapsed = luxon.DateTime.now().diff(new_store.harvestStart, ['seconds']).toObject().seconds;
+      $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount} in ${elapsed} seconds; An error occurred, please retry.`);
+      $("#results").empty().append("An error has occurred");
+      $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+      $(".show-error").on("click", function () {
+        executeForm();
+      });
+    });
 }
