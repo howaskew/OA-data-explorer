@@ -354,17 +354,17 @@ function executeForm(pageNumber) {
 
 }
 
-function resolveProperty(value, prop) {
-  return value.data && (value.data.superEvent && value.data.superEvent[prop] || value.data[prop]);
+function resolveProperty(item, prop) {
+  return item.data && (item.data.superEvent && item.data.superEvent[prop] || item.data[prop]);
 }
 
-function resolveDate(value, prop) {
-  return value.data && (value.data.superEvent.eventSchedule && value.data.superEvent.eventSchedule[prop] || value.data[prop]);
+function resolveDate(item, prop) {
+  return item.data && (item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
 }
 
-function renderSchedule(value) {
-  if (value.data && value.data.eventSchedule && Array.isArray(value.data.eventSchedule)) {
-    return value.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
+function renderSchedule(item) {
+  if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
+    return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
   } else {
     return '';
   }
@@ -386,7 +386,6 @@ function loadRPDEPage(url, storeId, filters) {
   }
 
   store.pagesLoaded++;
-
   if (store.pagesLoaded < 50) {
     addApiPanel(url, true);
   } else if (store.pagesLoaded === 50) {
@@ -394,135 +393,168 @@ function loadRPDEPage(url, storeId, filters) {
   }
 
   let results = $("#results");
+
   $.ajax({
     async: true,
     type: 'GET',
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
   })
-    .done(function (data) {
-      if (store.itemCount === 0) {
-        results.empty();
-        results.append("<div id='resultsDiv' class='container-fluid'></div>");
-      }
-      results = $("#resultsDiv");
+  .done(function (page) {
 
-      $.each(data.content ? data.content : data.items, function (_, value) {
-        store.itemCount++;
-        if (value.state === 'updated') {
+    if (store.itemCount === 0) {
+      results.empty();
+      results.append("<div id='resultsDiv' class='container-fluid'></div>");
+    }
 
-          // Update activity list
-          var activities = resolveProperty(value, 'activity');
-          if (Array.isArray(activities)) {
-            activities.map(activity => activity.id || activity['@id']).filter(id => id).forEach(id => store.uniqueActivities.add(id));
-          }
+    results = $("#resultsDiv");
 
-          // Filter
-          var itemMatchesActivity = !filters.relevantActivitySet ? true : (resolveProperty(value, 'activity') || []).filter(x => filters.relevantActivitySet.has(x.id || x['@id'] || 'NONE')).length > 0;
-          var itemMatchesDay = !filters.day ? true : value.data && value.data.eventSchedule && value.data.eventSchedule.filter(x => x.byDay && x.byDay.includes(filters.day) || x.byDay.includes(filters.day.replace('https', 'http'))).length > 0;
-          var itemMatchesGender = !filters.gender ? true : resolveProperty(value, 'genderRestriction') === filters.gender;
-          if (itemMatchesActivity && itemMatchesDay && itemMatchesGender) {
-            store.matchingItemCount++;
+    $.each(page.content ? page.content : page.items, function (_, item) {
 
-            storeJson(value.id, value);
+      store.itemCount++;
 
-            if (store.matchingItemCount < 100) {
-              results.append(
-                "<div id='col" + store.matchingItemCount + "' class='row rowhover'>" +
-                "    <div id='text" + store.matchingItemCount + "' class='col-md-1 col-sm-2 text-truncate'> " + value.id + "</div>" +
-                "    <div class='col'>" + resolveProperty(value, 'name') + "</div>" +
-                "    <div class='col'>" + (resolveProperty(value, 'activity') || []).filter(x => x.id || x['@id']).map(x => x.prefLabel).join(', ') + "</div>" +
-                // "    <div class='col'>" + (resolveDate(value, 'startDate') || '')  + "</div>" +
-                // "    <div class='col'>" + (resolveDate(value, 'endDate') || '')  + "</div>" +
-                "    <div class='col'>" + ((value.data && value.data.location && value.data.location.name) || '') + "</div>" +
-                "    <div class='col'>" +
-                "        <div class='visualise'>" +
-                "            <div class='row'>" +
-                "                <div class='col' style=\"text-align: right\">" +
-                //"                    <button id='" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>" +
-                "                    <button id='json" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1 '> JSON</button>" +
-                "                    <button id='validate" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1'>Validate</button>" +
-                "                    <button id='richness" + store.matchingItemCount + "' class='btn btn-secondary btn-sm mb-1'>Richness</button>" +
-                "                </div>" +
-                "            </div>" +
-                "        </div>" +
-                "    </div>" +
-                "</div>"
-              );
+      if (item.state === 'updated') {
 
-              $("#json" + store.matchingItemCount).on("click", function () {
-                getJSON(value.id);
-              });
-              $("#validate" + store.matchingItemCount).on("click", function () {
-                openValidator(value.id);
-                //getValidate(value.id);
-              });
-              $("#richness" + store.matchingItemCount).on("click", function () {
-                getRichness(value.id);
-              });
+        // Update activity list
+        var activities = resolveProperty(item, 'activity');
+        if (Array.isArray(activities)) {
+          activities
+          .map(activity => activity.id || activity['@id'])
+          .filter(id => id)
+          .forEach(id => store.uniqueActivities.add(id));
+        }
 
-              if (value.id.length > 8) {
-                $("#col" + store.matchingItemCount).hover(function () {
-                  $("#text" + store.matchingItemCount).removeClass("text-truncate");
-                  $("#text" + store.matchingItemCount).prop("style", "font-size: 70%");
-                }, function () {
-                  $("#text" + store.matchingItemCount).addClass("text-truncate");
-                  $("#text" + store.matchingItemCount).prop("style", "font-size: 100%");
-                });
-              }
-            } else if (store.matchingItemCount === 100) {
-              results.append(
-                "<div class='row rowhover'>" +
-                "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
-                "</div>"
+        // Filter
+        var itemMatchesActivity =
+          !filters.relevantActivitySet
+            ? true
+            : (resolveProperty(item, 'activity') || []).filter(activity =>
+                filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+              ).length > 0;
+        var itemMatchesDay =
+          !filters.day
+            ? true
+            :     item.data
+              &&  item.data.eventSchedule
+              &&  item.data.eventSchedule.filter(x =>
+                        x.byDay
+                    &&  x.byDay.includes(filters.day)
+                    ||  x.byDay.includes(filters.day.replace('https', 'http'))
+                  ).length > 0;
+        var itemMatchesGender =
+          !filters.gender
+            ? true
+            : resolveProperty(item, 'genderRestriction') === filters.gender;
+        if (itemMatchesActivity && itemMatchesDay && itemMatchesGender) {
+
+          store.matchingItemCount++;
+
+          storeJson(item.id, item);
+
+          if (store.matchingItemCount < 100) {
+            results.append(
+              `<div id='col ${store.matchingItemCount}' class='row rowhover'>` +
+              `    <div id='text ${store.matchingItemCount}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+              `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+              `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+              // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
+              // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+              `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+              `    <div class='col'>` +
+              `        <div class='visualise'>` +
+              `            <div class='row'>` +
+              `                <div class='col' style='text-align: right'>` +
+              // `                    <button id='${store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+              `                    <button id='json${store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+              `                    <button id='validate${store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+              `                    <button id='richness${store.matchingItemCount}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+              `                </div>` +
+              `            </div>` +
+              `        </div>` +
+              `    </div>` +
+              `</div>`
+            );
+
+            $(`#json${store.matchingItemCount}`).on("click", function () {
+              getJSON(item.id);
+            });
+            $(`#validate${store.matchingItemCount}`).on("click", function () {
+              openValidator(item.id);
+              //getValidate(item.id);
+            });
+            $(`#richness${store.matchingItemCount}`).on("click", function () {
+              getRichness(item.id);
+            });
+
+            if (item.id.length > 8) {
+              $(`#col${store.matchingItemCount}`).hover(
+                function () {
+                  $(`#text${store.matchingItemCount}`).removeClass("text-truncate");
+                  $(`#text${store.matchingItemCount}`).prop("style", "font-size: 70%");
+                },
+                function () {
+                  $(`#text${store.matchingItemCount}`).addClass("text-truncate");
+                  $(`#text${store.matchingItemCount}`).prop("style", "font-size: 100%");
+                }
               );
             }
 
           }
+          else if (store.matchingItemCount === 100) {
+            results.append(
+              "<div class='row rowhover'>" +
+              "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
+              "</div>"
+            );
+          }
+
         }
 
-        if (value.state === 'deleted') {
-          storeJson(value.id, value);
-        }
-
-      });
-
-      let pageNo = data.number ? data.number : data.page;
-      let firstPage = "";
-      if (data.first === true) {
-        firstPage = "disabled='disabled'";
+      }
+      else if (item.state === 'deleted') {
+        storeJson(item.id, item);
       }
 
-      let lastPage = "";
-      if (data.last === true) {
-        lastPage = "disabled='disabled'";
-      }
+    }); // We have now finished iterating through all items for this page
 
+    let pageNo = page.number ? page.number : page.page;
+    let firstPage = "";
+    if (page.first === true) {
+      firstPage = "disabled='disabled'";
+    }
 
-      const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
-      if (url !== data.next) {
-        $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
-        loadRPDEPage(data.next, storeId, filters);
-      } else {
-        loadingComplete();
-        updateActivityList(store.uniqueActivities);
-        $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
-        if (data.items.length === 0 && store.matchingItemCount === 0) {
-          results.append("<div><p>No results found</p></div>");
-        }
-        //postText();
-        postQuality();
+    let lastPage = "";
+    if (page.last === true) {
+      lastPage = "disabled='disabled'";
+    }
+
+    const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
+    if (url !== page.next) {
+      $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
+      loadRPDEPage(page.next, storeId, filters);
+    }
+    else {
+      $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
+      if (page.items.length === 0 && store.matchingItemCount === 0) {
+        results.append("<div><p>No results found</p></div>");
       }
-    })
-    .fail(function () {
-      const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
-      $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; An error occurred, please retry.`);
-      $("#results").empty().append("An error has occurred");
-      $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
-      $(".show-error").on("click", function () {
-        executeForm();
-      });
+      updateActivityList(store.uniqueActivities);
+      loadingComplete();
+      postText();
+      getQuality();
+      postQuality();
+    }
+
+  })
+  .fail(function () {
+    const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
+    $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; An error occurred, please retry.`);
+    $("#results").empty().append("An error has occurred");
+    $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+    $(".show-error").on("click", function () {
+      executeForm();
     });
+  });
 }
 
 function populateEndpointsFromJson() {
