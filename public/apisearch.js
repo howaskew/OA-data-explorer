@@ -18,6 +18,7 @@ let config;
 let store;
 let new_store;
 
+
 // This demo is based on https://neofusion.github.io/hierarchy-select/
 
 // Using source files:
@@ -349,6 +350,7 @@ function executeForm(pageNumber) {
   $("#results").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
   clearStore(store);
+  clearStore(new_store);
 
   $("#progress").text(`Loading first page...`);
   clearApiPanel();
@@ -386,8 +388,7 @@ function getRelevantActivitySet(id) {
   return null;
 }
 
-function loadRPDEPage(url, storeId, filters, endpoint) {
-
+async function loadRPDEPage(url, storeId, filters, endpoint) {
 
   // Another store has been loaded, so do nothing
   if (storeId !== store.currentStoreId) {
@@ -409,7 +410,7 @@ function loadRPDEPage(url, storeId, filters, endpoint) {
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
   })
-  .done(function (page) {
+  .done(async function (page) {
 
     if (store.itemCount === 0) {
       results.empty();
@@ -540,7 +541,7 @@ function loadRPDEPage(url, storeId, filters, endpoint) {
     const elapsed = luxon.DateTime.now().diff(store.harvestStart, ['seconds']).toObject().seconds;
     if (url !== page.next) {
       $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount} in ${elapsed} seconds; Loading...`);
-      loadRPDEPage(page.next, storeId, filters, endpoint);
+      await loadRPDEPage(page.next, storeId, filters, endpoint);
     }
     else {
       $("#progress").text(`Pages loaded ${store.pagesLoaded}; Items loaded ${store.itemCount}; results ${store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
@@ -550,7 +551,7 @@ function loadRPDEPage(url, storeId, filters, endpoint) {
       updateActivityList(store.uniqueActivities);
       loadingComplete();
       postText();
-      postQuality(endpoint);
+      await postQuality(endpoint);
     }
 
   })

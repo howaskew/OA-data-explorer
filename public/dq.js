@@ -1,10 +1,9 @@
 function postText() {
-
-  console.log("Posting text");
-
+  // This is just to demo adding text to log or to html...
+  //console.log("Posting text");
+  // Clear the summary panel on the browser output:
   $("#summary").empty();
-  $("#summary").append("<h3>Posting!</h3>");
-
+  //$("#summary").append("<h3>Posting!</h3>");
 }
 
 function getQuality(dataStore) {
@@ -75,34 +74,18 @@ function getQuality(dataStore) {
 
 function postQuality(endpoint) {
 
-  const dataToChart = getQuality(store);
+  // Get original loaded data and handle deleted
+  let dataToChart = getQuality(store);
 
-  console.log(dataToChart);
+  // Create a new store to hold the new data
+  let feed_2;
 
-  const opps = Object.keys(dataToChart).length;
+  // Create a new store to hold the combined data
+  let combinedStore = [];
 
-  // Get today's date
-  const today = new Date();
+  //console.log(dataToChart);
 
-  // Loop through your data to count the matching dates
-  let count_future = 0;
-  for (const row of dataToChart) {
-    // Convert the date in the row to a JavaScript Date object
-    const date = new Date(row.data.startDate);
-
-    // Check if the date is greater than or equal to today's date
-    if (date >= today) {
-      count_future++;
-    }
-  }
-
-  console.log(`Number of dates greater than or equal to today: ${count_future}`);
-
-  const percent1 = count_future / opps * 100;
-  const rounded1 = percent1.toFixed(1);
-
-  //Finding the related API feed to match superEvents to
-
+  //Finding the related API feeds to match superEvents to
   //Useful code extracts relevant stems but this is not the actual url needed
   const urlStems = dataToChart.reduce((acc, row) => {
     if (row.data.superEvent) {
@@ -113,22 +96,22 @@ function postQuality(endpoint) {
     return acc;
   }, []);
 
-  const uniqueUrlStems = urlStems.filter((stem, index) => {
+  let uniqueUrlStems = urlStems.filter((stem, index) => {
     return urlStems.indexOf(stem) === index;
   });
 
   console.log(`Unique URL stems: ${uniqueUrlStems}`);
 
-  // Actually that is not the url needed but can use it as a flag 
-  // and then extract from endpoint and try adding required text
+  // Not the url needed but can use it as a flag that superEvents exist
+  // and then extract stem from endpoint and try adding required text
 
-  console.log(endpoint);
+  console.log(`Original Endpoint: ${endpoint}`);
 
-  if (uniqueUrlStems) {
+  if (uniqueUrlStems && uniqueUrlStems.length > 0) {
     console.log('Load 2nd feed');
     const newEndpoint = endpoint.replace("scheduled-sessions", "session-series");
     // Could check these against endpoints from crawler
-    console.log(newEndpoint);
+    console.log(`New Endpoint: ${newEndpoint}`);
 
     var filters = {
       activity: $('#activity-list-id').val(),
@@ -148,37 +131,14 @@ function postQuality(endpoint) {
 
     console.log('Done 2nd feed')
 
-    console.log(new_store.loadedData);
+    //console.log(new_store.loadedData);
 
-    //Keep latest modified for each id 
+    feed_2 = getQuality(new_store);
 
-    // Sort the data by id and modified in descending order
-    const sortedData = Object.values(new_store.loadedData).sort((a, b) => {
-      if (a.id === b.id) {
-        return new Date(a.modified) - new Date(b.modified);
-      }
-      return a.id - b.id;
-    });
+  }
 
-    // Use reduce() to keep only the last modified for each id
-    const finalData = sortedData.reduce((accumulator, currentValue) => {
-      if (!accumulator[currentValue.ID]) {
-        accumulator[currentValue.id] = currentValue;
-      }
-      return accumulator;
-    }, {});
-
-    // Only keep those with state === updated
-    const filtered = Object.values(finalData).filter(d => d.state === 'updated');
-
-    // Convert the finalData object back to an array
-    const feed_2 = Object.values(filtered);
-
-    // Now joining the 2 feeds...
-
-    // Create a new store to hold the combined data
-    const combinedStore = [];
-
+  // Now joining the 2 feeds...
+  if (feed_2) {
     // Iterate through the superEvent store
     for (const superEventItem of dataToChart) {
       //console.log(superEventItem)
@@ -190,22 +150,46 @@ function postQuality(endpoint) {
         //console.log(idValue);
         // Look up the corresponding item in the ID store
         const idItem = feed_2.find(item => item.id === idValue);
-        console.log(idItem);
+        //console.log(idItem);
         // If a matching item was found, add the superEvent item to it as a new property
-        if (idItem) {
+        if (idItem && idItem.data) {
           console.log('Match found');
-          idItem.superEvent = superEventItem;
-          combinedStore.push(idItem);
+          superEventItem.data.superEvent = idItem.data;
+          combinedStore.push(superEventItem);
         }
       }
     }
-    console.log(combinedStore);
+  } else {
+    combinedStore = dataToChart;
+  }
+  console.log('combinedStore:');
+  console.log(combinedStore);
 
+  // CALCULATE DATA QUALITY METRICS
 
+  const opps = Object.keys(combinedStore).length;
+
+  console.log(opps);
+
+  // Get today's date
+  const today = new Date();
+
+  // Loop through your data to count the matching dates
+  let count_future = 0;
+  for (const row of combinedStore) {
+    // Convert the date in the row to a JavaScript Date object
+    const date = new Date(row.data.startDate);
+
+    // Check if the date is greater than or equal to today's date
+    if (date >= today) {
+      count_future++;
+    }
   }
 
+  console.log(`Number of dates greater than or equal to today: ${count_future}`);
 
-
+  const percent1 = count_future / opps * 100;
+  const rounded1 = percent1.toFixed(1);
 
   // Count of records with 'where'
 
@@ -229,7 +213,7 @@ function postQuality(endpoint) {
   }
 
   // Filter the data array to get objects with a valid postcode or geospatial coordinates
-  const validData = dataToChart.filter((obj) => {
+  const validData = combinedStore.filter((obj) => {
 
     const postcode = getProperty(obj, 'postalCode');
     const latitude = getProperty(obj, 'latitude')
@@ -605,7 +589,7 @@ function loadRPDEPage_2(url, storeId, filters, endpoint) {
   let results = $("#results");
 
   $.ajax({
-    async: true,
+    async: false,
     type: 'GET',
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
