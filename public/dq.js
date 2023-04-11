@@ -88,7 +88,7 @@ function postQuality(endpoint) {
   //Finding the related API feeds to match superEvents to
   //Useful code extracts relevant stems but this is not the actual url needed
   const urlStems = dataToChart.reduce((acc, row) => {
-    if (row.data.superEvent) {
+    if (row.data && row.data.superEvent && typeof row.data.superEvent === 'string') {
       const lastSlashIndex = row.data.superEvent.lastIndexOf("/");
       const urlStem = row.data.superEvent.substring(0, lastSlashIndex);
       acc.push(urlStem);
