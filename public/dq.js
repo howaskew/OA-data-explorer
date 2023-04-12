@@ -40,7 +40,7 @@ function getQuality(dataStore) {
     return { ...obj, count };
   });
 
-  console.log(dataWithCount);
+  //console.log(dataWithCount);
 
   // Sort the data by id and modified in descending order
   const sortedData = Object.values(dataWithCount).sort((a, b) => {
@@ -75,8 +75,8 @@ function getQuality(dataStore) {
 function MatchToActivityList(id) {
   let concept = scheme.getConceptByID(id);
   if (concept) {
-    console.log('Match');
-    console.log(concept);
+    //console.log('Match');
+    //console.log(concept);
     //return new Set([id].concat(concept.getNarrowerTransitive().map(concept => concept.id)));
   }
   return null;
@@ -183,7 +183,7 @@ function postQuality(endpoint) {
 
   const opps = combinedStore.length;
 
-  console.log(opps);
+  //console.log(opps);
 
   // Get today's date
   const today = new Date();
@@ -213,7 +213,7 @@ function postQuality(endpoint) {
       }
     } else {
       // Handle the case where the date is not valid
-      console.log('Invalid date:', dateString);
+      //console.log('Invalid date:', dateString);
     }
   }
 
@@ -325,9 +325,7 @@ function postQuality(endpoint) {
   );
 
   // Log the sorted Map to the console for debugging
-  console.log(sortedDateCounts);
-
-  var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
+  //console.log(sortedDateCounts);
 
   // OUTPUT THE METRICS TO THE HTML...
 
@@ -381,7 +379,6 @@ function postQuality(endpoint) {
   }
 
   new ApexCharts(document.querySelector("#spark1"), spark1).render();
-
 
   var options_2 = {
     chart: {
@@ -454,7 +451,6 @@ function postQuality(endpoint) {
   var chart = new ApexCharts(document.querySelector("#apexchart3"), options_3);
 
   chart.render();
-
 
   var options_4 = {
     chart: {

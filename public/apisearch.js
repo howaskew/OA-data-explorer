@@ -594,7 +594,7 @@ function getRawJSON(id) {
 
 function openValidator(id) {
   const jsonString = JSON.stringify(store.loadedData[id], null, 2);
-  console.log(jsonString)
+  //console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
   const win = window.open(url, "_blank", "height=800,width=1200");
   win.focus();
