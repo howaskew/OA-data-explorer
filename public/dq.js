@@ -167,7 +167,7 @@ function postQuality(endpoint) {
         //console.log(idItem);
         // If a matching item was found, add it to the superEvent item and push to combined store
         if (idItem && idItem.data) {
-          console.log('Match found');
+          //console.log('Match found');
           superEventItem.data.superEvent = idItem.data;
           combinedStore.push(superEventItem);
         }
@@ -176,8 +176,8 @@ function postQuality(endpoint) {
   } else {
     combinedStore = dataToChart;
   }
-  console.log('combinedStore:');
-  console.log(combinedStore);
+  //console.log('combinedStore:');
+  //console.log(combinedStore);
 
   // CALCULATE DATA QUALITY METRICS
 
@@ -188,8 +188,12 @@ function postQuality(endpoint) {
   // Get today's date
   const today = new Date();
 
+  // Create a Map to keep track of the count for each date
+  let dateCounts = new Map();
+
   // Loop through your data to count the matching dates
   let count_future = 0;
+
   for (const row of combinedStore) {
     // Convert the date in the row to a JavaScript Date object
     const date = new Date(row.data.startDate);
@@ -198,9 +202,25 @@ function postQuality(endpoint) {
     if (date >= today) {
       count_future++;
     }
+
+    // Get the string representation of the date in the format "YYYY-MM-DD"
+    const dateString = date.toISOString().slice(0, 10);
+
+    // Increment the count for the date in the Map
+    if (dateCounts.has(dateString)) {
+      dateCounts.set(dateString, dateCounts.get(dateString) + 1);
+    } else {
+      dateCounts.set(dateString, 1);
+    }
   }
 
-  console.log(`Number of dates greater than or equal to today: ${count_future}`);
+  // Log the counts of unique future dates and all dates, and the count for each date
+  console.log(`There are ${count_future} future dates`);
+  console.log(`There are ${dateCounts.size} unique dates in the data`);
+  //console.log("Date counts:");
+  //for (const [date, count] of dateCounts) {
+  //  console.log(`${date}: ${count}`);
+  //}
 
   const percent1 = count_future / opps * 100;
   const rounded1 = percent1.toFixed(1);
@@ -296,7 +316,14 @@ function postQuality(endpoint) {
     return array;
   }
 
-  // data for the sparklines that appear below header area
+  // Sort the dateCounts Map by date, in ascending order
+  const sortedDateCounts = new Map(
+    Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
+  );
+
+  // Log the sorted Map to the console for debugging
+  console.log(sortedDateCounts);
+
   var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
 
   // OUTPUT THE METRICS TO THE HTML...
@@ -322,9 +349,9 @@ function postQuality(endpoint) {
     },
     series: [{
       name: 'Opportunities',
-      data: randomizeArray(sparklineData)
+      data: Array.from(sortedDateCounts.values()),
     }],
-    labels: [...Array(24).keys()].map(n => `2018-09-0${n + 1}`),
+    labels: Array.from(sortedDateCounts.keys()),
     yaxis: {
       min: 0
     },

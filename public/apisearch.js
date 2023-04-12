@@ -73,7 +73,7 @@ $(function () {
 
     renderActivityList(scheme);
 
-    console.log(scheme);
+    //console.log(scheme);
 
     // Note: use the below to set dropdown value elsewhere if necessary
     //$('.activity-list-dropdown').setValue("https://openactive.io/activity-list#72d19892-5f55-4e9c-87b0-a5433baa49c8");
