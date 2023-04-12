@@ -181,9 +181,9 @@ function postQuality(endpoint) {
 
   // CALCULATE DATA QUALITY METRICS
 
-  const opps = Object.keys(combinedStore).length;
+  const opps = combinedStore.length;
 
-  //console.log(opps);
+  console.log(opps);
 
   // Get today's date
   const today = new Date();
@@ -197,20 +197,23 @@ function postQuality(endpoint) {
   for (const row of combinedStore) {
     // Convert the date in the row to a JavaScript Date object
     const date = new Date(row.data.startDate);
-
-    // Check if the date is greater than or equal to today's date
-    if (date >= today) {
-      count_future++;
-    }
-
-    // Get the string representation of the date in the format "YYYY-MM-DD"
-    const dateString = date.toISOString().slice(0, 10);
-
-    // Increment the count for the date in the Map
-    if (dateCounts.has(dateString)) {
-      dateCounts.set(dateString, dateCounts.get(dateString) + 1);
+    // Check if the date is valid before processing it
+    if (!isNaN(date)) {
+      // Check if the date is greater than or equal to today's date
+      if (date >= today) {
+        count_future++;
+      }
+      // Get the string representation of the date in the format "YYYY-MM-DD"
+      const dateString = date.toISOString().slice(0, 10);
+      // Increment the count for the date in the Map
+      if (dateCounts.has(dateString)) {
+        dateCounts.set(dateString, dateCounts.get(dateString) + 1);
+      } else {
+        dateCounts.set(dateString, 1);
+      }
     } else {
-      dateCounts.set(dateString, 1);
+      // Handle the case where the date is not valid
+      console.log('Invalid date:', dateString);
     }
   }
 
