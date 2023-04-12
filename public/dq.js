@@ -72,6 +72,16 @@ function getQuality(dataStore) {
 
 }
 
+function MatchToActivityList(id) {
+  let concept = scheme.getConceptByID(id);
+  if (concept) {
+    console.log('Match');
+    console.log(concept);
+    //return new Set([id].concat(concept.getNarrowerTransitive().map(concept => concept.id)));
+  }
+  return null;
+}
+
 function postQuality(endpoint) {
 
   // Get original loaded data and handle deleted
@@ -87,6 +97,10 @@ function postQuality(endpoint) {
 
   //Finding the related API feeds to match superEvents to
   //Useful code extracts relevant stems but this is not the actual url needed
+
+  //Notes:
+  //This works for ScheduledSession feeds with embedded link to sessionSeries (e.g. Active Newham)
+  //This will not trigger loading second feed where sessionSeries contains superevent (e.g. Castle Point)
   const urlStems = dataToChart.reduce((acc, row) => {
     if (row.data && row.data.superEvent && typeof row.data.superEvent === 'string') {
       const lastSlashIndex = row.data.superEvent.lastIndexOf("/");
@@ -151,7 +165,7 @@ function postQuality(endpoint) {
         // Look up the corresponding item in the ID store
         const idItem = feed_2.find(item => item.id === idValue);
         //console.log(idItem);
-        // If a matching item was found, add the superEvent item to it as a new property
+        // If a matching item was found, add it to the superEvent item and push to combined store
         if (idItem && idItem.data) {
           console.log('Match found');
           superEventItem.data.superEvent = idItem.data;
@@ -169,7 +183,7 @@ function postQuality(endpoint) {
 
   const opps = Object.keys(combinedStore).length;
 
-  console.log(opps);
+  //console.log(opps);
 
   // Get today's date
   const today = new Date();
@@ -239,6 +253,31 @@ function postQuality(endpoint) {
   const percent2 = valid_where / opps * 100;
   const rounded2 = percent2.toFixed(1);
 
+  // Handling Activities
+
+  // Loop through the data to count activities
+  let count_activity = 0;
+  for (const row of combinedStore) {
+    let row_activities = resolveProperty(row, 'activity');
+
+    if (Array.isArray(row_activities)) {
+      row_activities
+        .map(activity => activity.id || activity['@id'])
+        .filter(id => id)
+        .forEach((id) => {
+          MatchToActivityList(id);
+          count_activity++;
+        });
+    }
+  }
+
+
+  console.log(`Number of records with matching activity: ${count_activity}`);
+
+
+  const percent3 = count_activity / opps * 100;
+  const rounded3 = percent3.toFixed(1);
+
   // This creates dummy data for the spark graph - in time replace with count of opps per day
   var randomizeArray = function (arg) {
     var array = arg.slice();
@@ -259,6 +298,8 @@ function postQuality(endpoint) {
 
   // data for the sparklines that appear below header area
   var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
+
+  // OUTPUT THE METRICS TO THE HTML...
 
   // the default colorPalette for this dashboard
   var colorPalette = ['#00D8B6', '#008FFB', '#FEB019', '#FF4560', '#775DD0']
@@ -383,118 +424,47 @@ function postQuality(endpoint) {
   var chart = new ApexCharts(document.querySelector("#apexchart3"), options_3);
 
   chart.render();
-  // console.log(store.loadedData);
+
+
+  var options_4 = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded3],
+    labels: [['Valid Activity', 'ID']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+
+  var chart = new ApexCharts(document.querySelector("#apexchart4"), options_4);
+
+  chart.render();
 
 }
 
 function postQuality_original() {
-
-  const dataToChart = getQuality();
-
-  console.log(dataToChart);
-
-  const opps = Object.keys(dataToChart).length;
-
-
-  var randomizeArray = function (arg) {
-    var array = arg.slice();
-    var currentIndex = array.length, temporaryValue, randomIndex;
-
-    while (0 !== currentIndex) {
-
-      randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex -= 1;
-
-      temporaryValue = array[currentIndex];
-      array[currentIndex] = array[randomIndex];
-      array[randomIndex] = temporaryValue;
-    }
-
-    return array;
-  }
-
-  // data for the sparklines that appear below header area
-  var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
-
-  // the default colorPalette for this dashboard
-  //var colorPalette = ['#01BFD6', '#5564BE', '#F7A600', '#EDCD24', '#F74F58'];
-  var colorPalette = ['#00D8B6', '#008FFB', '#FEB019', '#FF4560', '#775DD0']
-
-  var spark1 = {
-    chart: {
-      id: 'sparkline1',
-      group: 'sparklines',
-      type: 'area',
-      height: 300,
-      sparkline: {
-        enabled: true
-      },
-    },
-    stroke: {
-      curve: 'straight'
-    },
-    fill: {
-      opacity: 1,
-    },
-    series: [{
-      name: 'Sales',
-      data: randomizeArray(sparklineData)
-    }],
-    labels: [...Array(24).keys()].map(n => `2018-09-0${n + 1}`),
-    yaxis: {
-      min: 0
-    },
-    xaxis: {
-      type: 'datetime',
-    },
-    colors: ['#DCE6EC'],
-    title: {
-      text: opps,
-      offsetX: 30,
-      style: {
-        fontSize: '35px',
-        cssClass: 'apexcharts-yaxis-title'
-      }
-    },
-    subtitle: {
-      text: 'Number of OA Opportunities',
-      offsetX: 30,
-      style: {
-        fontSize: '20px',
-        cssClass: 'apexcharts-yaxis-title'
-      }
-    }
-  }
-
-  new ApexCharts(document.querySelector("#spark1"), spark1).render();
-
-  var options_1 = {
-    chart: {
-      height: 300,
-      type: 'radialBar',
-    },
-    series: [opps],
-    labels: ['Number of Opportunities'],
-  }
-
-  var chart = new ApexCharts(document.querySelector("#apexchart1"), options_1);
-
-  chart.render();
-
-  var options_2 = {
-    chart: {
-      height: 300,
-      type: 'radialBar',
-    },
-    series: [75],
-    labels: ['Progress'],
-  }
-
-  var chart = new ApexCharts(document.querySelector("#apexchart2"), options_2);
-
-  chart.render();
-
-  // console.log(store.loadedData);
 
   let keysLoadedData = {};
 

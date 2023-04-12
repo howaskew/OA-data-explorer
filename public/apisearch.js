@@ -73,6 +73,8 @@ $(function () {
 
     renderActivityList(scheme);
 
+    console.log(scheme);
+
     // Note: use the below to set dropdown value elsewhere if necessary
     //$('.activity-list-dropdown').setValue("https://openactive.io/activity-list#72d19892-5f55-4e9c-87b0-a5433baa49c8");
   });
@@ -116,7 +118,6 @@ function renderActivityList(localScheme) {
   });
 }
 
-
 function updateActivityList(filterSet) {
   var filter = Array.from(filterSet);
   var subsetScheme = scheme.generateSubset(filter);
@@ -156,7 +157,6 @@ function updateEndpointUpdate() {
 
   // updateParameters("execute", true);
 }
-
 
 function updateCoverage() {
   coverage = $("#Coverage").val();
@@ -364,12 +364,16 @@ function executeForm(pageNumber) {
 
 }
 
+//Amended to handle embedded subsevents when merging sessions / series 
 function resolveProperty(item, prop) {
-  return item.data && (item.data.superEvent && item.data.superEvent[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent[prop] || 
+    item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop] || 
+    item.data[prop]);
 }
 
+//Is this working now?
 function resolveDate(item, prop) {
-  return item.data && (item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
 }
 
 function renderSchedule(item) {
@@ -433,6 +437,10 @@ async function loadRPDEPage(url, storeId, filters, endpoint) {
           .filter(id => id)
           .forEach(id => store.uniqueActivities.add(id));
         }
+
+        //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
+
+        //console.log(activities);
 
         // Filter
         var itemMatchesActivity =
