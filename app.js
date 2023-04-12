@@ -54,8 +54,8 @@ const cacheSuccesses = cache('48 hours', onlyStatus200);
 // TODO: Restrict with cors and to RPDE only
 app.get('/fetch', cacheSuccesses, async(req, res, next) => {
   try {
-      const page = await axios.get(req.query.url);
-  res.status(200).send(page.data);
+    const page = await axios.get(req.query.url);
+    res.status(200).send(page.data);
   } catch (error) {
     if (error.response) {
       // Request made and server responded
@@ -70,7 +70,6 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       console.log('Error', error.message);
     }
   }
-
 });
 
 // Get all feeds on load
