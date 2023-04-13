@@ -18,15 +18,31 @@ function getProperty(obj, propertyName) {
 
 // -------------------------------------------------------------------------------------------------
 
+function matchToActivityList(id) {
+  let concept = scheme.getConceptByID(id);
+  if (concept) {
+    //console.log('Match');
+    //console.log(concept);
+    //return new Set([id].concat(concept.getNarrowerTransitive().map(concept => concept.id)));
+  }
+  return null;
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function runDataQuality(store) {
 
   if (store.type === 1)
   {
     // store1Items = Object.values(store1.items); //getLatestUpdatedItems(store, true);
 
-    // Useful code extracts relevant stems but this is not the actual url needed
+    //Notes:
+    //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
+    //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
     const urlStems = Object.values(store1.items).reduce((accumulator, item) => {
-      if (item.data.superEvent) {
+      if (  item.data &&
+            item.data.superEvent &&
+            typeof item.data.superEvent === 'string' ) {
         const lastSlashIndex = item.data.superEvent.lastIndexOf("/");
         const urlStem = item.data.superEvent.substring(0, lastSlashIndex);
         accumulator.push(urlStem);
@@ -34,11 +50,17 @@ function runDataQuality(store) {
       return accumulator;
     }, []);
 
-    const uniqueUrlStems = urlStems.filter((urlStem, index) => {
+    let uniqueUrlStems = urlStems.filter((urlStem, index) => {
       return urlStems.indexOf(urlStem) === index;
     });
 
-    if (uniqueUrlStems) {
+    if (  uniqueUrlStems &&
+          uniqueUrlStems.length > 0 ) {
+
+      console.log(`Unique URL stems: ${uniqueUrlStems}`);
+      // Not the url needed but can use it as a flag that superEvents exist
+      // and then extract stem from endpoint and try adding required text
+
       let filters = {
         activity: $('#activity-list-id').val(),
         coverage: $("#Coverage").val(),
@@ -54,6 +76,10 @@ function runDataQuality(store) {
       }
 
       store2.firstPage = store1.firstPage.replace("scheduled-sessions", "session-series");
+
+      console.log(`Original endpoint: ${store1.firstPage}`);
+      console.log(`New endpoint: ${store2.firstPage}`);
+
       setStoreItems(store2.firstPage, store2, filters);
     }
     else {
@@ -65,14 +91,17 @@ function runDataQuality(store) {
 
     let combinedStoreItems = [];
     for (const store1Item of Object.values(store1.items)) {
-      if (store1Item.data.superEvent) {
+      if (  store1Item.data &&
+            store1Item.data.superEvent &&
+            typeof store1Item.data.superEvent === 'string' ) {
         const lastSlashIndex = store1Item.data.superEvent.lastIndexOf('/');
         const store2ItemId = store1Item.data.superEvent.substring(lastSlashIndex + 1);
         const store2Item = Object.values(store2.items).find(store2Item => store2Item.id === store2ItemId);
         // If the match isn't found then the sessionSeries has been deleted, so lose the scheduledSession info
-        if (store2Item) {
-          console.log('Match found');
-          store1Item.data.superEvent = store2Item;
+        if (  store2Item &&
+              store2Item.data ) {
+          // console.log('Match found');
+          store1Item.data.superEvent = store2Item.data;
           combinedStoreItems.push(store1Item);
         }
       }
@@ -87,25 +116,52 @@ function runDataQuality(store) {
 
 function postDataQuality(items) {
 
+  $('#summary').empty();
+
   const numItems = items.length;
 
   // -------------------------------------------------------------------------------------------------
 
   // Get today's date
   const dateNow = new Date();
+  let dateCounts = new Map();
 
   // Loop through the data to count the matching dates
   let numItemsNowToFuture = 0;
   for (const item of items) {
     // Convert the date to a JavaScript Date object
     const date = new Date(item.data.startDate);
-    // Check if the date is greater than or equal to today's date
-    if (date >= dateNow) {
-      numItemsNowToFuture++;
+    if (!isNaN(date)) {
+      // Check if the date is greater than or equal to today's date
+      if (date >= dateNow) {
+        numItemsNowToFuture++;
+      }
+      // Get the string representation of the date in the format "YYYY-MM-DD"
+      const dateString = date.toISOString().slice(0, 10);
+      // Increment the count for the date in the Map
+      if (dateCounts.has(dateString)) {
+        dateCounts.set(dateString, dateCounts.get(dateString) + 1);
+      }
+      else {
+        dateCounts.set(dateString, 1);
+      }
+    }
+    else {
+      // Handle the case where the date is not valid
+      //console.log('Invalid date:', dateString);
     }
   }
 
-  console.log(`Number of items with start dates greater than or equal to today: ${numItemsNowToFuture}`);
+  // Sort the dateCounts Map by date, in ascending order
+  const sortedDateCounts = new Map(
+    Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
+  );
+
+  // Log the counts of unique future dates and all dates, and the count for each date
+  console.log(`There are ${numItemsNowToFuture} future dates`);
+  console.log(`There are ${dateCounts.size} unique dates in the data`);
+
+  // console.log(`Number of items with start dates greater than or equal to today: ${numItemsNowToFuture}`);
 
   const percent1 = (numItemsNowToFuture / numItems) * 100;
   const rounded1 = percent1.toFixed(1);
@@ -119,7 +175,7 @@ function postDataQuality(items) {
     const postalCode = getProperty(item, 'postalCode');
     const latitude = getProperty(item, 'latitude');
     const longitude = getProperty(item, 'longitude');
-    const hasValidPostcode =
+    const hasValidPostalCode =
       postalCode &&
       postalCode.length > 0 &&
       ukPostalCodeRegex.test(postalCode);
@@ -128,7 +184,7 @@ function postDataQuality(items) {
       latitude.length > 0 &&
       longitude &&
       longitude.length > 0;
-    return hasValidPostcode || hasValidLatLon;
+    return hasValidPostalCode || hasValidLatLon;
   });
 
   // Get the count of valid data objects
@@ -138,6 +194,30 @@ function postDataQuality(items) {
 
   const percent2 = (numItemsWithGeo / numItems) * 100;
   const rounded2 = percent2.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  // Handling Activities
+
+  // Loop through the data to count activities
+  let numItemsWithActivity = 0;
+  for (const item of items) {
+    let activities = resolveProperty(item, 'activity');
+    if (Array.isArray(activities)) {
+      activities
+      .map(activity => activity.id || activity['@id'])
+      .filter(activityId => activityId)
+      .forEach((activityId) => {
+        matchToActivityList(activityId);
+        numItemsWithActivity++;
+      });
+    }
+  }
+
+  console.log(`Number of items with matching activity: ${numItemsWithActivity}`);
+
+  const percent3 = (numItemsWithActivity / numItems) * 100;
+  const rounded3 = percent3.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
@@ -160,9 +240,11 @@ function postDataQuality(items) {
   }
 
   // Data for the sparklines that appear below header area
-  var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
+  // var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
 
   // -------------------------------------------------------------------------------------------------
+
+  // OUTPUT THE METRICS TO THE HTML...
 
   // The default colorPalette for this dashboard
   var colorPalette = ['#00D8B6', '#008FFB', '#FEB019', '#FF4560', '#775DD0']
@@ -185,9 +267,9 @@ function postDataQuality(items) {
     },
     series: [{
       name: 'Opportunities',
-      data: randomizeArray(sparklineData)
+      data: Array.from(sortedDateCounts.values()),
     }],
-    labels: [...Array(24).keys()].map(n => `2018-09-0${n + 1}`),
+    labels: Array.from(sortedDateCounts.keys()),
     yaxis: {
       min: 0
     },
@@ -286,6 +368,43 @@ function postDataQuality(items) {
   }
 
   new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo).render();
+
+  // -------------------------------------------------------------------------------------------------
+
+  var options_percentItemsWithActivity = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded3],
+    labels: [['Valid Activity', 'ID']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+
+  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsWithActivity).render();
+
 }
 
 // -------------------------------------------------------------------------------------------------

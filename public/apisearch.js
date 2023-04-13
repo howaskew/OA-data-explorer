@@ -105,19 +105,18 @@ function setStoreItems(url, store, filters) {
             ? true
             : resolveProperty(item, 'genderRestriction') === filters.gender;
 
-        let itemMatchesFilters =
-          itemMatchesActivity &&
-          itemMatchesDay &&
-          itemMatchesGender;
+        if (  itemMatchesActivity &&
+              itemMatchesDay &&
+              itemMatchesGender ) {
 
-        if (itemMatchesFilters) {
+          if (!store.items.hasOwnProperty(item.id)) {
+            store.numItemsMatchFilters++;
+          }
 
           if (  !store.items.hasOwnProperty(item.id) ||
                 (item.modified > store.items[item.id].modified) ) {
             store.items[item.id] = item;
           }
-
-          store.numItemsMatchFilters++;
 
           if (store.numItemsMatchFilters < 100) {
             results.append(
@@ -182,6 +181,7 @@ function setStoreItems(url, store, filters) {
       else if ( (item.state === 'deleted') &&
                 store.items.hasOwnProperty(item.id)) {
         delete store.items[item.id];
+        store.numItemsMatchFilters--;
       }
 
     });
@@ -208,7 +208,7 @@ function setStoreItems(url, store, filters) {
         results.append("<div><p>No results found</p></div>");
       }
       store.lastPage = url;
-      updateActivityList(store.uniqueActivities);
+      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
       loadingComplete(store);
     }
 
@@ -226,14 +226,18 @@ function setStoreItems(url, store, filters) {
 
 // -------------------------------------------------------------------------------------------------
 
+//Amended to handle embedded subsevents when merging sessions / series
 function resolveProperty(item, prop) {
-  return item.data && (item.data.superEvent && item.data.superEvent[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent[prop] ||
+    item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop] ||
+    item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
 
+//Is this working now?
 function resolveDate(item, prop) {
-  return item.data && (item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -352,13 +356,13 @@ function renderActivityList(localScheme) {
 
 // -------------------------------------------------------------------------------------------------
 
-// function renderSchedule(item) {
-//   if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
-//     return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
-//   } else {
-//     return '';
-//   }
-// }
+function renderSchedule(item) {
+  if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
+    return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
+  } else {
+    return '';
+  }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -408,7 +412,7 @@ function getVisualise(store, itemId) {
 
 function openValidator(store, itemId) {
   const jsonString = JSON.stringify(store.items[itemId], null, 2);
-  console.log(jsonString)
+  // console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
   const win = window.open(url, "_blank", "height=800,width=1200");
   win.focus();

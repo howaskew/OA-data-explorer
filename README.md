@@ -2,7 +2,7 @@
 
 The Visualiser makes it easy to query OpenActive SessionSeries data directly from RPDE feeds, leveraging the CDN to ensure fast query response times.
 
-This version is not intended for production - it’s a playpen that takes advantage of the crawler and harvester aspects of the visualiser to provide data on which to test the DQ metric calculations and presentation.
+This version was intended as a playpen that takes advantage of the crawler and harvester aspects of the visualiser to provide data on which to test the DQ metric calculations and presentation. However, the immediacy of the data quality feedback and the visualisations are useful / positive so we may deploy.
 
 
 The live rpde-visualiser still contains a lot of OpenReferral related code, some of which - e.g. visualising the json and calculating richness - is not working properly
