@@ -63,7 +63,7 @@ function setStoreItems(url, store, filters) {
   })
   .done(async function (page) {
 
-    if (store.numItems === 0) {
+    if (store.type === 1 && store.numItems === 0) {
       results.empty();
       results.append("<div id='resultsDiv' class='container-fluid'></div>");
     }
@@ -79,9 +79,9 @@ function setStoreItems(url, store, filters) {
         let activities = resolveProperty(item, 'activity');
         if (Array.isArray(activities)) {
           activities
-          .map(activity => activity.id || activity['@id'])
-          .filter(activityId => activityId)
-          .forEach(activityId => store.uniqueActivities.add(activityId));
+            .map(activity => activity.id || activity['@id'])
+            .filter(activityId => activityId)
+            .forEach(activityId => store.uniqueActivities.add(activityId));
         }
 
         //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
@@ -92,98 +92,105 @@ function setStoreItems(url, store, filters) {
           !filters.relevantActivitySet
             ? true
             : (resolveProperty(item, 'activity') || []).filter(activity =>
-                filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
-              ).length > 0;
+              filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+            ).length > 0;
         let itemMatchesDay =
           !filters.day
             ? true
-            :     item.data
-              &&  item.data.eventSchedule
-              &&  item.data.eventSchedule.filter(x =>
-                        x.byDay
-                    &&  x.byDay.includes(filters.day)
-                    ||  x.byDay.includes(filters.day.replace('https', 'http'))
-                  ).length > 0;
+            : item.data
+            && item.data.eventSchedule
+            && item.data.eventSchedule.filter(x =>
+              x.byDay
+              && x.byDay.includes(filters.day)
+              || x.byDay.includes(filters.day.replace('https', 'http'))
+            ).length > 0;
         let itemMatchesGender =
           !filters.gender
             ? true
             : resolveProperty(item, 'genderRestriction') === filters.gender;
 
-        if (  itemMatchesActivity &&
-              itemMatchesDay &&
-              itemMatchesGender ) {
+        if (itemMatchesActivity &&
+          itemMatchesDay &&
+          itemMatchesGender) {
+          let itemMatchesFilters =
+            itemMatchesActivity &&
+            itemMatchesDay &&
+            itemMatchesGender;
 
           if (!store.items.hasOwnProperty(item.id)) {
             store.numItemsMatchFilters++;
           }
+          if (itemMatchesFilters) {
 
-          if (  !store.items.hasOwnProperty(item.id) ||
-                (item.modified > store.items[item.id].modified) ) {
-            store.items[item.id] = item;
-          }
-
-          if (store.numItemsMatchFilters < 100) {
-            results.append(
-              `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-              `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-              `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
-              `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-              // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
-              // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
-              `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-              `    <div class='col'>` +
-              `        <div class='visualise'>` +
-              `            <div class='row'>` +
-              `                <div class='col' style='text-align: right'>` +
-              // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-              `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-              `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-              `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-              `                </div>` +
-              `            </div>` +
-              `        </div>` +
-              `    </div>` +
-              `</div>`
-            );
-
-            $(`#json${store.numItemsMatchFilters}`).on("click", function () {
-              getVisualise(store, item.id);
-            });
-            $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
-              openValidator(store, item.id);
-              //getValidate(item.id);
-            });
-            $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
-              getRichness(store, item.id);
-            });
-
-            if (item.id.length > 8) {
-              $(`#col${store.numItemsMatchFilters}`).hover(
-                function () {
-                  $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
-                  $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
-                },
-                function () {
-                  $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
-                  $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
-                }
-              );
+            if (!store.items.hasOwnProperty(item.id) ||
+              (item.modified > store.items[item.id].modified)) {
+              store.items[item.id] = item;
             }
+            if (store.type === 1) {
+              if (store.numItemsMatchFilters < 100) {
+                results.append(
+                  `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+                  `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+                  `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+                  `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+                  // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
+                  // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+                  `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+                  `    <div class='col'>` +
+                  `        <div class='visualise'>` +
+                  `            <div class='row'>` +
+                  `                <div class='col' style='text-align: right'>` +
+                  // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+                  `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+                  `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+                  `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                  `                </div>` +
+                  `            </div>` +
+                  `        </div>` +
+                  `    </div>` +
+                  `</div>`
+                );
 
-          }
-          else if (store.numItemsMatchFilters === 100) {
-            results.append(
-              "<div class='row rowhover'>" +
-              "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
-              "</div>"
-            );
+                $(`#json${store.numItemsMatchFilters}`).on("click", function () {
+                  getVisualise(store, item.id);
+                });
+                $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
+                  openValidator(store, item.id);
+                  //getValidate(item.id);
+                });
+                $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
+                  getRichness(store, item.id);
+                });
+
+                if (item.id.length > 8) {
+                  $(`#col${store.numItemsMatchFilters}`).hover(
+                    function () {
+                      $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
+                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+                    },
+                    function () {
+                      $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
+                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+                    }
+                  );
+                }
+
+              }
+              else if (store.numItemsMatchFilters === 100) {
+                results.append(
+                  "<div class='row rowhover'>" +
+                  "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
+                  "</div>"
+                );
+              }
+            }
           }
 
         }
 
       }
-      else if ( (item.state === 'deleted') &&
-                store.items.hasOwnProperty(item.id)) {
+      else if ((item.state === 'deleted') &&
+        store.items.hasOwnProperty(item.id)) {
         delete store.items[item.id];
         store.numItemsMatchFilters--;
       }
@@ -275,7 +282,7 @@ function loadingComplete(store) {
   $("#loading-time").hide();
 
   console.log(`Finished loading store${store.type}`);
-  console.log(store.items);
+  //console.log(store.items);
   runDataQuality(store);
 
 }
@@ -452,9 +459,9 @@ function getValidate(itemId) {
     url: url,
     dataType: "json"
   })
-  .done(function (data) {
-    postValidate(data);
-  });
+    .done(function (data) {
+      postValidate(data);
+    });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -519,9 +526,9 @@ function getRichness(store, itemId) {
     url: url,
     dataType: "json"
   })
-  .done(function (data) {
-    postRichness(data);
-  });
+    .done(function (data) {
+      postRichness(data);
+    });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -544,44 +551,44 @@ function postRichness(data) {
     JSON.stringify(data),
     "json"
   )
-  .done(function (resBody) {
-    $("#richness").empty();
-    if (resBody.populated === undefined && resBody.not_populated === undefined) {
-      $("#richness").append("<h3>Error</h3><p>" + resBody[0].message + "</p>");
-      return;
-    }
-    $("#richness").append('<h5>' + (data.name || (data.superEvent && data.superEvent.name)) + '</h5><h6>' + data.id + '</h6>');
-    let Richness = "";
-    let populated = "";
-    for (let i = 0; i < resBody.populated.length; i++) {
-      populated = populated + "<div class='row rowhover'><div class='col-sm-8'>" + resBody.populated[i].name + "</div><div class='col-sm-4'>" + resBody.populated[i].percentage + "%</div></div>";
-    }
-    Richness = Richness + "<div class='card-group mt-2'>";
-    Richness = Richness + (
-      '<div class="card">' +
-      '<div class="card-header bg-light"><h4>Populated</h4></div>' +
-      '<div class="card-body">' + populated + '</div>' +
-      '</div>');
+    .done(function (resBody) {
+      $("#richness").empty();
+      if (resBody.populated === undefined && resBody.not_populated === undefined) {
+        $("#richness").append("<h3>Error</h3><p>" + resBody[0].message + "</p>");
+        return;
+      }
+      $("#richness").append('<h5>' + (data.name || (data.superEvent && data.superEvent.name)) + '</h5><h6>' + data.id + '</h6>');
+      let Richness = "";
+      let populated = "";
+      for (let i = 0; i < resBody.populated.length; i++) {
+        populated = populated + "<div class='row rowhover'><div class='col-sm-8'>" + resBody.populated[i].name + "</div><div class='col-sm-4'>" + resBody.populated[i].percentage + "%</div></div>";
+      }
+      Richness = Richness + "<div class='card-group mt-2'>";
+      Richness = Richness + (
+        '<div class="card">' +
+        '<div class="card-header bg-light"><h4>Populated</h4></div>' +
+        '<div class="card-body">' + populated + '</div>' +
+        '</div>');
 
-    let not_populated = "";
-    for (let i = 0; i < resBody.not_populated.length; i++) {
-      not_populated = not_populated + "<div class='row rowhover'><div class='col-sm-8'>" + resBody.not_populated[i].name + "</div><div class='col-sm-4'>" + resBody.not_populated[i].percentage + "%</div></div>";
-    }
-    Richness +=
-      '<div class="card">' +
-      '<div class="card-header bg-light"><h4>Not populated</h4></div>' +
-      '<div class="card-body">' + not_populated + '</div>' +
-      '</div></div>';
+      let not_populated = "";
+      for (let i = 0; i < resBody.not_populated.length; i++) {
+        not_populated = not_populated + "<div class='row rowhover'><div class='col-sm-8'>" + resBody.not_populated[i].name + "</div><div class='col-sm-4'>" + resBody.not_populated[i].percentage + "%</div></div>";
+      }
+      Richness +=
+        '<div class="card">' +
+        '<div class="card-header bg-light"><h4>Not populated</h4></div>' +
+        '<div class="card-body">' + not_populated + '</div>' +
+        '</div></div>';
 
-    $("#richness").append(Richness);
+      $("#richness").append(Richness);
 
-    $("#richness").append("<h3>Overall</h3>" +
-      "<p>Score: " + resBody.richness_percentage + "%</p>");
-  })
-  .fail(function (error) {
-    $("#richness").empty().append("<div>An error has occurred</div>");
-    $("#richness").append('<div>' + error.responseJSON.message + '</div>');
-  });
+      $("#richness").append("<h3>Overall</h3>" +
+        "<p>Score: " + resBody.richness_percentage + "%</p>");
+    })
+    .fail(function (error) {
+      $("#richness").empty().append("<div>An error has occurred</div>");
+      $("#richness").append('<div>' + error.responseJSON.message + '</div>');
+    });
 
 }
 
@@ -603,8 +610,8 @@ function addApiPanel(text, code) {
     colour = "lightgray";
   }
   panel
-  .add("<div style='background-color: " + colour + "'><p class='text-wrap' style='word-wrap: break-word'>" + text + "</p></div>")
-  .appendTo(panel);
+    .add("<div style='background-color: " + colour + "'><p class='text-wrap' style='word-wrap: break-word'>" + text + "</p></div>")
+    .appendTo(panel);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -918,12 +925,12 @@ function setPage() {
         }
       });
     })
-    .done(function () {
-      updateEndpointUpdate();
-      if (getUrlParameter("execute") === "true") {
-        runForm();
-      }
-    });
+      .done(function () {
+        updateEndpointUpdate();
+        if (getUrlParameter("execute") === "true") {
+          runForm();
+        }
+      });
   }
   else {
     updateParameters("endpoint", $("#endpoint").val());
@@ -940,9 +947,9 @@ function setEndpoints() {
       $("#endpoint").append("<option value='" + item.url + "'>" + item.name + " - " + item.kind + "</option>");
     });
   })
-  .done(function () {
-    setPage();
-  });
+    .done(function () {
+      setPage();
+    });
 }
 
 // -------------------------------------------------------------------------------------------------
