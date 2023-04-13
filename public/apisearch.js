@@ -105,45 +105,47 @@ function setStoreItems(url, store, filters) {
               ? true
               : resolveProperty(item, 'genderRestriction') === filters.gender;
 
+        if (  itemMatchesActivity &&
+              itemMatchesDay &&
+              itemMatchesGender ) {
           let itemMatchesFilters =
             itemMatchesActivity &&
             itemMatchesDay &&
             itemMatchesGender;
 
+          if (!store.items.hasOwnProperty(item.id)) {
+            store.numItemsMatchFilters++;
+          }
           if (itemMatchesFilters) {
 
-            if (!store.items.hasOwnProperty(item.id) ||
-              (item.modified > store.items[item.id].modified)) {
-              store.items[item.id] = item;
-            }
+          if (  !store.items.hasOwnProperty(item.id) ||
+                (item.modified > store.items[item.id].modified) ) {
+            store.items[item.id] = item;
+          }
 
-            store.numItemsMatchFilters++;
-
-            if (store.type === 1) {
-              
-              if (store.numItemsMatchFilters < 100) {
-                results.append(
-                  `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-                  `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
-                  `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-                  // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
-                  // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
-                  `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-                  `    <div class='col'>` +
-                  `        <div class='visualise'>` +
-                  `            <div class='row'>` +
-                  `                <div class='col' style='text-align: right'>` +
-                  // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-                  `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-                  `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-                  `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-                  `                </div>` +
-                  `            </div>` +
-                  `        </div>` +
-                  `    </div>` +
-                  `</div>`
-                );
+          if (store.numItemsMatchFilters < 100) {
+            results.append(
+              `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+              `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+              `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+              `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+              // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
+              // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+              `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+              `    <div class='col'>` +
+              `        <div class='visualise'>` +
+              `            <div class='row'>` +
+              `                <div class='col' style='text-align: right'>` +
+              // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+              `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+              `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+              `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+              `                </div>` +
+              `            </div>` +
+              `        </div>` +
+              `    </div>` +
+              `</div>`
+            );
 
                 $(`#json${store.numItemsMatchFilters}`).on("click", function () {
                   getVisualise(store, item.id);
@@ -181,11 +183,12 @@ function setStoreItems(url, store, filters) {
 
           }
 
-        }
-        else if ((item.state === 'deleted') &&
-          store.items.hasOwnProperty(item.id)) {
-          delete store.items[item.id];
-        }
+      }
+      else if ( (item.state === 'deleted') &&
+                store.items.hasOwnProperty(item.id)) {
+        delete store.items[item.id];
+        store.numItemsMatchFilters--;
+      }
 
       });
 
@@ -200,20 +203,20 @@ function setStoreItems(url, store, filters) {
         lastPage = "disabled='disabled'";
       }
 
-      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-      if (url !== page.next) {
-        $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
-        setStoreItems(page.next, store, filters);
+    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+    if (url !== page.next) {
+      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
+      setStoreItems(page.next, store, filters);
+    }
+    else {
+      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+      if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
+        results.append("<div><p>No results found</p></div>");
       }
-      else {
-        $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
-        if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
-          results.append("<div><p>No results found</p></div>");
-        }
-        store.lastPage = url;
-        updateActivityList(store.uniqueActivities);
-        loadingComplete(store);
-      }
+      store.lastPage = url;
+      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
+      loadingComplete(store);
+    }
 
     })
     .fail(function () {
@@ -229,14 +232,18 @@ function setStoreItems(url, store, filters) {
 
 // -------------------------------------------------------------------------------------------------
 
+//Amended to handle embedded subsevents when merging sessions / series
 function resolveProperty(item, prop) {
-  return item.data && (item.data.superEvent && item.data.superEvent[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent[prop] ||
+    item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop] ||
+    item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
 
+//Is this working now?
 function resolveDate(item, prop) {
-  return item.data && (item.data && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
+  return item.data && (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -355,13 +362,13 @@ function renderActivityList(localScheme) {
 
 // -------------------------------------------------------------------------------------------------
 
-// function renderSchedule(item) {
-//   if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
-//     return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
-//   } else {
-//     return '';
-//   }
-// }
+function renderSchedule(item) {
+  if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
+    return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
+  } else {
+    return '';
+  }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -411,7 +418,7 @@ function getVisualise(store, itemId) {
 
 function openValidator(store, itemId) {
   const jsonString = JSON.stringify(store.items[itemId], null, 2);
-  //console.log(jsonString)
+  // console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
   const win = window.open(url, "_blank", "height=800,width=1200");
   win.focus();
