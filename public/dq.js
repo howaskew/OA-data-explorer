@@ -195,7 +195,7 @@ function postDataQuality(items) {
   const percent2 = (numItemsWithGeo / numItems) * 100;
   const rounded2 = percent2.toFixed(1);
 
-  
+
   // -------------------------------------------------------------------------------------------------
 
   // Handling Activities
@@ -219,7 +219,7 @@ function postDataQuality(items) {
 
   const percent3 = (numItemsWithActivity / numItems) * 100;
   const rounded3 = percent3.toFixed(1);
- 
+
   // -------------------------------------------------------------------------------------------------
 
   // OUTPUT THE METRICS TO THE HTML...
@@ -383,75 +383,3 @@ function postDataQuality(items) {
   new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsWithActivity).render();
 
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// function getLatestUpdatedItems(store, addIdCount) {
-//
-//   let data = Object.values(store.items);
-//
-//   // -------------------------------------------------------------------------------------------------
-//
-//   if (addIdCount)
-//   {
-//     // Adding a count per id at this stage to provide reassurance
-//     // that the sort, keep, filter, etc. are working as expected
-//     // Use reduce() to get the total count for each id
-//     const idCount = data.reduce((accumulator, currentValue) => {
-//       accumulator[currentValue.id] = accumulator[currentValue.id] ? accumulator[currentValue.id] + 1 : 1;
-//       return accumulator;
-//     }, {});
-//
-//     // Add count to each object in the data
-//     data = data.map((obj) => {
-//       const count = idCount[obj.id];
-//       return { ...obj, count };
-//     });
-//   }
-//
-//   // -------------------------------------------------------------------------------------------------
-//
-//   // Sort the data by id and modified in descending order
-//   const sortedData = data.sort((a, b) => {
-//     if (a.id === b.id) {
-//       return new Date(a.modified) - new Date(b.modified);
-//     }
-//     return a.id - b.id;
-//   });
-//
-//   // -------------------------------------------------------------------------------------------------
-//
-//   // Use reduce() to keep only the last modified for each id
-//   const latestData = Object.values(sortedData.reduce((accumulator, currentValue) => {
-//     if (!accumulator[currentValue.id]) {
-//       accumulator[currentValue.id] = currentValue;
-//     }
-//     return accumulator;
-//   }, {}));
-//
-//   // -------------------------------------------------------------------------------------------------
-//
-//   const latestUpdatedData = latestData.filter(item => item.state === 'updated');
-//
-//   // -------------------------------------------------------------------------------------------------
-//
-//   return latestUpdatedData;
-//
-// }
-
-// -------------------------------------------------------------------------------------------------
-
-
-      const elapsed = luxon.DateTime.now().diff(new_store.harvestStart, ['seconds']).toObject().seconds;
-      if (url !== page.next) {
-        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount} in ${elapsed} seconds; Loading...`);
-        loadRPDEPage_2(page.next, storeId, filters, endpoint);
-      }
-      else {
-        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
-        if (page.items.length === 0 && new_store.matchingItemCount === 0) {
-          results.append("<div><p>No results found</p></div>");
-        }
-        updateActivityList(new_store.uniqueActivities);
-        loadingComplete();
-      }
