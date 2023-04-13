@@ -63,7 +63,7 @@ function setStoreItems(url, store, filters) {
   })
     .done(function (page) {
 
-      if (store.numItems === 0) {
+      if (store.type === 1 && store.numItems === 0) {
         results.empty();
         results.append("<div id='resultsDiv' class='container-fluid'></div>");
       }
@@ -105,90 +105,91 @@ function setStoreItems(url, store, filters) {
               ? true
               : resolveProperty(item, 'genderRestriction') === filters.gender;
 
-        if (  itemMatchesActivity &&
-              itemMatchesDay &&
-              itemMatchesGender ) {
-          let itemMatchesFilters =
-            itemMatchesActivity &&
+          if (itemMatchesActivity &&
             itemMatchesDay &&
-            itemMatchesGender;
+            itemMatchesGender) {
+            let itemMatchesFilters =
+              itemMatchesActivity &&
+              itemMatchesDay &&
+              itemMatchesGender;
 
-          if (!store.items.hasOwnProperty(item.id)) {
-            store.numItemsMatchFilters++;
-          }
-          if (itemMatchesFilters) {
+            if (!store.items.hasOwnProperty(item.id)) {
+              store.numItemsMatchFilters++;
+            }
+            if (itemMatchesFilters) {
 
-          if (  !store.items.hasOwnProperty(item.id) ||
-                (item.modified > store.items[item.id].modified) ) {
-            store.items[item.id] = item;
-          }
+              if (!store.items.hasOwnProperty(item.id) ||
+                (item.modified > store.items[item.id].modified)) {
+                store.items[item.id] = item;
+              }
+              if (store.type === 1) {
+                if (store.numItemsMatchFilters < 100) {
+                  results.append(
+                    `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+                    `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+                    `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+                    `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+                    // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
+                    // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+                    `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+                    `    <div class='col'>` +
+                    `        <div class='visualise'>` +
+                    `            <div class='row'>` +
+                    `                <div class='col' style='text-align: right'>` +
+                    // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+                    `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+                    `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+                    `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                    `                </div>` +
+                    `            </div>` +
+                    `        </div>` +
+                    `    </div>` +
+                    `</div>`
+                  );
 
-          if (store.numItemsMatchFilters < 100) {
-            results.append(
-              `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-              `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-              `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
-              `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-              // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
-              // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
-              `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-              `    <div class='col'>` +
-              `        <div class='visualise'>` +
-              `            <div class='row'>` +
-              `                <div class='col' style='text-align: right'>` +
-              // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-              `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-              `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-              `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-              `                </div>` +
-              `            </div>` +
-              `        </div>` +
-              `    </div>` +
-              `</div>`
-            );
+                  $(`#json${store.numItemsMatchFilters}`).on("click", function () {
+                    getVisualise(store, item.id);
+                  });
+                  $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
+                    openValidator(store, item.id);
+                    //getValidate(item.id);
+                  });
+                  $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
+                    getRichness(store, item.id);
+                  });
 
-                $(`#json${store.numItemsMatchFilters}`).on("click", function () {
-                  getVisualise(store, item.id);
-                });
-                $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
-                  openValidator(store, item.id);
-                  //getValidate(item.id);
-                });
-                $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
-                  getRichness(store, item.id);
-                });
+                  if (item.id.length > 8) {
+                    $(`#col${store.numItemsMatchFilters}`).hover(
+                      function () {
+                        $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
+                        $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+                      },
+                      function () {
+                        $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
+                        $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+                      }
+                    );
+                  }
 
-                if (item.id.length > 8) {
-                  $(`#col${store.numItemsMatchFilters}`).hover(
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
-                    },
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
-                    }
+                }
+                else if (store.numItemsMatchFilters === 100) {
+                  results.append(
+                    "<div class='row rowhover'>" +
+                    "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
+                    "</div>"
                   );
                 }
-
-              }
-              else if (store.numItemsMatchFilters === 100) {
-                results.append(
-                  "<div class='row rowhover'>" +
-                  "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
-                  "</div>"
-                );
               }
             }
 
           }
 
-      }
-      else if ( (item.state === 'deleted') &&
-                store.items.hasOwnProperty(item.id)) {
-        delete store.items[item.id];
-        store.numItemsMatchFilters--;
-      }
+        }
+        else if ((item.state === 'deleted') &&
+          store.items.hasOwnProperty(item.id)) {
+          delete store.items[item.id];
+          store.numItemsMatchFilters--;
+        }
 
       });
 
@@ -203,20 +204,20 @@ function setStoreItems(url, store, filters) {
         lastPage = "disabled='disabled'";
       }
 
-    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-    if (url !== page.next) {
-      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
-      setStoreItems(page.next, store, filters);
-    }
-    else {
-      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
-      if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
-        results.append("<div><p>No results found</p></div>");
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      if (url !== page.next) {
+        $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
+        setStoreItems(page.next, store, filters);
       }
-      store.lastPage = url;
-      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
-      loadingComplete(store);
-    }
+      else {
+        $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+        if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
+          results.append("<div><p>No results found</p></div>");
+        }
+        store.lastPage = url;
+        updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
+        loadingComplete(store);
+      }
 
     })
     .fail(function () {
