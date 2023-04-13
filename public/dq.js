@@ -71,7 +71,7 @@ function runDataQuality(store) {
         const store2Item = Object.values(store2.items).find(store2Item => store2Item.id === store2ItemId);
         // If the match isn't found then the sessionSeries has been deleted, so lose the scheduledSession info
         if (store2Item) {
-          console.log('Match found');
+          //console.log('Match found');
           store1Item.data.superEvent = store2Item;
           combinedStoreItems.push(store1Item);
         }

@@ -36,13 +36,21 @@
   border-radius: 5px;
 }
 
+#grad {
+  background-image: linear-gradient(to right, rgba(113,203,242,0.5), rgba(226,20,131,0.5));
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  color: #fff;
+  padding: 5px;
+}
+
 #summary {
   height: 150px;
   position: relative;
   bottom: 0;
   overflow-y: scroll;
 }
-
 
 
 .sparkboxes .box {
