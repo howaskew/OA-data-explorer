@@ -52,7 +52,6 @@
   overflow-y: scroll;
 }
 
-
 .sparkboxes .box {
   padding: 3px 0 0 0;
   position: relative;
@@ -62,7 +61,6 @@
   position: relative;
   padding-top: 15px;
 }
-
 
 /* overrides */
 .sparkboxes #apexcharts-subtitle-text { fill: #8799a2 !important; }
