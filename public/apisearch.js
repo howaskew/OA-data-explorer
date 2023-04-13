@@ -61,7 +61,7 @@ function setStoreItems(url, store, filters) {
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
   })
-  .done(function (page) {
+  .done(async function (page) {
 
     if (store.numItems === 0) {
       results.empty();
@@ -83,6 +83,10 @@ function setStoreItems(url, store, filters) {
           .filter(activityId => activityId)
           .forEach(activityId => store.uniqueActivities.add(activityId));
         }
+
+        //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
+
+        //console.log(activities);
 
         let itemMatchesActivity =
           !filters.relevantActivitySet

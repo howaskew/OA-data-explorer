@@ -195,6 +195,7 @@ function postDataQuality(items) {
   const percent2 = (numItemsWithGeo / numItems) * 100;
   const rounded2 = percent2.toFixed(1);
 
+  
   // -------------------------------------------------------------------------------------------------
 
   // Handling Activities
@@ -267,6 +268,7 @@ function postDataQuality(items) {
     },
     series: [{
       name: 'Opportunities',
+      data: Array.from(sortedDateCounts.values()),
       data: Array.from(sortedDateCounts.values()),
     }],
     labels: Array.from(sortedDateCounts.keys()),
@@ -464,181 +466,17 @@ function postDataQuality(items) {
 
 // -------------------------------------------------------------------------------------------------
 
-// function postDataQuality_original() {
-//
-//   const dataToChart = getLatestUpdatedItems();
-//
-//   console.log(dataToChart);
-//
-//   const numItems = Object.keys(dataToChart).length;
-//
-//   var randomizeArray = function (arg) {
-//     var array = arg.slice();
-//     var currentIndex = array.length, temporaryValue, randomIndex;
-//
-//     while (0 !== currentIndex) {
-//
-//       randomIndex = Math.floor(Math.random() * currentIndex);
-//       currentIndex -= 1;
-//
-//       temporaryValue = array[currentIndex];
-//       array[currentIndex] = array[randomIndex];
-//       array[randomIndex] = temporaryValue;
-//     }
-//
-//     return array;
-//   }
-//
-//   // data for the sparklines that appear below header area
-//   var sparklineData = [47, 45, 54, 38, 56, 24, 65, 31, 37, 39, 62, 51, 35, 41, 35, 27, 93, 53, 61, 27, 54, 43, 19, 46];
-//
-//   // the default colorPalette for this dashboard
-//   //var colorPalette = ['#01BFD6', '#5564BE', '#F7A600', '#EDCD24', '#F74F58'];
-//   var colorPalette = ['#00D8B6', '#008FFB', '#FEB019', '#FF4560', '#775DD0']
-//
-//   var spark1 = {
-//     chart: {
-//       id: 'sparkline1',
-//       group: 'sparklines',
-//       type: 'area',
-//       height: 300,
-//       sparkline: {
-//         enabled: true
-//       },
-//     },
-//     stroke: {
-//       curve: 'straight'
-//     },
-//     fill: {
-//       opacity: 1,
-//     },
-//     series: [{
-//       name: 'Sales',
-//       data: randomizeArray(sparklineData)
-//     }],
-//     labels: [...Array(24).keys()].map(n => `2018-09-0${n + 1}`),
-//     yaxis: {
-//       min: 0
-//     },
-//     xaxis: {
-//       type: 'datetime',
-//     },
-//     colors: ['#DCE6EC'],
-//     title: {
-//       text: numItems,
-//       offsetX: 30,
-//       style: {
-//         fontSize: '35px',
-//         cssClass: 'apexcharts-yaxis-title'
-//       }
-//     },
-//     subtitle: {
-//       text: 'Number of OA Opportunities',
-//       offsetX: 30,
-//       style: {
-//         fontSize: '20px',
-//         cssClass: 'apexcharts-yaxis-title'
-//       }
-//     }
-//   }
-//
-//   new ApexCharts(document.querySelector("#spark1"), spark1).render();
-//
-//   var options_1 = {
-//     chart: {
-//       height: 300,
-//       type: 'radialBar',
-//     },
-//     series: [numItems],
-//     labels: ['Number of Opportunities'],
-//   }
-//
-//   var chart = new ApexCharts(document.querySelector("#apexchart1"), options_1);
-//
-//   chart.render();
-//
-//   var options2 = {
-//     chart: {
-//       height: 300,
-//       type: 'radialBar',
-//     },
-//     series: [75],
-//     labels: ['Progress'],
-//   }
-//
-//   var chart = new ApexCharts(document.querySelector("#apexchart2"), options2);
-//
-//   chart.render();
-//
-//   // console.log(store1.items);
-//
-//   let keysLoadedData = {};
-//
-//   for (const id in store1.items) {
-//     for (const key in store1.items[id]) {
-//       if (!Object.keys(keysLoadedData).includes(key)) {
-//         keysLoadedData[key] = 1;
-//       } else {
-//         keysLoadedData[key] += 1;
-//       }
-//     }
-//   }
-//
-//   let tableKeysLoadedData = `<table border="0px">\n`;
-//   for (const [key, val] of Object.entries(keysLoadedData)) {
-//     tableKeysLoadedData +=
-//       `  <tr>\n`
-//       + `    <td>${key}</td>\n`
-//       + `    <td>${val}</td>\n`
-//       + `  </tr>\n`;
-//   }
-//   tableKeysLoadedData += `</table>\n`;
-//
-//   let tableUniqueActivities = `<table border="0px">\n`;
-//   for (const [key, val] of store1.uniqueActivities.entries()) {
-//     // Keys and vals are currently the same here, so only need one:
-//     tableUniqueActivities +=
-//       `  <tr>\n`
-//       + `    <td><a href="${val}">${val}</a></td>\n`
-//       + `  </tr>\n`;
-//     // + `  <tr>\n`
-//     // + `    <td>${key}</td>\n`
-//     // + `    <td>${val}</td>\n`
-//     // + `  </tr>\n`;
-//   }
-//   tableUniqueActivities += `</table>\n`;
-//
-//   let table =
-//     `<table border="0px">\n`
-//     + `  <tr>\n`
-//     + `    <td>pagesLoaded</td>\n`
-//     + `    <td>${store1.pagesLoaded}</td>\n`
-//     + `  </tr>\n`
-//     + `  <tr>\n`
-//     + `    <td>itemCount</td>\n`
-//     + `    <td>${store1.itemCount}</td>\n`
-//     + `  </tr>\n`
-//     + `  <tr>\n`
-//     + `    <td>matchingItemCount</td>\n`
-//     + `    <td>${store1.matchingItemCount}</td>\n`
-//     + `  </tr>\n`
-//     + `  <tr>\n`
-//     + `    <td>loadedData length</td>\n`
-//     + `    <td>${Object.keys(store1.items).length}</td>\n`
-//     + `  </tr>\n`
-//     + `  <tr>\n`
-//     + `    <td>loadedData keys</td>\n`
-//     + `    <td>\n`
-//     + `${tableKeysLoadedData}`
-//     + `    </td>\n`
-//     + `  </tr>\n`
-//     + `  <tr>\n`
-//     + `    <td>uniqueActivities</td>\n`
-//     + `    <td>\n`
-//     + `${tableUniqueActivities}`
-//     + `    </td>\n`
-//     + `  </tr>\n`
-//     + `</table>\n`;
-//
-//   $("#summary").append(table);
-// }
+
+      const elapsed = luxon.DateTime.now().diff(new_store.harvestStart, ['seconds']).toObject().seconds;
+      if (url !== page.next) {
+        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount} in ${elapsed} seconds; Loading...`);
+        loadRPDEPage_2(page.next, storeId, filters, endpoint);
+      }
+      else {
+        $("#progress").text(`Pages loaded ${new_store.pagesLoaded}; Items loaded ${new_store.itemCount}; results ${new_store.matchingItemCount}; Loading complete in ${elapsed} seconds`);
+        if (page.items.length === 0 && new_store.matchingItemCount === 0) {
+          results.append("<div><p>No results found</p></div>");
+        }
+        updateActivityList(new_store.uniqueActivities);
+        loadingComplete();
+      }
