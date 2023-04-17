@@ -59,7 +59,8 @@
 
 #spark1, #spark2, #spark3, #spark4 {
   position: relative;
-  padding-top: 15px;
+  padding-right: 15px;
+  padding-left: 15px;
 }
 
 /* overrides */

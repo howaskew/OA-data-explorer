@@ -237,15 +237,34 @@ function postDataQuality(items) {
       group: 'sparklines',
       type: 'area',
       height: 300,
-      sparkline: {
-        enabled: true
+      toolbar: {
+        show: false
       },
+      //sparkline: {
+      // enabled: true
+      //},
     },
     stroke: {
       curve: 'straight'
     },
     fill: {
       opacity: 1,
+    },
+    dataLabels: {
+      enabled: false
+    },
+    tooltip: {
+      marker: {
+        show: false
+      },
+      //custom: function({series, seriesIndex, dataPointIndex, w}) {
+      //  return '<div class="arrow_box">' +
+      //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
+      //    '</div>'
+      //},
+      x: {
+        format: "dd MMM yyyy",
+      },
     },
     annotations: {
       xaxis: [
@@ -262,30 +281,60 @@ function postDataQuality(items) {
       ]
     },
     series: [{
-      name: 'Opportunities',
+      name: 'Sessions/Slots',
       data: Array.from(sortedDateCounts.values()),
     }],
     labels: Array.from(sortedDateCounts.keys()),
+    grid: {
+      show: false
+    },
     yaxis: {
-      min: 0
+      floating: false, //true takes y axis out of plot space
+      show: false,
+      min: 0,
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false
+      }
     },
     //MODIFY THESE OPTIONS TO OVERRIDE DEFAULT STYLING TO SHOW MIN AND MAX VALUES...
     xaxis: {
-      type: 'datetime',
-      tickAmount: 2
+      type: "datetime",
+      floating: false,
+      labels: {
+        show: false,
+        rotate: 0,
+        format: "dd MMM yyyy",
+        //formatter : function (val) {
+        //  if (val === minDate | val === maxDate) {
+        //    return val
+        //  }
+        //}
+      },
+      tooltip: {
+        enabled: false
+      },
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      }
     },
     colors: ['#DCE6EC'],
     title: {
       text: numItems,
-      offsetX: 30,
+      offsetX: 20,
       style: {
         fontSize: '30px',
         cssClass: 'apexcharts-yaxis-title'
       }
     },
     subtitle: {
-      text: 'OpenActive Opportunities',
-      offsetX: 30,
+      text: 'Bookable Opportunities',
+      offsetX: 20,
       style: {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
