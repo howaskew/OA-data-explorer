@@ -32,17 +32,16 @@ function matchToActivityList(id) {
 
 function runDataQuality(store) {
 
-  if (store.type === 1)
-  {
+  if (store.type === 1) {
     // store1Items = Object.values(store1.items); //getLatestUpdatedItems(store, true);
 
     //Notes:
     //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
     //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
     const urlStems = Object.values(store1.items).reduce((accumulator, item) => {
-      if (  item.data &&
-            item.data.superEvent &&
-            typeof item.data.superEvent === 'string' ) {
+      if (item.data &&
+        item.data.superEvent &&
+        typeof item.data.superEvent === 'string') {
         const lastSlashIndex = item.data.superEvent.lastIndexOf("/");
         const urlStem = item.data.superEvent.substring(0, lastSlashIndex);
         accumulator.push(urlStem);
@@ -54,8 +53,8 @@ function runDataQuality(store) {
       return urlStems.indexOf(urlStem) === index;
     });
 
-    if (  uniqueUrlStems &&
-          uniqueUrlStems.length > 0 ) {
+    if (uniqueUrlStems &&
+      uniqueUrlStems.length > 0) {
 
       console.log(`Unique URL stems: ${uniqueUrlStems}`);
       // Not the url needed but can use it as a flag that superEvents exist
@@ -91,15 +90,15 @@ function runDataQuality(store) {
 
     let combinedStoreItems = [];
     for (const store1Item of Object.values(store1.items)) {
-      if (  store1Item.data &&
-            store1Item.data.superEvent &&
-            typeof store1Item.data.superEvent === 'string' ) {
+      if (store1Item.data &&
+        store1Item.data.superEvent &&
+        typeof store1Item.data.superEvent === 'string') {
         const lastSlashIndex = store1Item.data.superEvent.lastIndexOf('/');
         const store2ItemId = store1Item.data.superEvent.substring(lastSlashIndex + 1);
         const store2Item = Object.values(store2.items).find(store2Item => store2Item.id === store2ItemId);
         // If the match isn't found then the sessionSeries has been deleted, so lose the scheduledSession info
-        if (  store2Item &&
-              store2Item.data ) {
+        if (store2Item &&
+          store2Item.data) {
           // console.log('Match found');
           store1Item.data.superEvent = store2Item.data;
           combinedStoreItems.push(store1Item);
@@ -157,6 +156,13 @@ function postDataQuality(items) {
     Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
   );
 
+  // Get an array of sorted keys
+  const sortedKeys = Array.from(sortedDateCounts.keys());
+
+  // Get the minimum (first) and maximum (last) keys
+  const minDate = sortedKeys[0];
+  const maxDate = sortedKeys[sortedKeys.length - 1];
+
   // Log the counts of unique future dates and all dates, and the count for each date
   console.log(`There are ${numItemsNowToFuture} future dates`);
   console.log(`There are ${dateCounts.size} unique dates in the data`);
@@ -206,12 +212,12 @@ function postDataQuality(items) {
     let activities = resolveProperty(item, 'activity');
     if (Array.isArray(activities)) {
       activities
-      .map(activity => activity.id || activity['@id'])
-      .filter(activityId => activityId)
-      .forEach((activityId) => {
-        matchToActivityList(activityId);
-        numItemsWithActivity++;
-      });
+        .map(activity => activity.id || activity['@id'])
+        .filter(activityId => activityId)
+        .forEach((activityId) => {
+          matchToActivityList(activityId);
+          numItemsWithActivity++;
+        });
     }
   }
 
@@ -231,9 +237,12 @@ function postDataQuality(items) {
       group: 'sparklines',
       type: 'area',
       height: 300,
-      sparkline: {
-        enabled: true
+      toolbar: {
+        show: false
       },
+      //sparkline: {
+      // enabled: true
+      //},
     },
     stroke: {
       curve: 'straight'
@@ -241,30 +250,91 @@ function postDataQuality(items) {
     fill: {
       opacity: 1,
     },
+    dataLabels: {
+      enabled: false
+    },
+    tooltip: {
+      marker: {
+        show: false
+      },
+      //custom: function({series, seriesIndex, dataPointIndex, w}) {
+      //  return '<div class="arrow_box">' +
+      //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
+      //    '</div>'
+      //},
+      x: {
+        format: "dd MMM yyyy",
+      },
+    },
+    annotations: {
+      xaxis: [
+        {
+          x: new Date().getTime(),
+          borderColor: '#775DD0',
+          label: {
+            style: {
+              color: '#000',
+            },
+            text: 'Today'
+          }
+        }
+      ]
+    },
     series: [{
-      name: 'Opportunities',
-      data: Array.from(sortedDateCounts.values()),
+      name: 'Sessions/Slots',
       data: Array.from(sortedDateCounts.values()),
     }],
     labels: Array.from(sortedDateCounts.keys()),
-    yaxis: {
-      min: 0
+    grid: {
+      show: false
     },
+    yaxis: {
+      floating: false, //true takes y axis out of plot space
+      show: false,
+      min: 0,
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false
+      }
+    },
+    //MODIFY THESE OPTIONS TO OVERRIDE DEFAULT STYLING TO SHOW MIN AND MAX VALUES...
     xaxis: {
-      type: 'datetime',
+      type: "datetime",
+      floating: false,
+      labels: {
+        show: false,
+        rotate: 0,
+        format: "dd MMM yyyy",
+        //formatter : function (val) {
+        //  if (val === minDate | val === maxDate) {
+        //    return val
+        //  }
+        //}
+      },
+      tooltip: {
+        enabled: false
+      },
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      }
     },
     colors: ['#DCE6EC'],
     title: {
       text: numItems,
-      offsetX: 30,
+      offsetX: 20,
       style: {
         fontSize: '30px',
         cssClass: 'apexcharts-yaxis-title'
       }
     },
     subtitle: {
-      text: 'OpenActive Opportunities',
-      offsetX: 30,
+      text: 'Bookable Opportunities',
+      offsetX: 20,
       style: {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
