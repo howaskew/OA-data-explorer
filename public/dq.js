@@ -117,7 +117,7 @@ function postDataQuality(items) {
 
   $('#summary').empty();
 
-  const numItems = items.length;
+  const numItems = items.length.toLocaleString();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -264,6 +264,11 @@ function postDataQuality(items) {
       //},
       x: {
         format: "ddd dd MMM yyyy",
+      },
+      y: {
+        formatter: function (val) {
+          return val.toLocaleString();
+        } 
       },
     },
     annotations: {
