@@ -1,6 +1,8 @@
 let config;
 let endpoint;
-let scheme = null;
+let scheme_1 = null;
+let scheme_2 = null;
+
 let activityListRefresh = 0;
 
 let loadingTimeout = null;
@@ -379,14 +381,14 @@ function renderSchedule(item) {
 
 function updateActivityList(filterSet) {
   let filter = Array.from(filterSet);
-  let subsetScheme = scheme.generateSubset(filter);
+  let subsetScheme = scheme_1.generateSubset(filter);
   renderActivityList(subsetScheme);
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function getRelevantActivitySet(id) {
-  let concept = scheme.getConceptByID(id);
+  let concept = scheme_1.getConceptByID(id);
   if (concept) {
     return new Set([id].concat(concept.getNarrowerTransitive().map(concept => concept.id)));
   }
@@ -958,12 +960,23 @@ $(function () {
   // Note: this file should be copied to your server on a nightly cron and served from there
   $.getJSON('https://openactive.io/activity-list/activity-list.jsonld', function (data) {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
-    scheme = new skos.ConceptScheme(data);
+    scheme_1 = new skos.ConceptScheme(data);
 
-    renderActivityList(scheme);
+    renderActivityList(scheme_1);
 
     // Note: use the below to set dropdown value elsewhere if necessary
     //$('.activity-list-dropdown').setValue("https://openactive.io/activity-list#72d19892-5f55-4e9c-87b0-a5433baa49c8");
+  });
+});
+
+$(function () {
+  // Note: this file should be copied to your server on a nightly cron and served from there
+  $.getJSON('https://openactive.io/facility-types/facility-types.jsonld', function (data) {
+    // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
+    scheme_2 = new skos.ConceptScheme(data);
+
+    console.log(scheme_2);
+
   });
 });
 
