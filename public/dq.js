@@ -19,7 +19,7 @@ function getProperty(obj, propertyName) {
 // -------------------------------------------------------------------------------------------------
 
 function matchToActivityList(id) {
-  let concept = scheme.getConceptByID(id);
+  let concept = scheme_1.getConceptByID(id);
   if (concept) {
     //console.log('Match');
     //console.log(concept);
