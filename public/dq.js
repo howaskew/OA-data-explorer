@@ -263,7 +263,7 @@ function postDataQuality(items) {
       //    '</div>'
       //},
       x: {
-        format: "dd MMM yyyy",
+        format: "ddd dd MMM yyyy",
       },
     },
     annotations: {
