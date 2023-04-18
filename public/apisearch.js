@@ -45,6 +45,7 @@ clearStore(store2);
 
 // -------------------------------------------------------------------------------------------------
 
+//This replaces the loadRPDE function in Nick's original visualiser adaptation
 function setStoreItems(url, store, filters) {
 
   store.numPages++;
@@ -130,13 +131,15 @@ function setStoreItems(url, store, filters) {
             }
             if (store.type === 1) {
               if (store.numItemsMatchFilters < 100) {
+
+
                 results.append(
                   `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
                   `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${resolveProperty(item, 'name')}</div>` +
+                  `    <div class='col'>${(resolveProperty (item, 'name') || 'Name not found')}</div>` +
                   `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-                  // `    <div class='col'>${(resolveDate(item, 'startDate') || '')}/div>` +
-                  // `    <div class='col'>${(resolveDate(item, 'endDate') || '')}/div>` +
+                  `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+                  `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
                   `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
                   `    <div class='col'>` +
                   `        <div class='visualise'>` +
@@ -145,7 +148,7 @@ function setStoreItems(url, store, filters) {
                   // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
                   `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
                   `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-                  `                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                  //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
                   `                </div>` +
                   `            </div>` +
                   `        </div>` +
@@ -241,16 +244,17 @@ function setStoreItems(url, store, filters) {
 
 //Amended to handle embedded subsevents when merging sessions / series
 function resolveProperty(item, prop) {
-  return item.data && (item.data.superEvent && item.data.superEvent[prop] ||
-    item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop] ||
+  return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
+    (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
     item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-//Is this working now?
 function resolveDate(item, prop) {
-  return item.data && (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || item.data[prop]);
+  return item.data && 
+  (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || 
+    item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -975,7 +979,7 @@ $(function () {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
     scheme_2 = new skos.ConceptScheme(data);
 
-    console.log(scheme_2);
+    //console.log(scheme_2);
 
   });
 });
