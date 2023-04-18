@@ -100,12 +100,14 @@ function runDataQuality(store) {
         if (store2Item &&
           store2Item.data) {
           // console.log('Match found');
-          store1Item.data.superEvent = store2Item.data;
-          combinedStoreItems.push(store1Item);
+          // TODO: Double check if this deepcopy attempt correcty preserves type:
+          let store1ItemCopy = JSON.parse(JSON.stringify(store1Item));
+          let store2ItemCopy = JSON.parse(JSON.stringify(store2Item));
+          store1ItemCopy.data.superEvent = store2ItemCopy.data;
+          combinedStoreItems.push(store1ItemCopy);
         }
       }
     }
-
     postDataQuality(combinedStoreItems);
   }
 
