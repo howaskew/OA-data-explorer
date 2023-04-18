@@ -12,6 +12,11 @@
   margin-bottom: 1%;
 }
 
+.col-md-6 .row {
+  margin-right: 0px;
+  margin-left: 0px;
+}
+
 .rowhover:hover {
   background-color: lightgrey;
 }

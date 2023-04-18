@@ -24,6 +24,8 @@ let store2 = {
   type: 2
 };
 
+let link = null; //Linking variable between feeds
+
 // let store1Items = null;
 // let store2Items = null;
 
@@ -229,11 +231,11 @@ function setStoreItems(url, store, filters) {
     const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
     if (url !== page.next) {
       progress.empty();
-      progress.text(`${progress_text} Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
+      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
       setStoreItems(page.next, store, filters);
     }
     else {
-      progress.text(`${progress_text} Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
       if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
         results.append("<div><p>No results found</p></div>");
       }
