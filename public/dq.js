@@ -246,6 +246,161 @@ function postDataQuality(items) {
   // -------------------------------------------------------------------------------------------------
 
   // OUTPUT THE METRICS TO THE HTML...
+
+  // -------------------------------------------------------------------------------------------------
+
+  let numListingsForDisplay = numItemsForDisplay;
+
+  let spark1 = {
+    chart: {
+      id: 'bar1',
+      group: 'sparklines',
+      type: 'bar',
+      height: 300,
+      toolbar: {
+        show: false
+      }
+    },
+    fill: {
+      opacity: 1,
+    },
+    series: [{
+      name: 'Sessions/Slots',
+      data: Array.from(sortedDateCounts.values()),
+    }],
+    labels: Array.from(sortedDateCounts.keys()),
+    colors: ['#DCE6EC'],
+    title: {
+      text: numListingsForDisplay,
+      align: 'left',
+      offsetX: 0,
+      style: {
+        fontSize: '30px',
+        cssClass: 'apexcharts-yaxis-title'
+      }
+    },
+    subtitle: {
+      text: 'Listings',
+      align: 'left',
+      offsetX: 0,
+      style: {
+        fontSize: '18px',
+        cssClass: 'apexcharts-yaxis-title'
+      }
+    }
+  }
+
+  new ApexCharts(document.querySelector("#apexchart1"), spark1).render();
+
+  // -------------------------------------------------------------------------------------------------
+
+  var options_percentItemsNowToFuture = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded1],
+    labels: [['Valid', 'Start Date']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+
+  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture).render();
+
+  // -------------------------------------------------------------------------------------------------
+
+  var options_percentItemsWithGeo = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded2],
+    labels: [['Valid postcode', 'or coordinates']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+
+  new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo).render();
+
+  // -------------------------------------------------------------------------------------------------
+
+  var options_percentItemsWithActivity = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded3],
+    labels: [['Valid Activity', 'ID']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+  new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity).render();
+
+  // -------------------------------------------------------------------------------------------------
+
   let annotation_text = {};
   if (dateCounts.size > 0) {
     annotation_text = {
@@ -264,7 +419,7 @@ function postDataQuality(items) {
     };
   }
 
-  let spark1 = {
+  let spark6 = {
     chart: {
       id: 'sparkline1',
       group: 'sparklines',
@@ -351,7 +506,8 @@ function postDataQuality(items) {
     colors: ['#DCE6EC'],
     title: {
       text: numItemsForDisplay,
-      offsetX: 20,
+      align: 'right',
+      offsetX: 0,
       style: {
         fontSize: '30px',
         cssClass: 'apexcharts-yaxis-title'
@@ -359,7 +515,8 @@ function postDataQuality(items) {
     },
     subtitle: {
       text: 'Bookable Opportunities',
-      offsetX: 20,
+      align: 'right',
+      offsetX: 0,
       style: {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
@@ -367,114 +524,6 @@ function postDataQuality(items) {
     }
   }
 
-  new ApexCharts(document.querySelector("#spark1"), spark1).render();
-
-  // -------------------------------------------------------------------------------------------------
-
-  var options_percentItemsNowToFuture = {
-    chart: {
-      height: 300,
-      type: 'radialBar',
-    },
-    series: [rounded1],
-    labels: [['Valid', 'Start Date']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    }
-  }
-
-  new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsNowToFuture).render();
-
-  // -------------------------------------------------------------------------------------------------
-
-  var options_percentItemsWithGeo = {
-    chart: {
-      height: 300,
-      type: 'radialBar',
-    },
-    series: [rounded2],
-    labels: [['Valid postcode', 'or coordinates']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    }
-  }
-
-  new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo).render();
-
-  // -------------------------------------------------------------------------------------------------
-
-  var options_percentItemsWithActivity = {
-    chart: {
-      height: 300,
-      type: 'radialBar',
-    },
-    series: [rounded3],
-    labels: [['Valid Activity', 'ID']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    }
-  }
-
-  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsWithActivity).render();
+  new ApexCharts(document.querySelector("#apexchart6"), spark6).render();
 
 }
