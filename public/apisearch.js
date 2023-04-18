@@ -57,6 +57,7 @@ function setStoreItems(url, store, filters) {
   }
 
   let results = $("#results");
+  let progress = $("#progress");
 
   $.ajax({
     async: true,
@@ -68,11 +69,23 @@ function setStoreItems(url, store, filters) {
 
     if (store.type === 1 && store.numItems === 0) {
       results.empty();
-      results.append("<div id='resultsDiv' class='container-fluid'></div>");
+      results.append("<div id='resultsDiv'</div>");
+      progress.empty();
+      progress.append("<div id='progressDiv1'</div>");
+    }
+    if (store.type === 2 && store.numItems === 0) {
+      progress.append("<div id='progressDiv2'</div>");
+      progress = $("#progressDiv2");
     }
 
     results = $("#resultsDiv");
-
+    if (store.type===1) {
+      progress = $("#progressDiv1");
+      progress_text = "Selected feed:"
+    } else {
+      progress = $("#progressDiv2");
+      progress_text = "Related feed:"
+    }
     $.each(page.content ? page.content : page.items, function (_, item) {
 
       store.numItems++;
@@ -136,7 +149,7 @@ function setStoreItems(url, store, filters) {
                 results.append(
                   `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
                   `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${(resolveProperty (item, 'name') || 'Name not found')}</div>` +
+                  `    <div class='col'>${(resolveProperty (item, 'name') || '')}</div>` +
                   `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
                   `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
                   `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
@@ -215,11 +228,12 @@ function setStoreItems(url, store, filters) {
 
     const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
     if (url !== page.next) {
-      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
+      progress.empty();
+      progress.text(`${progress_text} Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; Loading...`);
       setStoreItems(page.next, store, filters);
     }
     else {
-      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+      progress.text(`${progress_text} Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
       if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
         results.append("<div><p>No results found</p></div>");
       }

@@ -18,7 +18,7 @@
 <body>
     <div class="mainheading">
         <img src="images/OpenActive-Landscape-Logo-2.png" style="max-width: 100%; height: auto;"> </img>
-        <h3>Data Explorer</h3>
+        <h3>Data Quality Explorer</h3>
     </div>
 
     <div class="container-fluid" style="padding-left: 5%; padding-right: 5%">
@@ -175,7 +175,9 @@
                 </div>
             </div>
             <div class="col-md-6 col-sm-4">
-                <h5>API calls made:</h5>
+                <div class="row">
+                    <h5>API calls made:</h5>
+                </div>
                 <div id="loading-time" style="display: none;">
                     <h5>Loading feed pages...</h5>
                     <p>Note: the initial query can take up to 30 seconds for larger feeds, but takes less than 1 second
@@ -183,7 +185,7 @@
                     <p>You can change your filter and "Execute query" again while the feed pages load to filter the
                         results from the pages loaded so far.</p>
                 </div>
-                <h6 id="progress"></h6>
+                <div id="progress"></div>
                 <div id="api"></div>
             </div>
         </div>
@@ -197,7 +199,7 @@
         <div class="tab-content">
             <div class="tab-pane active" id="summaryPanel">
                 <div class="row mt-4 mb-4">
-                    <div  id="grad" class="col-md-12>">
+                    <div id="grad" class="col-md-12>">
                         <h2>DISCOVERY</h2>
                         <h2>BOOKING</h2>
                     </div>
