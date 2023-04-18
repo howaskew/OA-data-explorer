@@ -38,7 +38,7 @@ function runDataQuality(store) {
     //Notes:
     //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
     //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
-    let link = null;
+
     const urlStems = Object.values(store1.items).reduce((accumulator, item) => {
       if (item.data && item.data.type && typeof item.data.type === 'string') {
         if (item.data.type === 'ScheduledSession' && item.data.superEvent && typeof item.data.superEvent === 'string') {
@@ -100,28 +100,28 @@ function runDataQuality(store) {
   }
   else if (store.type === 2) {
     // store2Items = Object.values(store2.items); //getLatestUpdatedItems(store, false);
-
     let combinedStoreItems = [];
     for (const store1Item of Object.values(store1.items)) {
       if (store1Item.data &&
-        store1Item.data.superEvent &&
-        typeof store1Item.data.superEvent === 'string') {
-        const lastSlashIndex = store1Item.data.superEvent.lastIndexOf('/');
-        const store2ItemId = store1Item.data.superEvent.substring(lastSlashIndex + 1);
+        store1Item.data[link] &&
+        typeof store1Item.data[link] === 'string') {
+        const lastSlashIndex = store1Item.data[link].lastIndexOf('/');
+        const store2ItemId = store1Item.data[link].substring(lastSlashIndex + 1);
+        //console.log(store2ItemId);
         const store2Item = Object.values(store2.items).find(store2Item => store2Item.id === store2ItemId);
         // If the match isn't found then the sessionSeries has been deleted, so lose the scheduledSession info
         if (store2Item &&
           store2Item.data) {
-          // console.log('Match found');
+          //console.log('Match found');
           // TODO: Double check if this deepcopy attempt correcty preserves type:
           let store1ItemCopy = JSON.parse(JSON.stringify(store1Item));
           let store2ItemCopy = JSON.parse(JSON.stringify(store2Item));
-          store1ItemCopy.data.superEvent = store2ItemCopy.data;
+          store1ItemCopy.data[link] = store2ItemCopy.data;
           combinedStoreItems.push(store1ItemCopy);
         }
       }
     }
-
+    //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
     postDataQuality(combinedStoreItems);
   }
 
@@ -133,7 +133,8 @@ function postDataQuality(items) {
 
   $('#summary').empty();
 
-  const numItems = items.length.toLocaleString();
+  const numItems = items.length;
+  const numItemsForDisplay = numItems.toLocaleString();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -145,7 +146,9 @@ function postDataQuality(items) {
   let numItemsNowToFuture = 0;
   for (const item of items) {
     // Convert the date to a JavaScript Date object
+
     const date = new Date(item.data.startDate);
+
     if (!isNaN(date)) {
       // Check if the date is greater than or equal to today's date
       if (date >= dateNow) {
@@ -160,11 +163,11 @@ function postDataQuality(items) {
       else {
         dateCounts.set(dateString, 1);
       }
-    }
-    else {
+    } else {
       // Handle the case where the date is not valid
-      //console.log('Invalid date:', dateString);
+      console.log(`Invalid date: ${date}`);
     }
+
   }
 
   // Sort the dateCounts Map by date, in ascending order
@@ -182,8 +185,6 @@ function postDataQuality(items) {
   // Log the counts of unique future dates and all dates, and the count for each date
   console.log(`There are ${numItemsNowToFuture} future dates`);
   console.log(`There are ${dateCounts.size} unique dates in the data`);
-
-  // console.log(`Number of items with start dates greater than or equal to today: ${numItemsNowToFuture}`);
 
   const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
@@ -261,7 +262,7 @@ function postDataQuality(items) {
         }
       ]
     };
-  } 
+  }
 
   let spark1 = {
     chart: {
@@ -349,7 +350,7 @@ function postDataQuality(items) {
     },
     colors: ['#DCE6EC'],
     title: {
-      text: numItems,
+      text: numItemsForDisplay,
       offsetX: 20,
       style: {
         fontSize: '30px',
