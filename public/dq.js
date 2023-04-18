@@ -38,20 +38,18 @@ function runDataQuality(store) {
     //Notes:
     //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
     //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
+    let link = null;
     const urlStems = Object.values(store1.items).reduce((accumulator, item) => {
-      let link = null;
-      if (item.data &&
-        item.data.superEvent &&
-        typeof item.data.superEvent === 'string') {
-        link = "superEvent";
-      }
-      if (item.data &&
-        item.data.facilityUse &&
-        typeof item.data.facilityUse === 'string') {
-        link = "facilityUse";
+      if (item.data && item.data.type && typeof item.data.type === 'string') {
+        if (item.data.type === 'ScheduledSession' && item.data.superEvent && typeof item.data.superEvent === 'string') {
+          link = 'superEvent';
+        }
+        else if (item.data.type === 'Slot' && item.data.facilityUse && typeof item.data.facilityUse === 'string') {
+          link = 'facilityUse';
+        }
       }
       if (link) {
-        const lastSlashIndex = item.data[link].lastIndexOf("/");
+        const lastSlashIndex = item.data[link].lastIndexOf('/');
         const urlStem = item.data[link].substring(0, lastSlashIndex);
         accumulator.push(urlStem);
       }
@@ -83,11 +81,11 @@ function runDataQuality(store) {
         relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
       }
 
-      if (link == "superEvent") {
+      if (link === 'superEvent') {
         store2.firstPage = store1.firstPage.replace("scheduled-sessions", "session-series");
       }
 
-      if (link == "facilityUse") {
+      if (link == 'facilityUse') {
         store2.firstPage = store1.firstPage.replace("slots", "facility-uses");
       }
 
