@@ -232,9 +232,25 @@ function postDataQuality(items) {
   // -------------------------------------------------------------------------------------------------
 
   // OUTPUT THE METRICS TO THE HTML...
+  let annotation_text = {};
+  if (dateCounts.size > 0) {
+    annotation_text = {
+      xaxis: [
+        {
+          x: new Date().getTime(),
+          borderColor: '#775DD0',
+          label: {
+            style: {
+              color: '#000',
+            },
+            text: 'Today'
+          }
+        }
+      ]
+    };
+  } 
 
-
-  var spark1 = {
+  let spark1 = {
     chart: {
       id: 'sparkline1',
       group: 'sparklines',
@@ -248,7 +264,7 @@ function postDataQuality(items) {
       //},
     },
     stroke: {
-      curve: 'straight'
+      curve: 'smooth'
     },
     fill: {
       opacity: 1,
@@ -274,20 +290,7 @@ function postDataQuality(items) {
         }
       },
     },
-    annotations: {
-      xaxis: [
-        {
-          x: new Date().getTime(),
-          borderColor: '#775DD0',
-          label: {
-            style: {
-              color: '#000',
-            },
-            text: 'Today'
-          }
-        }
-      ]
-    },
+    annotations: annotation_text,
     series: [{
       name: 'Sessions/Slots',
       data: Array.from(sortedDateCounts.values()),
