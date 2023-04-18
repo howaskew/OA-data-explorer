@@ -108,6 +108,7 @@ function runDataQuality(store) {
         }
       }
     }
+
     postDataQuality(combinedStoreItems);
   }
 
@@ -171,7 +172,7 @@ function postDataQuality(items) {
 
   // console.log(`Number of items with start dates greater than or equal to today: ${numItemsNowToFuture}`);
 
-  const percent1 = (numItemsNowToFuture / numItems) * 100;
+  const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
@@ -200,7 +201,7 @@ function postDataQuality(items) {
 
   console.log(`Number of items with valid postcode or lat-lon coordinates: ${numItemsWithGeo}`);
 
-  const percent2 = (numItemsWithGeo / numItems) * 100;
+  const percent2 = (numItemsWithGeo / numItems) * 100 || 0;
   const rounded2 = percent2.toFixed(1);
 
 
@@ -225,7 +226,7 @@ function postDataQuality(items) {
 
   console.log(`Number of items with matching activity: ${numItemsWithActivity}`);
 
-  const percent3 = (numItemsWithActivity / numItems) * 100;
+  const percent3 = (numItemsWithActivity / numItems) * 100 || 0;
   const rounded3 = percent3.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
@@ -270,7 +271,7 @@ function postDataQuality(items) {
       y: {
         formatter: function (val) {
           return val.toLocaleString();
-        } 
+        }
       },
     },
     annotations: {
