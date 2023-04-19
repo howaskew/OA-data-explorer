@@ -21,9 +21,7 @@ function getProperty(obj, propertyName) {
 function matchToActivityList(id) {
   let concept = scheme_1.getConceptByID(id);
   if (concept) {
-    //console.log('Match');
-    //console.log(concept);
-    //return new Set([id].concat(concept.getNarrowerTransitive().map(concept => concept.id)));
+    return concept.prefLabel;
   }
   return null;
 }
@@ -223,25 +221,60 @@ function postDataQuality(items) {
 
   // Handling Activities
 
-  // Loop through the data to count activities
+  let activityCounts = new Map()
   let numItemsWithActivity = 0;
+
+  // Loop through the data to count activities
+  // Count any ids/label that match in activityCounts
+  // But only increment items with matching activities once
+
   for (const item of items) {
     let activities = resolveProperty(item, 'activity');
     if (Array.isArray(activities)) {
+      // Use a set to avoid counting multiple prefLabels for the same row
+      let activityLabelsSet = new Set();
+      // Unpack the activity json
       activities
         .map(activity => activity.id || activity['@id'])
         .filter(activityId => activityId)
         .forEach((activityId) => {
-          matchToActivityList(activityId);
-          numItemsWithActivity++;
+          // See if there is a matching id / label
+          let label = matchToActivityList(activityId);
+
+          if (label) {
+            // Add to row level list of labels
+            activityLabelsSet.add(label);
+            // Add to feed level list of labels
+            activityCounts.set(label, (activityCounts.get(label) || 0) + 1);
+          }
+
         });
+
+      // Update the count if a matching label found
+      if (activityLabelsSet.size > 0) {
+        numItemsWithActivity++;
+      }
+
     }
   }
 
-  console.log(`Number of items with matching activity: ${numItemsWithActivity}`);
+  console.log(`Number of items with a matching activity: ${numItemsWithActivity}`);
 
   const percent3 = (numItemsWithActivity / numItems) * 100 || 0;
   const rounded3 = percent3.toFixed(1);
+
+  // Sort the ActivityCounts Map by date, in ascending order
+  const sortedActivityCounts = new Map(
+    Array.from(activityCounts.entries()).sort((a, b) => b[1] - a[1])
+  );
+
+  // Get the first 10 entries from the map
+  const entries = Array.from(sortedActivityCounts.entries()).slice(0, 6);
+
+  // Create a new map from the selected entries
+  const top10activities = new Map(entries);
+
+  console.log(`There are ${activityCounts.size} unique activities in the data`);
 
   // -------------------------------------------------------------------------------------------------
 
@@ -259,17 +292,29 @@ function postDataQuality(items) {
       height: 300,
       toolbar: {
         show: false
+      },
+      sparkline :{
+        enabled: false,
+      },
+    },
+    plotOptions: {
+      bar: {
+        horizontal: true,
+        borderRadius: 4,
       }
     },
     fill: {
-      opacity: 1,
+      opacity: 0.8,
     },
     series: [{
       name: 'Sessions/Slots',
-      data: Array.from(sortedDateCounts.values()),
+      data: Array.from(top10activities.values()),
     }],
-    labels: Array.from(sortedDateCounts.keys()),
-    colors: ['#DCE6EC'],
+    dataLabels: {
+      enabled: false,
+    },
+    labels: Array.from(top10activities.keys()),
+    colors: ['#71CBF2'],
     title: {
       text: numListingsForDisplay,
       align: 'left',
@@ -287,7 +332,70 @@ function postDataQuality(items) {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
       }
-    }
+    },
+    grid: {
+      show: false,
+      padding: {
+        left: -10,
+        right: 0,
+        top: -35,
+        bottom: 0,
+      }
+    },
+    xaxis: {
+      floating: false,
+      labels: {
+        show: false,
+      },
+      title: {
+        text: "Top Actvities",
+        offsetX: -20,
+        offsetY: -15
+      },
+      tooltip: {
+        enabled: false
+      },
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false,
+      }
+    },
+    yaxis: {
+      labels: {
+        show: true,
+        align: 'right',
+        minWidth: 0,
+        maxWidth: 80,
+        offsetX: 12,
+        offsetY: 2,
+        //formatter: (value) => { return val },
+      },
+      floating: false, //true takes y axis out of plot space
+      axisBorder: {
+        show: false,
+      },
+      axisTicks: {
+        show: false
+      }
+    },
+    tooltip: {
+      marker: {
+        show: false
+      },
+      //custom: function({series, seriesIndex, dataPointIndex, w}) {
+      //  return '<div class="arrow_box">' +
+      //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
+      //    '</div>'
+      //},
+      y: {
+        formatter: function (val) {
+          return val.toLocaleString();
+        }
+      },
+    },
+
   }
 
   new ApexCharts(document.querySelector("#apexchart1"), spark1).render();
@@ -428,15 +536,15 @@ function postDataQuality(items) {
       toolbar: {
         show: false
       },
-      //sparkline: {
-      // enabled: true
-      //},
+      sparkline: {
+       enabled: false
+      }
     },
     stroke: {
       curve: 'smooth'
     },
     fill: {
-      opacity: 1,
+      opacity: 0.8,
     },
     dataLabels: {
       enabled: false
@@ -503,7 +611,7 @@ function postDataQuality(items) {
         show: false,
       }
     },
-    colors: ['#DCE6EC'],
+    colors: ['#E21483'],
     title: {
       text: numItemsForDisplay,
       align: 'right',

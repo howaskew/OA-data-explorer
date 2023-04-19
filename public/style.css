@@ -3,8 +3,14 @@
   overflow-y: scroll;
   position: relative;
   bottom: 0;
+  margin-right: 10px;
+  margin-left: 10px;
 }
 
+#progress {
+  margin-right: 10px;
+  margin-left: 10px;
+}
 
 .mainheading {
   text-align: center;
@@ -12,9 +18,21 @@
   margin-bottom: 1%;
 }
 
-.col-md-6 .row {
+div.col-md-2, div.col-md-6 {
   margin-right: 0px;
   margin-left: 0px;
+  padding-right: 0px;
+  padding-left: 0px;
+}
+
+.top {
+  margin-right: 10px;
+  margin-left: 10px;
+}
+
+.flex_row {
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .rowhover:hover {
@@ -31,6 +49,7 @@
   padding: 0 !important;
   margin: 0 !important;
 }
+
 .w-95 {
   width: 95% !important;
 }
@@ -40,10 +59,12 @@
   margin: 5px;
   padding: 10px;
   border-radius: 5px;
+  margin-right: 10px;
+  margin-left: 10px;
 }
 
 #grad {
-  background-image: linear-gradient(to right, rgba(113,203,242,0.5), rgba(226,20,131,0.5));
+  background-image: linear-gradient(to right, rgba(113,203,242,0.8), rgba(226,20,131,0.8));
   display: flex;
   justify-content: space-between;
   width: 100%;
