@@ -33,39 +33,53 @@ function matchToActivityList(id) {
 function runDataQuality(store) {
 
   if (store.type === 1) {
-    // store1Items = Object.values(store1.items); //getLatestUpdatedItems(store, true);
 
     //Notes:
     //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
     //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
 
-    const urlStems = Object.values(store1.items).reduce((accumulator, item) => {
-      if (item.data && item.data.type && typeof item.data.type === 'string') {
-        if (item.data.type === 'ScheduledSession' && item.data.superEvent && typeof item.data.superEvent === 'string') {
-          link = 'superEvent';
+    let uniqueUrlStems = [];
+    if (['ScheduledSession', 'Slot'].includes(store.itemDataType)) {
+      const urlStems = Object.values(store.items).reduce((accumulator, item) => {
+        if (item.data && item.data.type && typeof item.data.type === 'string') {
+          if (item.data.type === 'ScheduledSession' && item.data.superEvent && typeof item.data.superEvent === 'string') {
+            link = 'superEvent';
+          }
+          else if (item.data.type === 'Slot' && item.data.facilityUse && typeof item.data.facilityUse === 'string') {
+            link = 'facilityUse';
+          }
         }
-        else if (item.data.type === 'Slot' && item.data.facilityUse && typeof item.data.facilityUse === 'string') {
-          link = 'facilityUse';
+        if (link) {
+          const lastSlashIndex = item.data[link].lastIndexOf('/');
+          const urlStem = item.data[link].substring(0, lastSlashIndex);
+          accumulator.push(urlStem);
         }
-      }
-      if (link) {
-        const lastSlashIndex = item.data[link].lastIndexOf('/');
-        const urlStem = item.data[link].substring(0, lastSlashIndex);
-        accumulator.push(urlStem);
-      }
-      return accumulator;
-    }, []);
+        return accumulator;
+      }, []);
 
-    let uniqueUrlStems = urlStems.filter((urlStem, index) => {
-      return urlStems.indexOf(urlStem) === index;
-    });
-
-    if (uniqueUrlStems &&
-      uniqueUrlStems.length > 0) {
+      uniqueUrlStems = [...new Set(urlStems)];
 
       console.log(`Unique URL stems: ${uniqueUrlStems}`);
       // Not the url needed but can use it as a flag that superEvents exist
       // and then extract stem from endpoint and try adding required text
+    }
+
+    if (store.itemDataType === 'SessionSeries') {
+      store2.firstPage = store1.firstPage.replace('session-series', 'scheduled-sessions');
+    }
+    else if (store.itemDataType === 'ScheduledSession' && uniqueUrlStems.length > 0) {
+      store2.firstPage = store1.firstPage.replace('scheduled-sessions', 'session-series');
+    }
+    else if (store.itemDataType === 'FacilityUse') {
+      store2.firstPage = store1.firstPage.replace('facility-uses', 'slots');
+    }
+    else if (store.itemDataType === 'Slot' && uniqueUrlStems.length > 0) {
+      store2.firstPage = store1.firstPage.replace('slots', 'facility-uses');
+    }
+
+    if (store2.firstPage) {
+      console.log(`store1 endpoint: ${store1.firstPage}`);
+      console.log(`store2 endpoint: ${store2.firstPage}`);
 
       let filters = {
         activity: $('#activity-list-id').val(),
@@ -81,17 +95,6 @@ function runDataQuality(store) {
         relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
       }
 
-      if (link === 'superEvent') {
-        store2.firstPage = store1.firstPage.replace("scheduled-sessions", "session-series");
-      }
-
-      if (link == 'facilityUse') {
-        store2.firstPage = store1.firstPage.replace("slots", "facility-uses");
-      }
-
-      console.log(`Original endpoint: ${store1.firstPage}`);
-      console.log(`New endpoint: ${store2.firstPage}`);
-
       setStoreItems(store2.firstPage, store2, filters);
     }
     else {
@@ -99,30 +102,49 @@ function runDataQuality(store) {
     }
   }
   else if (store.type === 2) {
-    // store2Items = Object.values(store2.items); //getLatestUpdatedItems(store, false);
-    let combinedStoreItems = [];
-    for (const store1Item of Object.values(store1.items)) {
-      if (store1Item.data &&
-        store1Item.data[link] &&
-        typeof store1Item.data[link] === 'string') {
-        const lastSlashIndex = store1Item.data[link].lastIndexOf('/');
-        const store2ItemId = store1Item.data[link].substring(lastSlashIndex + 1);
-        //console.log(store2ItemId);
-        const store2Item = Object.values(store2.items).find(store2Item => store2Item.id === store2ItemId);
-        // If the match isn't found then the sessionSeries has been deleted, so lose the scheduledSession info
-        if (store2Item &&
-          store2Item.data) {
-          //console.log('Match found');
-          // TODO: Double check if this deepcopy attempt correcty preserves type:
-          let store1ItemCopy = JSON.parse(JSON.stringify(store1Item));
-          let store2ItemCopy = JSON.parse(JSON.stringify(store2Item));
-          store1ItemCopy.data[link] = store2ItemCopy.data;
-          combinedStoreItems.push(store1ItemCopy);
+
+    let storeSuperEvent = null;
+    let storeSubEvent = null;
+    if (['SessionSeries', 'FacilityUse'].includes(store1.itemDataType) && ['ScheduledSession', 'Slot'].includes(store2.itemDataType)) {
+      storeSuperEvent = store1;
+      storeSubEvent = store2;
+    }
+    else if (['ScheduledSession', 'Slot'].includes(store1.itemDataType) && ['SessionSeries', 'FacilityUse'].includes(store2.itemDataType)) {
+      storeSuperEvent = store2;
+      storeSubEvent = store1;
+    }
+
+    if (storeSubEvent.itemDataType === 'ScheduledSession') {
+      link = 'superEvent';
+    }
+    else if (storeSubEvent.itemDataType === 'Slot') {
+      link = 'facilityUse';
+    }
+
+    if (storeSuperEvent && storeSubEvent && link) {
+      let combinedStoreItems = [];
+      for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
+        if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
+          const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
+          const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
+          const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id === storeSuperEventItemId);
+          // If the match isn't found then the super-event has been deleted, so lose the sub-event info
+          if (storeSuperEventItem && storeSuperEventItem.data) {
+            // TODO: Double check if this deepcopy attempt correcty preserves type:
+            let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
+            let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
+            storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
+            combinedStoreItems.push(storeSubEventItemCopy);
+          }
         }
       }
+      //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
+      postDataQuality(combinedStoreItems);
     }
-    //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
-    postDataQuality(combinedStoreItems);
+    else {
+      console.warn('No combined store');
+      postDataQuality(Object.values(store1.items));
+    }
   }
 
 }
