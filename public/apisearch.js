@@ -33,8 +33,9 @@ let link = null; //Linking variable between feeds
 
 function clearStore(store) {
   store.items = {};
-  store.firstPage = '';
-  store.lastPage = '';
+  store.itemDataType;
+  store.firstPage = null;
+  store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
   store.numItemsMatchFilters = 0;
@@ -304,7 +305,27 @@ function loadingComplete(store) {
   $("#loading-time").hide();
 
   console.log(`Finished loading store${store.type}`);
-  //console.log(store.items);
+
+  let itemDataTypes = Object.values(store.items).map(item => {
+    if (item.data && item.data.type && typeof item.data.type === 'string') {
+      return item.data.type;
+    }
+  }).filter(itemDataType => itemDataType);
+
+  let uniqueitemDataTypes = [...new Set(itemDataTypes)];
+
+  switch (uniqueitemDataTypes.length) {
+    case 0:
+      store.itemDataType = null;
+      break;
+    case 1:
+      store.itemDataType = uniqueitemDataTypes[0];
+      break;
+    default:
+      store.itemDataType = 'mixed';
+      break;
+  }
+
   runDataQuality(store);
 
 }
