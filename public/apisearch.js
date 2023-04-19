@@ -17,6 +17,11 @@ let minAge;
 let maxAge;
 let keywords;
 
+let currentPostcode;
+let currentLatitude;
+let currentLongitude;
+var map = new LeafletMapGeocoder('e596b6b1e3d14286ba1376e059f91388');
+
 let store1 = {
   type: 1
 };
@@ -67,91 +72,88 @@ function setStoreItems(url, store, filters) {
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
   })
-  .done(async function (page) {
+    .done(async function (page) {
 
-    if (store.type === 1 && store.numItems === 0) {
-      results.empty();
-      results.append("<div id='resultsDiv'</div>");
-      progress.empty();
-      progress.append("<div id='progressDiv1'</div>");
-    }
-    if (store.type === 2 && store.numItems === 0) {
-      progress.append("<div id='progressDiv2'</div>");
-      progress = $("#progressDiv2");
-    }
+      if (store.type === 1 && store.numItems === 0) {
+        results.empty();
+        results.append("<div id='resultsDiv'</div>");
+        progress.empty();
+        progress.append("<div id='progressDiv1'</div>");
+      }
+      if (store.type === 2 && store.numItems === 0) {
+        progress.append("<div id='progressDiv2'</div>");
+        progress = $("#progressDiv2");
+      }
 
-    results = $("#resultsDiv");
-    if (store.type===1) {
-      progress = $("#progressDiv1");
-      progress_text = "Selected feed:"
-    } else {
-      progress = $("#progressDiv2");
-      progress_text = "Related feed:"
-    }
-    $.each(page.content ? page.content : page.items, function (_, item) {
+      results = $("#resultsDiv");
+      if (store.type === 1) {
+        progress = $("#progressDiv1");
+        progress_text = "Selected feed:"
+      } else {
+        progress = $("#progressDiv2");
+        progress_text = "Related feed:"
+      }
+      $.each(page.content ? page.content : page.items, function (_, item) {
 
-      store.numItems++;
+        store.numItems++;
 
-      if (item.state === 'updated') {
+        if (item.state === 'updated') {
 
-        let activities = resolveProperty(item, 'activity');
-        if (Array.isArray(activities)) {
-          activities
-            .map(activity => activity.id || activity['@id'])
-            .filter(activityId => activityId)
-            .forEach(activityId => store.uniqueActivities.add(activityId));
-        }
-
-        //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
-
-        //console.log(activities);
-
-        let itemMatchesActivity =
-          !filters.relevantActivitySet
-            ? true
-            : (resolveProperty(item, 'activity') || []).filter(activity =>
-              filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
-            ).length > 0;
-        let itemMatchesDay =
-          !filters.day
-            ? true
-            : item.data
-            && item.data.eventSchedule
-            && item.data.eventSchedule.filter(x =>
-              x.byDay
-              && x.byDay.includes(filters.day)
-              || x.byDay.includes(filters.day.replace('https', 'http'))
-            ).length > 0;
-        let itemMatchesGender =
-          !filters.gender
-            ? true
-            : resolveProperty(item, 'genderRestriction') === filters.gender;
-
-        if (itemMatchesActivity &&
-          itemMatchesDay &&
-          itemMatchesGender) {
-          let itemMatchesFilters =
-            itemMatchesActivity &&
-            itemMatchesDay &&
-            itemMatchesGender;
-
-          if (!store.items.hasOwnProperty(item.id)) {
-            store.numItemsMatchFilters++;
+          let activities = resolveProperty(item, 'activity');
+          if (Array.isArray(activities)) {
+            activities
+              .map(activity => activity.id || activity['@id'])
+              .filter(activityId => activityId)
+              .forEach(activityId => store.uniqueActivities.add(activityId));
           }
-          if (itemMatchesFilters) {
 
-            if (!store.items.hasOwnProperty(item.id) ||
-              (item.modified > store.items[item.id].modified)) {
-              store.items[item.id] = item;
+          //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
+
+          //console.log(activities);
+
+
+          if (!store.items.hasOwnProperty(item.id) ||
+            (item.modified > store.items[item.id].modified)) {
+            store.items[item.id] = item;
+          }
+
+          if (store.type === 1) {
+
+            // Filters
+            let itemMatchesFilters = false;
+            let itemMatchesActivity = !filters.relevantActivitySet ? true : (resolveProperty(item, 'activity') || []).filter(x => filters.relevantActivitySet.has(x.id || x['@id'] || 'NONE')).length > 0;
+            let itemMatchesDay = !filters.day ? true : item.data && item.data.eventSchedule && item.data.eventSchedule.filter(x => x.byDay && x.byDay.includes(filters.day) || x.byDay.includes(filters.day.replace('https', 'http'))).length > 0;
+            let itemMatchesGender = !filters.gender ? true : resolveProperty(item, 'genderRestriction') === filters.gender;
+            let itemOrganiserName = matchesOrganiserName(item.data, filters.organiserName);
+            let itemkeyWords = containsKeywords(item.data, filters.keywords);
+
+            let itemStartTime = !filters.startTime ? true : item.data && item.data.eventSchedule && item.data.eventSchedule.filter(x => x.startTime.includes(filters.startTime)).length > 0;
+            let itemEndTime = !filters.endTime ? true : item.data && item.data.eventSchedule && item.data.eventSchedule.filter(x => x.endTime.includes(filters.endTime)).length > 0;
+
+            let itemMinAge = !filters.minAge ? true : checkMinAge(item.data, filters.minAge);
+            let itemMaxAge = !filters.maxAge ? true : checkMaxAge(item.data, filters.maxAge);
+
+            let itemOrganization = !filters.organisation || filters.organisation == "Any" ? true : item.data && item.data.organizer && item.data.organizer.name.toLowerCase().includes(filters.organisation.toLowerCase());
+
+            let itemCoverage = !filters.coverage || filters.proximity ? true : isValidPostCode(item, filters.coverage);
+
+            let itemProximity = !filters.proximity ? true : isValidProximity(item, filters.proximity);
+
+            if (itemMatchesActivity && itemMatchesDay && itemMatchesGender && itemkeyWords &&
+              itemStartTime && itemEndTime && itemMinAge && itemMaxAge &&
+              itemOrganization && itemCoverage && itemProximity && itemOrganiserName) {
+              itemMatchesFilters = true;
             }
-            if (store.type === 1) {
+
+            if (itemMatchesFilters) {
+
               if (store.numItemsMatchFilters < 100) {
 
 
                 results.append(
                   `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
                   `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${(resolveProperty (item, 'name') || '')}</div>` +
+                  `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
                   `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
                   `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
                   `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
@@ -205,55 +207,52 @@ function setStoreItems(url, store, filters) {
               }
             }
           }
-
+        }
+        else if ((item.state === 'deleted') &&
+          store.items.hasOwnProperty(item.id)) {
+          delete store.items[item.id];
+          store.numItemsMatchFilters--;
         }
 
-      }
-      else if ((item.state === 'deleted') &&
-        store.items.hasOwnProperty(item.id)) {
-        delete store.items[item.id];
-        store.numItemsMatchFilters--;
+      });
+
+      let pageNo = page.number ? page.number : page.page;
+      let firstPage = "";
+      if (page.first === true) {
+        firstPage = "disabled='disabled'";
       }
 
+      let lastPage = "";
+      if (page.last === true) {
+        lastPage = "disabled='disabled'";
+      }
+
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      if (url !== page.next) {
+        progress.empty();
+        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
+        setStoreItems(page.next, store, filters);
+      }
+      else {
+        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+        if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
+          results.append("<div><p>No results found</p></div>");
+        }
+        store.lastPage = url;
+        updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
+        loadingComplete(store);
+      }
+
+    })
+    .fail(function () {
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
+      $("#results").empty().append("An error has occurred");
+      $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+      $(".show-error").on("click", function () {
+        runForm();
+      });
     });
-
-    let pageNo = page.number ? page.number : page.page;
-    let firstPage = "";
-    if (page.first === true) {
-      firstPage = "disabled='disabled'";
-    }
-
-    let lastPage = "";
-    if (page.last === true) {
-      lastPage = "disabled='disabled'";
-    }
-
-    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-    if (url !== page.next) {
-      progress.empty();
-      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
-      setStoreItems(page.next, store, filters);
-    }
-    else {
-      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
-      if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
-        results.append("<div><p>No results found</p></div>");
-      }
-      store.lastPage = url;
-      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
-      loadingComplete(store);
-    }
-
-  })
-  .fail(function () {
-    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-    $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
-    $("#results").empty().append("An error has occurred");
-    $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
-    $(".show-error").on("click", function () {
-      runForm();
-    });
-  });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -268,9 +267,9 @@ function resolveProperty(item, prop) {
 // -------------------------------------------------------------------------------------------------
 
 function resolveDate(item, prop) {
-  return item.data && 
-  (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || 
-    item.data[prop]);
+  return item.data &&
+    (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] ||
+      item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -865,6 +864,7 @@ function runForm(pageNumber) {
     maxAge: $("#maxAge").val(),
     gender: $("#Gender").val(),
     keywords: $("#Keywords").val(),
+    organiserName: $("#OrganiserName").val(),
     relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
   }
 
@@ -880,7 +880,18 @@ function runForm(pageNumber) {
 
   store1.firstPage = $("#endpoint").val();
 
-  setStoreItems(store1.firstPage, store1, filters);
+  if (filters.coverage && filters.proximity && currentPostcode != filters.coverage) {
+    map.geocode(filters.coverage, function (geo, country, timezone) {
+      currentLatitude = geo.lat;
+      currentLongitude = geo.lng;
+      currentPostcode = filters.coverage;
+      setStoreItems(store1.firstPage, store1, filters);
+    });
+  } else {
+    setStoreItems(store1.firstPage, store1, filters);
+  }
+
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1002,6 +1013,214 @@ $(function () {
 
 // -------------------------------------------------------------------------------------------------
 
+function isValidPostCode(value, filterCoverage) {
+  return value.data && value.data.location && value.data.location.address && value.data.location.address.postalCode &&
+    value.data.location.address.postalCode.toLowerCase().startsWith(filterCoverage.toLowerCase());
+}
+
+function isValidProximity(value, filterProximity) {
+  var isLatLngExits = value.data && value.data.location && value.data.location.geo;
+  if (isLatLngExits) {
+    return getIsValidDistance(value, filterProximity);
+  } else {
+    return false
+  }
+}
+
+function getIsValidDistance(value, filterProximity) {
+  var sessionlatitude = value.data.location.geo ? value.data.location.geo.latitude : null;
+  var sessionlongitude = value.data.location.geo ? value.data.location.geo.longitude : null;
+  if (sessionlatitude != null && sessionlongitude != null && currentLatitude != null && currentLongitude != null) {
+    var distance = proximityDistance(currentLatitude, sessionlatitude, currentLongitude, sessionlongitude);
+    if (distance <= parseFloat(filterProximity)) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
+function matchesOrganiserName(value, organiserName) {
+  if (!value) {
+    return false;
+  } else if (!organiserName) {
+    return true;
+  }
+  var organiserNameArray = organiserName.split(" ");
+  if (value.organizer && value.organizer.name) {
+    let missingParts = getMissingKeywords(value.organizer.name, organiserNameArray);
+    if (missingParts.length == 0) {
+      return true;
+    }
+  }
+  if (value.superEvent && value.superEvent.organizer && value.superEvent.organizer.name) {
+    let missingParts = getMissingKeywords(value.superEvent.organizer.name, organiserNameArray);
+    if (missingParts.length == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function containsKeywords(value, keywords) {
+  if (!value) {
+    return false;
+  } else if (!keywords) {
+    return true;
+  }
+  var keywordArray = keywords.split(" ");
+  var missingKeywords = getMissingKeywords(value.name, keywordArray);
+  if (value.description) {
+    missingKeywords = getMissingKeywords(value.description, missingKeywords);
+  }
+  if (value.superEvent && value.superEvent.name) {
+    missingKeywords = getMissingKeywords(value.superEvent.name, missingKeywords);
+  }
+  if (value.superEvent && value.superEvent.description) {
+    missingKeywords = getMissingKeywords(value.superEvent.description, missingKeywords);
+  }
+  if (missingKeywords.length == 0) {
+    return true;
+  }
+  return false;
+}
+
+function getMissingKeywords(value, keywords) {
+  if (!keywords || keywords.length == 0) {
+    return [];
+  } else if (!value) {
+    return keywords;
+  }
+  let missingKeywords = keywords;
+  for (var i = 0; i < missingKeywords.length; i++) {
+    if (checkForKeywords(value, missingKeywords[i])) {
+      missingKeywords = missingKeywords.filter(e => e !== missingKeywords[i]);
+      i--;
+    }
+  }
+  return missingKeywords;
+}
+
+function checkForKeywords(value, keywords) {
+  if (!value || !keywords) {
+    return false;
+  }
+  if (Array.isArray(keywords)) {
+    return getMissingKeywords(value, keywords);
+  } else if (typeof keywords === 'string') {
+    return value.toLowerCase().includes(keywords.toLowerCase());
+  } else {
+    return false;
+  }
+}
+
+function checkMinAge(value, minAge) {
+  if (!value) {
+    return false;
+  } else if (!minAge) {
+    return true;
+  }
+  try {
+    if (value.ageRange) {
+      return parseInt(value.ageRange.minValue) <= parseInt(minAge);
+    } else if (value.superEvent && value.superEvent.ageRange) {
+      return parseInt(value.superEvent.ageRange.minValue) <= parseInt(minAge);
+    }
+  } catch (error) { }
+  return false;
+}
+
+function checkMaxAge(value, maxAge) {
+  if (!value) {
+    return false;
+  } else if (!maxAge) {
+    return true;
+  }
+  try {
+    if (value.ageRange) {
+      return parseInt(value.ageRange.maxValue) >= parseInt(maxAge);
+    } else if (value.superEvent && value.superEvent.ageRange) {
+      return parseInt(value.superEvent.ageRange.maxValue) >= parseInt(maxAge);
+    }
+  } catch (error) { }
+  return false;
+}
+
+function proximityDistance(lat1, lat2, lon1, lon2) {
+
+  var R = 6371; // km 
+  //has a problem with the .toRad() method below.
+  var x1 = lat2 - lat1;
+  var dLat = x1.toRad();
+  var x2 = lon2 - lon1;
+  var dLon = x2.toRad();
+  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1.toRad()) * Math.cos(lat2.toRad()) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  var d = R * c;
+  return d;
+}
+
+//Number.prototype.toRad = function() {
+//  return this * Math.PI / 180;
+
+function LeafletMapGeocoder(apikey) {
+  var self = this;
+  self.geocode = function geocode(query, callback) {
+    if (query == null || typeof query !== 'string' || query.trim().length == 0) {
+      alert("Please enter an address.")
+    } else {
+      // Call the OpenCage Geocoder
+      $.ajax({
+        url: 'https://api.opencagedata.com/geocode/v1/json',
+        method: 'GET',
+        data: {
+          'key': 'e596b6b1e3d14286ba1376e059f91388',
+          'q': query
+          // see other optional params:
+          // https://opencagedata.com/api#forward-opt
+        },
+        dataType: 'json',
+        statusCode: {
+          200: function (response) { // success
+            if (response.results.length == 0) {
+              alert("Address not found");
+            } else {
+              var country = null;
+              var timezone = null;
+              // Extract the country code from the results
+              if (response.results[0].components && response.results[0].components.country_code && typeof response.results[0].components.country_code === 'string') {
+                country = response.results[0].components.country_code.toUpperCase();
+              }
+              // Extract the timezone from the results
+              if (response.results[0].annotations && response.results[0].annotations.timezone && response.results[0].annotations.timezone.name) {
+                timezone = response.results[0].annotations.timezone.name;
+              }
+              callback(response.results[0].geometry, country, timezone);
+            }
+          },
+          401: function () {
+            alert('This feature is unavailable, please contact support.');
+            console.log('invalid API key');
+            console.log('get a free trial: https://opencagedata.com/pricing');
+          },
+          402: function () {
+            alert('This feature is unavailable today. Please try again tomorrow.');
+            console.log('hit free-trial daily limit');
+            console.log('become a customer: https://opencagedata.com/pricing');
+          }
+          // other possible response codes:
+          // https://opencagedata.com/api#codes
+        }
+      });
+    }
+  }
+}
+
 $(function () {
   setEndpoints();
 });
+

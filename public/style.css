@@ -18,7 +18,7 @@
   margin-bottom: 1%;
 }
 
-div.col-md-2, div.col-md-6 {
+div.col-md-2, div.col-md-6, div.col-sm-4 {
   margin-right: 0px;
   margin-left: 0px;
   padding-right: 0px;
@@ -33,6 +33,11 @@ div.col-md-2, div.col-md-6 {
 .flex_row {
   display: flex;
   flex-wrap: wrap;
+}
+
+#CoverageRow {
+  margin-right: 15px;
+  margin-left: 15px;
 }
 
 .rowhover:hover {

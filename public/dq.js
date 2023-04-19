@@ -129,6 +129,9 @@ function runDataQuality(store) {
 
 function postDataQuality(items) {
 
+
+  console.log(coverage);
+
   $('#summary').empty();
 
   const numItems = items.length;
