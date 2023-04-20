@@ -181,11 +181,13 @@ function postDataQuality(items) {
 
   const dateNow = new Date();
   let dateCounts = new Map();
-  let activityCounts = new Map()
+  let activityCounts = new Map();
+  let urlCounts = new Map();
 
   let numItemsNowToFuture = 0;
   let numItemsWithGeo = 0;
   let numItemsWithActivity = 0;
+  let numItemsWithUrl = 0;
 
   for (const item of items) {
 
@@ -220,15 +222,13 @@ function postDataQuality(items) {
     const longitude = getProperty(item, 'longitude');
 
     const hasValidPostalCode =
-      postalCode &&
+      typeof postalCode === 'string' &&
       postalCode.length > 0 &&
       ukPostalCodeRegex.test(postalCode);
 
     const hasValidLatLon =
-      latitude &&
-      latitude.length > 0 &&
-      longitude &&
-      longitude.length > 0;
+      typeof latitude === 'number' &&
+      typeof longitude === 'number';
 
     if (hasValidPostalCode || hasValidLatLon) {
       numItemsWithGeo++;
@@ -271,12 +271,23 @@ function postDataQuality(items) {
 
     }
 
+    // -------------------------------------------------------------------------------------------------
+
+    // URL info
+
+    if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
+      numItemsWithUrl++;
+    }
+    else if (item.data && item.data.url && typeof item.data.url === 'string') {
+      urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
+    }
+
   }
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with future dates: ${numItemsNowToFuture}`);
-  console.log(`Number of unique future dates: ${dateCounts.size}`);
+  console.log(`Number of items with present/future dates: ${numItemsNowToFuture}`);
+  console.log(`Number of unique past/present/future dates: ${dateCounts.size}`);
 
   const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
@@ -316,6 +327,15 @@ function postDataQuality(items) {
 
   // Create a new map from the first 10 entries
   const top10activities = new Map(Array.from(sortedActivityCounts.entries()).slice(0, 6));
+
+  // -------------------------------------------------------------------------------------------------
+
+  numItemsWithUrl += urlCounts.size;
+
+  console.log(`Number of items with URLs (either template or explicit string): ${numItemsWithUrl}`);
+
+  const percent4 = (numItemsWithUrl / numItems) * 100 || 0;
+  const rounded4 = percent4.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
@@ -579,7 +599,7 @@ function postDataQuality(items) {
       height: 300,
       type: 'radialBar',
     },
-    series: [rounded3],
+    series: [rounded4],
     labels: [['Unique', 'URLs']],
     plotOptions: {
       radialBar: {
