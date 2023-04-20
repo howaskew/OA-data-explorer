@@ -151,21 +151,25 @@ function postDataQuality(items) {
   $('#summary').empty();
 
   // Count bookable opportunities - the number of unique items from subevent that appear in combined store (after matching)
-  const numOpps = items.length;
+  let numOpps = 0;
+  if (link) {
+    numOpps = items.length;
+  }
   const numOppsForDisplay = numOpps.toLocaleString();
 
-  let listings = [];
-
   // Count listings opportunities - the number of unique items from superevent that appear in combined store (after matching)
-  for (const item of items) {
-    if (item.data && item.data[link] && item.data[link].identifier) {
-      listings.push(item.data[link].identifier);
+  let numListings = items.length;
+
+  if (link) {
+    let listings = [];
+    for (const item of items) {
+      if (item.data && item.data[link] && item.data[link].identifier) {
+        listings.push(item.data[link].identifier);
+      }
     }
+    let uniqueListings = [...new Set(listings)];
+    numListings = uniqueListings.length;
   }
-
-  let uniqueListings = [...new Set(listings)];
-
-  const numListings = uniqueListings.length;
   const numListingsForDisplay = numListings.toLocaleString();
 
   // numItems still used in calculation of percentages

@@ -898,6 +898,7 @@ function runForm(pageNumber) {
 
   clearStore(store1);
   clearStore(store2);
+  link = null;
 
   store1.firstPage = $("#endpoint").val();
 
