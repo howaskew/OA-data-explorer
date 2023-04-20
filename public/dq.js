@@ -112,10 +112,10 @@ function runDataQuality(store) {
       storeSubEvent = store1;
     }
 
-    if (storeSubEvent.itemDataType === 'ScheduledSession') {
+    if (storeSubEvent && storeSubEvent.itemDataType === 'ScheduledSession') {
       link = 'superEvent';
     }
-    else if (storeSubEvent.itemDataType === 'Slot') {
+    else if (storeSubEvent && storeSubEvent.itemDataType === 'Slot') {
       link = 'facilityUse';
     }
 
