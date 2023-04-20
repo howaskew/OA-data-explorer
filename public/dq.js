@@ -177,103 +177,76 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  // Get today's date
+  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+
   const dateNow = new Date();
   let dateCounts = new Map();
+  let activityCounts = new Map()
 
-  // Loop through the data to count the matching dates
   let numItemsNowToFuture = 0;
-  for (const item of items) {
-    // Convert the date to a JavaScript Date object
+  let numItemsWithGeo = 0;
+  let numItemsWithActivity = 0;
 
+  for (const item of items) {
+
+    // Date info
+
+    // Convert the date to a JavaScript Date object
     const date = new Date(item.data.startDate);
 
     if (!isNaN(date)) {
+
       // Check if the date is greater than or equal to today's date
       if (date >= dateNow) {
         numItemsNowToFuture++;
       }
+
       // Get the string representation of the date in the format "YYYY-MM-DD"
       const dateString = date.toISOString().slice(0, 10);
+
       // Increment the count for the date in the Map
-      if (dateCounts.has(dateString)) {
-        dateCounts.set(dateString, dateCounts.get(dateString) + 1);
-      }
-      else {
-        dateCounts.set(dateString, 1);
-      }
+      dateCounts.set(dateString, (dateCounts.get(dateString) || 0) + 1);
+
     } else {
-      // Handle the case where the date is not valid
       console.log(`Invalid date: ${date}`);
     }
 
-  }
+    // -------------------------------------------------------------------------------------------------
 
-  // Sort the dateCounts Map by date, in ascending order
-  const sortedDateCounts = new Map(
-    Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
-  );
+    // Geo info
 
-  // Get an array of sorted keys
-  const sortedKeys = Array.from(sortedDateCounts.keys());
-
-  // Get the minimum (first) and maximum (last) keys
-  const minDate = sortedKeys[0];
-  const maxDate = sortedKeys[sortedKeys.length - 1];
-
-  // Log the counts of unique future dates and all dates, and the count for each date
-  console.log(`There are ${numItemsNowToFuture} future dates`);
-  console.log(`There are ${dateCounts.size} unique dates in the data`);
-
-  const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
-  const rounded1 = percent1.toFixed(1);
-
-  // -------------------------------------------------------------------------------------------------
-
-  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
-
-  // Filter the data array to get objects with a valid postcode or geospatial coordinates
-  const itemsWithGeo = items.filter((item) => {
     const postalCode = getProperty(item, 'postalCode');
     const latitude = getProperty(item, 'latitude');
     const longitude = getProperty(item, 'longitude');
+
     const hasValidPostalCode =
       postalCode &&
       postalCode.length > 0 &&
       ukPostalCodeRegex.test(postalCode);
+
     const hasValidLatLon =
       latitude &&
       latitude.length > 0 &&
       longitude &&
       longitude.length > 0;
-    return hasValidPostalCode || hasValidLatLon;
-  });
 
-  // Get the count of valid data objects
-  const numItemsWithGeo = itemsWithGeo.length;
+    if (hasValidPostalCode || hasValidLatLon) {
+      numItemsWithGeo++;
+    }
 
-  console.log(`Number of items with valid postcode or lat-lon coordinates: ${numItemsWithGeo}`);
+    // -------------------------------------------------------------------------------------------------
 
-  const percent2 = (numItemsWithGeo / numItems) * 100 || 0;
-  const rounded2 = percent2.toFixed(1);
+    // Activity info
 
-
-  // -------------------------------------------------------------------------------------------------
-
-  // Handling Activities
-
-  let activityCounts = new Map()
-  let numItemsWithActivity = 0;
-
-  // Loop through the data to count activities
-  // Count any ids/label that match in activityCounts
-  // But only increment items with matching activities once
-
-  for (const item of items) {
+    // Count any ids/label that match in activityCounts
+    // But only increment items with matching activities once
     let activities = resolveProperty(item, 'activity');
+
     if (Array.isArray(activities)) {
+
       // Use a set to avoid counting multiple prefLabels for the same row
       let activityLabelsSet = new Set();
+
       // Unpack the activity json
       activities
         .map(activity => activity.id || activity['@id'])
@@ -297,25 +270,52 @@ function postDataQuality(items) {
       }
 
     }
+
   }
 
-  console.log(`Number of items with a matching activity: ${numItemsWithActivity}`);
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with future dates: ${numItemsNowToFuture}`);
+  console.log(`Number of unique future dates: ${dateCounts.size}`);
+
+  const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
+  const rounded1 = percent1.toFixed(1);
+
+  // Sort the dateCounts Map by date, in ascending order
+  const sortedDateCounts = new Map(
+    Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
+  );
+
+  // Get an array of sorted keys
+  const sortedKeys = Array.from(sortedDateCounts.keys());
+
+  // Get the minimum (first) and maximum (last) keys
+  const minDate = sortedKeys[0];
+  const maxDate = sortedKeys[sortedKeys.length - 1];
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid postcode or lat-lon coordinates: ${numItemsWithGeo}`);
+
+  const percent2 = (numItemsWithGeo / numItems) * 100 || 0;
+  const rounded2 = percent2.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with matching activities: ${numItemsWithActivity}`);
+  console.log(`Number of unique activities: ${activityCounts.size}`);
 
   const percent3 = (numItemsWithActivity / numItems) * 100 || 0;
   const rounded3 = percent3.toFixed(1);
 
-  // Sort the ActivityCounts Map by date, in ascending order
+  // Sort the activityCounts Map by activity, in ascending order
+  // TODO: Check if b[1] - a[1] is correct order, as this is different from sortedDateCounts
   const sortedActivityCounts = new Map(
     Array.from(activityCounts.entries()).sort((a, b) => b[1] - a[1])
   );
 
-  // Get the first 10 entries from the map
-  const entries = Array.from(sortedActivityCounts.entries()).slice(0, 6);
-
-  // Create a new map from the selected entries
-  const top10activities = new Map(entries);
-
-  console.log(`There are ${activityCounts.size} unique activities in the data`);
+  // Create a new map from the first 10 entries
+  const top10activities = new Map(Array.from(sortedActivityCounts.entries()).slice(0, 6));
 
   // -------------------------------------------------------------------------------------------------
 
