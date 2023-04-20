@@ -341,6 +341,13 @@ function postDataQuality(items) {
       sparkline: {
         enabled: false,
       },
+      events: {
+        click: function(event) {
+          if([...event.target.classList].includes('apexcharts-title-text')){
+            alert('Title clicked')
+          }
+        }
+      }
     },
     plotOptions: {
       bar: {
