@@ -32,10 +32,6 @@ function runDataQuality(store) {
 
   if (store.type === 1) {
 
-    //Notes:
-    //This works for ScheduledSession feeds with embedded link to SessionSeries (e.g. Active Newham)
-    //This will not trigger loading second feed where SessionSeries contains superevent (e.g. Castle Point)
-
     let uniqueUrlStems = [];
     if (['ScheduledSession', 'Slot'].includes(store.itemDataType)) {
       const urlStems = Object.values(store.items).reduce((accumulator, item) => {
@@ -58,8 +54,8 @@ function runDataQuality(store) {
       uniqueUrlStems = [...new Set(urlStems)];
 
       console.log(`Unique URL stems: ${uniqueUrlStems}`);
-      // Not the url needed but can use it as a flag that superEvents exist
-      // and then extract stem from endpoint and try adding required text
+      // Can be used as a check of the url(s) for related feeds
+
     }
 
     if (store.itemDataType === 'SessionSeries') {
@@ -96,6 +92,7 @@ function runDataQuality(store) {
       setStoreItems(store2.firstPage, store2, filters);
     }
     else {
+      console.warn('No related feed');
       postDataQuality(Object.values(store1.items));
     }
   }
@@ -112,10 +109,10 @@ function runDataQuality(store) {
       storeSubEvent = store1;
     }
 
-    if (storeSubEvent.itemDataType === 'ScheduledSession') {
+    if (storeSubEvent && storeSubEvent.itemDataType === 'ScheduledSession') {
       link = 'superEvent';
     }
-    else if (storeSubEvent.itemDataType === 'Slot') {
+    else if (storeSubEvent && storeSubEvent.itemDataType === 'Slot') {
       link = 'facilityUse';
     }
 
@@ -153,8 +150,26 @@ function postDataQuality(items) {
 
   $('#summary').empty();
 
+  // Count bookable opportunities - the number of unique items from subevent that appear in combined store (after matching)
+  const numOpps = items.length;
+  const numOppsForDisplay = numOpps.toLocaleString();
+
+  let listings = [];
+
+  // Count listings opportunities - the number of unique items from superevent that appear in combined store (after matching)
+  for (const item of items) {
+    if (item.data && item.data[link] && item.data[link].identifier) {
+      listings.push(item.data[link].identifier);
+    }
+  }
+
+  let uniqueListings = [...new Set(listings)];
+
+  const numListings = uniqueListings.length;
+  const numListingsForDisplay = numListings.toLocaleString();
+
+  // numItems still used in calculation of percentages
   const numItems = items.length;
-  const numItemsForDisplay = numItems.toLocaleString();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -304,8 +319,6 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  let numListingsForDisplay = numItemsForDisplay;
-
   let spark1 = {
     chart: {
       id: 'bar1',
@@ -315,7 +328,7 @@ function postDataQuality(items) {
       toolbar: {
         show: false
       },
-      sparkline :{
+      sparkline: {
         enabled: false,
       },
     },
@@ -530,6 +543,42 @@ function postDataQuality(items) {
   new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity).render();
 
   // -------------------------------------------------------------------------------------------------
+  // -------------------------------------------------------------------------------------------------
+
+  var options_percentItemsWithUrl = {
+    chart: {
+      height: 300,
+      type: 'radialBar',
+    },
+    series: [rounded3],
+    labels: [['Unique', 'URLs']],
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          margin: 15,
+          size: "65%"
+        },
+        dataLabels: {
+          showOn: "always",
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -30,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    }
+  }
+  new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl).render();
+
+  // -------------------------------------------------------------------------------------------------
 
   let annotation_text = {};
   if (dateCounts.size > 0) {
@@ -559,7 +608,7 @@ function postDataQuality(items) {
         show: false
       },
       sparkline: {
-       enabled: false
+        enabled: false
       }
     },
     stroke: {
@@ -635,7 +684,7 @@ function postDataQuality(items) {
     },
     colors: ['#E21483'],
     title: {
-      text: numItemsForDisplay,
+      text: numOppsForDisplay,
       align: 'right',
       offsetX: 0,
       style: {
