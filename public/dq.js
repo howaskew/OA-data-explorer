@@ -323,6 +323,12 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
+
+  let show_y_axis = false;
+  if (activityCounts.size > 0) {
+    show_y_axis = true;
+  }
+
   let spark1 = {
     chart: {
       id: 'bar1',
@@ -375,7 +381,7 @@ function postDataQuality(items) {
     grid: {
       show: false,
       padding: {
-        left: -10,
+        left: 0,
         right: 0,
         top: -35,
         bottom: 0,
@@ -387,7 +393,7 @@ function postDataQuality(items) {
         show: false,
       },
       title: {
-        text: "Top Actvities",
+        text: "Top Activities",
         offsetX: -20,
         offsetY: -15
       },
@@ -402,14 +408,33 @@ function postDataQuality(items) {
       }
     },
     yaxis: {
+      show: show_y_axis,
+      showForNullSeries: false,
       labels: {
         show: true,
-        align: 'right',
+        align: 'left',
         minWidth: 0,
-        maxWidth: 80,
+        maxWidth: 90,
         offsetX: 12,
-        offsetY: 2,
-        //formatter: (value) => { return val },
+        offsetY: 6,
+        formatter: function (value) {
+          let label = value.toString().trim();
+          let words = label.split(" ");
+          let lines = [];
+          let line = "";
+          for (var i = 0; i < words.length; i++) {
+            var testLine = line + words[i];
+            if (testLine.length > 10) { // Replace 10 with your desired line length
+              lines.push(line);
+              line = words[i];
+            } else {
+              line = testLine;
+            }
+          }
+          lines.push(line);
+          console.log(lines);
+          return lines;
+        }
       },
       floating: false, //true takes y axis out of plot space
       axisBorder: {
