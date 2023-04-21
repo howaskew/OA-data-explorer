@@ -119,7 +119,7 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
           name: dataset.name,
-          kind: feedInfo.name,
+          type: feedInfo.name,
           url: feedInfo.contentUrl,
           datasetUrl: dataset.url,
           discussionUrl: dataset.discussionUrl,

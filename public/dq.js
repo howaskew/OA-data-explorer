@@ -30,16 +30,16 @@ function matchToActivityList(id) {
 
 function runDataQuality(store) {
 
-  if (store.type === 1) {
+  if (store.ingressOrder === 1) {
 
     let uniqueUrlStems = [];
-    if (['ScheduledSession', 'Slot'].includes(store.itemDataType)) {
+    if (['ScheduledSession', 'Slot'].includes(store.feedType)) {
       const urlStems = Object.values(store.items).reduce((accumulator, item) => {
-        if (item.data && item.data.type && typeof item.data.type === 'string') {
-          if (item.data.type === 'ScheduledSession' && item.data.superEvent && typeof item.data.superEvent === 'string') {
+        if (item.data && ((typeof item.data.type === 'string') || (typeof item.data['@type'] === 'string'))) {
+          if (((item.data.type === 'ScheduledSession') || (item.data['@type'] === 'ScheduledSession')) && typeof item.data.superEvent === 'string') {
             link = 'superEvent';
           }
-          else if (item.data.type === 'Slot' && item.data.facilityUse && typeof item.data.facilityUse === 'string') {
+          else if (((item.data.type === 'Slot') || (item.data['@type'] === 'Slot')) && typeof item.data.facilityUse === 'string') {
             link = 'facilityUse';
           }
         }
@@ -55,20 +55,31 @@ function runDataQuality(store) {
 
       console.log(`Unique URL stems: ${uniqueUrlStems}`);
       // Can be used as a check of the url(s) for related feeds
-
     }
 
-    if (store.itemDataType === 'SessionSeries') {
+    // TODO: We used to include this in the following ScheduledSession and Slot conditions, but not now
+    // in order to get store2 regardless. Is the uniqueUrlStems stuff now obsolete?
+    //   && uniqueUrlStems.length > 0
+    if (store.feedType === 'SessionSeries') {
       store2.firstPage = store1.firstPage.replace('session-series', 'scheduled-sessions');
     }
-    else if (store.itemDataType === 'ScheduledSession' && uniqueUrlStems.length > 0) {
+    else if (store.feedType === 'ScheduledSession') {
       store2.firstPage = store1.firstPage.replace('scheduled-sessions', 'session-series');
     }
-    else if (store.itemDataType === 'FacilityUse') {
+    else if (store.feedType === 'FacilityUse') {
       store2.firstPage = store1.firstPage.replace('facility-uses', 'slots');
     }
-    else if (store.itemDataType === 'Slot' && uniqueUrlStems.length > 0) {
+    else if (store.feedType === 'IndividualFacilityUse') {
+      store2.firstPage = store1.firstPage.replace('individual-facility-uses', 'slots');
+    }
+    else if (store.feedType === 'Slot') {
       store2.firstPage = store1.firstPage.replace('slots', 'facility-uses');
+      if (!(store2.firstPage in feeds)) {
+        store2.firstPage = store1.firstPage.replace('slots', 'individual-facility-uses');
+        if (!(store2.firstPage in feeds)) {
+          store2.firstPage = null;
+        }
+      }
     }
 
     if (store2.firstPage) {
@@ -96,23 +107,26 @@ function runDataQuality(store) {
       postDataQuality(Object.values(store1.items));
     }
   }
-  else if (store.type === 2) {
+  else if (store.ingressOrder === 2) {
 
+    let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
+    let subEventFeedTypes = ['ScheduledSession', 'Slot'];
     let storeSuperEvent = null;
     let storeSubEvent = null;
-    if (['SessionSeries', 'FacilityUse'].includes(store1.itemDataType) && ['ScheduledSession', 'Slot'].includes(store2.itemDataType)) {
+
+    if (superEventFeedTypes.includes(store1.feedType) && subEventFeedTypes.includes(store2.feedType)) {
       storeSuperEvent = store1;
       storeSubEvent = store2;
     }
-    else if (['ScheduledSession', 'Slot'].includes(store1.itemDataType) && ['SessionSeries', 'FacilityUse'].includes(store2.itemDataType)) {
+    else if (subEventFeedTypes.includes(store1.feedType) && superEventFeedTypes.includes(store2.feedType)) {
       storeSuperEvent = store2;
       storeSubEvent = store1;
     }
 
-    if (storeSubEvent && storeSubEvent.itemDataType === 'ScheduledSession') {
+    if (storeSubEvent && storeSubEvent.feedType === 'ScheduledSession') {
       link = 'superEvent';
     }
-    else if (storeSubEvent && storeSubEvent.itemDataType === 'Slot') {
+    else if (storeSubEvent && storeSubEvent.feedType === 'Slot') {
       link = 'facilityUse';
     }
 
