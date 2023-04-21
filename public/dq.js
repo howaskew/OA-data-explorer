@@ -330,9 +330,12 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  numItemsWithUrl += urlCounts.size;
+  // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
+  // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
+  // be the metric we're after, but this may not truly be the case and needs to be investigated.
+  urlCounts.forEach((val,key) => {if (val === 1) {numItemsWithUrl++}});
 
-  console.log(`Number of items with URLs (either template or explicit string): ${numItemsWithUrl}`);
+  console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
 
   const percent4 = (numItemsWithUrl / numItems) * 100 || 0;
   const rounded4 = percent4.toFixed(1);
