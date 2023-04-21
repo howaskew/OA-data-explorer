@@ -17,23 +17,23 @@ let minAge;
 let maxAge;
 let keywords;
 
+let feeds = {};
+
 let store1 = {
-  type: 1
+  ingressOrder: 1
 };
 let store2 = {
-  type: 2
+  ingressOrder: 2
 };
 
 let link = null; //Linking variable between feeds
-
-// let store1Items = null;
-// let store2Items = null;
 
 // -------------------------------------------------------------------------------------------------
 
 function clearStore(store) {
   store.items = {};
-  store.itemDataType;
+  store.feedType = null;
+  store.itemDataType = null;
   store.firstPage = null;
   store.lastPage = null;
   store.numPages = 0;
@@ -70,19 +70,19 @@ function setStoreItems(url, store, filters) {
   })
   .done(async function (page) {
 
-    if (store.type === 1 && store.numItems === 0) {
+    if (store.ingressOrder === 1 && store.numItems === 0) {
       results.empty();
       results.append("<div id='resultsDiv'</div>");
       progress.empty();
       progress.append("<div id='progressDiv1'</div>");
     }
-    if (store.type === 2 && store.numItems === 0) {
+    if (store.ingressOrder === 2 && store.numItems === 0) {
       progress.append("<div id='progressDiv2'</div>");
       progress = $("#progressDiv2");
     }
 
     results = $("#resultsDiv");
-    if (store.type===1) {
+    if (store.ingressOrder === 1) {
       progress = $("#progressDiv1");
       progress_text = "Selected feed:"
     } else {
@@ -145,9 +145,8 @@ function setStoreItems(url, store, filters) {
               (item.modified > store.items[item.id].modified)) {
               store.items[item.id] = item;
             }
-            if (store.type === 1) {
+            if (store.ingressOrder === 1) {
               if (store.numItemsMatchFilters < 100) {
-
 
                 results.append(
                   `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
@@ -269,8 +268,8 @@ function resolveProperty(item, prop) {
 // -------------------------------------------------------------------------------------------------
 
 function resolveDate(item, prop) {
-  return item.data && 
-  (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] || 
+  return item.data &&
+  (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] ||
     item.data[prop]);
 }
 
@@ -304,11 +303,13 @@ function loadingComplete(store) {
   }
   $("#loading-time").hide();
 
-  console.log(`Finished loading store${store.type}`);
+  console.log(`Finished loading store${store.ingressOrder}`);
+
+  store.feedType = feeds[store.firstPage].type;
 
   let itemDataTypes = Object.values(store.items).map(item => {
-    if (item.data && item.data.type && typeof item.data.type === 'string') {
-      return item.data.type;
+    if (item.data && ((typeof item.data.type === 'string') || (typeof item.data['@type'] === 'string'))) {
+      return item.data.type || item.data['@type'];
     }
   }).filter(itemDataType => itemDataType);
 
@@ -324,6 +325,10 @@ function loadingComplete(store) {
     default:
       store.itemDataType = 'mixed';
       break;
+  }
+
+  if (store.feedType !== store.itemDataType) {
+    console.warn(`Feed type (${store.feedType}) doesn\'t match item data type (${store.itemDataType})`);
   }
 
   runDataQuality(store);
@@ -963,9 +968,9 @@ function setPage() {
   if (getUrlParameter("endpoint") !== undefined) {
     $("#endpoint").val(getUrlParameter("endpoint"));
     $.getJSON("/feeds", function (data) {
-      $.each(data.feeds, function (index, item) {
-        if (item.url === $("#endpoint option:selected").val()) {
-          config = item;
+      $.each(data.feeds, function (index, feed) {
+        if (feed.url === $("#endpoint option:selected").val()) {
+          config = feed;
         }
       });
     })
@@ -987,8 +992,9 @@ function setPage() {
 function setEndpoints() {
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
-    $.each(data.feeds, function (index, item) {
-      $("#endpoint").append("<option value='" + item.url + "'>" + item.name + " - " + item.kind + "</option>");
+    $.each(data.feeds, function (index, feed) {
+      feeds[feed.url] = feed;
+      $("#endpoint").append("<option value='" + feed.url + "'>" + feed.name + " - " + feed.type + "</option>");
     });
   })
     .done(function () {
