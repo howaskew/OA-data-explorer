@@ -162,6 +162,8 @@ function runDataQuality(store) {
 
 function postDataQuality(items) {
 
+  console.log(items);
+
   $('#summary').empty();
 
   // Count bookable opportunities - the number of unique items from subevent that appear in combined store (after matching)
@@ -347,7 +349,7 @@ function postDataQuality(items) {
   // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
   // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
   // be the metric we're after, but this may not truly be the case and needs to be investigated.
-  urlCounts.forEach((val,key) => {if (val === 1) {numItemsWithUrl++}});
+  urlCounts.forEach((val, key) => { if (val === 1) { numItemsWithUrl++ } });
 
   console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
 
@@ -379,8 +381,8 @@ function postDataQuality(items) {
         enabled: false,
       },
       events: {
-        click: function(event) {
-          if([...event.target.classList].includes('apexcharts-title-text')){
+        click: function (event) {
+          if ([...event.target.classList].includes('apexcharts-title-text')) {
             alert('Title clicked')
           }
         }
@@ -469,14 +471,14 @@ function postDataQuality(items) {
           for (var i = 0; i < words.length; i++) {
             var testLine = line + words[i];
             if (testLine.length > 10) { // Replace 10 with your desired line length
-              lines.push(line);
-              line = words[i];
+              lines.push(line.trim());
+              line = words[i] + " ";
             } else {
-              line = testLine;
+              line = testLine + " ";
             }
           }
-          lines.push(line);
-          console.log(lines);
+          lines.push(line.trim());
+          //console.log(lines);
           return lines;
         }
       },
@@ -508,15 +510,19 @@ function postDataQuality(items) {
 
   new ApexCharts(document.querySelector("#apexchart1"), spark1).render();
 
+
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsNowToFuture = {
+  var options_percentItemsWithActivity = {
     chart: {
       height: 300,
       type: 'radialBar',
     },
-    series: [rounded1],
-    labels: [['Valid', 'Start Date']],
+    fill: {
+      colors: ['#A7ABDA'],
+    },
+    series: [rounded3],
+    labels: [['Valid Activity', 'ID']],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -541,8 +547,7 @@ function postDataQuality(items) {
       }
     }
   }
-
-  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture).render();
+  new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity).render();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -550,6 +555,9 @@ function postDataQuality(items) {
     chart: {
       height: 300,
       type: 'radialBar',
+    },
+    fill: {
+      colors: ['#B196CB'],
     },
     series: [rounded2],
     labels: [['Valid postcode', 'or coordinates']],
@@ -582,13 +590,16 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsWithActivity = {
+  var options_percentItemsNowToFuture = {
     chart: {
       height: 300,
       type: 'radialBar',
     },
-    series: [rounded3],
-    labels: [['Valid Activity', 'ID']],
+    fill: {
+      colors: ['#BD82BB'],
+    },
+    series: [rounded1],
+    labels: [['Valid', 'Start Date']],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -613,15 +624,18 @@ function postDataQuality(items) {
       }
     }
   }
-  new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity).render();
 
-  // -------------------------------------------------------------------------------------------------
+  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture).render();
+
   // -------------------------------------------------------------------------------------------------
 
   var options_percentItemsWithUrl = {
     chart: {
       height: 300,
       type: 'radialBar',
+    },
+    fill: {
+      colors: ['#C76DAC'],
     },
     series: [rounded4],
     labels: [['Unique', 'URLs']],
@@ -650,6 +664,7 @@ function postDataQuality(items) {
     }
   }
   new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl).render();
+
 
   // -------------------------------------------------------------------------------------------------
 
