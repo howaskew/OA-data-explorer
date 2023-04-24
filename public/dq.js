@@ -30,32 +30,31 @@ function matchToActivityList(id) {
 
 function runDataQuality(store) {
 
-  if (store.ingressOrder === 1) {
+  if (store && subEventFeedTypes.includes(store.feedType)) {
 
-    let uniqueUrlStems = [];
-    if (['ScheduledSession', 'Slot'].includes(store.feedType)) {
-      const urlStems = Object.values(store.items).reduce((accumulator, item) => {
-        if (item.data && ((typeof item.data.type === 'string') || (typeof item.data['@type'] === 'string'))) {
-          if (((item.data.type === 'ScheduledSession') || (item.data['@type'] === 'ScheduledSession')) && typeof item.data.superEvent === 'string') {
-            link = 'superEvent';
-          }
-          else if (((item.data.type === 'Slot') || (item.data['@type'] === 'Slot')) && typeof item.data.facilityUse === 'string') {
-            link = 'facilityUse';
-          }
-        }
-        if (link) {
-          const lastSlashIndex = item.data[link].lastIndexOf('/');
-          const urlStem = item.data[link].substring(0, lastSlashIndex);
-          accumulator.push(urlStem);
-        }
-        return accumulator;
-      }, []);
-
-      uniqueUrlStems = [...new Set(urlStems)];
-
-      console.log(`Unique URL stems: ${uniqueUrlStems}`);
-      // Can be used as a check of the url(s) for related feeds
+    if (store.feedType === 'ScheduledSession') {
+      link = 'superEvent';
     }
+    else if (store.feedType === 'Slot') {
+      link = 'facilityUse';
+    }
+
+    const urlStems = Object.values(store.items).reduce((accumulator, item) => {
+      if (link && item.data && item.data[link]) {
+        const lastSlashIndex = item.data[link].lastIndexOf('/');
+        const urlStem = item.data[link].substring(0, lastSlashIndex);
+        accumulator.push(urlStem);
+      }
+      return accumulator;
+    }, []);
+
+    uniqueUrlStems = [...new Set(urlStems)];
+
+    console.log(`Unique URL stems: ${uniqueUrlStems}`);
+    // Can be used as a check of the url(s) for related feeds
+  }
+
+  if (store.ingressOrder === 1) {
 
     // TODO: We used to include this in the following ScheduledSession and Slot conditions, but not now
     // in order to get store2 regardless. Is the uniqueUrlStems stuff now obsolete?
@@ -103,16 +102,11 @@ function runDataQuality(store) {
       setStoreItems(store2.firstPage, store2, filters);
     }
     else {
-      console.warn('No related feed');
+      console.warn('No related feed, data quality from first store only');
       postDataQuality(Object.values(store1.items));
     }
   }
   else if (store.ingressOrder === 2) {
-
-    let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-    let subEventFeedTypes = ['ScheduledSession', 'Slot'];
-    let storeSuperEvent = null;
-    let storeSubEvent = null;
 
     if (superEventFeedTypes.includes(store1.feedType) && subEventFeedTypes.includes(store2.feedType)) {
       storeSuperEvent = store1;
@@ -123,14 +117,14 @@ function runDataQuality(store) {
       storeSubEvent = store1;
     }
 
-    if (storeSubEvent && storeSubEvent.feedType === 'ScheduledSession') {
-      link = 'superEvent';
-    }
-    else if (storeSubEvent && storeSubEvent.feedType === 'Slot') {
-      link = 'facilityUse';
+    if (!link) {
+      console.warn('No feed linking variable, can\'t create combined store');
     }
 
-    if (storeSuperEvent && storeSubEvent && link) {
+    if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
+        storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
+        link
+    ) {
       let combinedStoreItems = [];
       for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
         if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
@@ -150,9 +144,16 @@ function runDataQuality(store) {
       //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
       postDataQuality(combinedStoreItems);
     }
+    else if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0) {
+        console.warn('No combined store, data quality from super-events only');
+        postDataQuality(Object.values(storeSuperEvent.items));
+    }
+    else if (storeSubEvent && Object.values(storeSubEvent.items).length > 0) {
+      console.warn('No combined store, data quality from sub-events only');
+      postDataQuality(Object.values(storeSubEvent.items));
+    }
     else {
-      console.warn('No combined store');
-      postDataQuality(Object.values(store1.items));
+      console.warn('No combined store and no separate stores, so no data quality');
     }
   }
 
@@ -175,7 +176,6 @@ function postDataQuality(items) {
 
   // Count listings opportunities - the number of unique items from superevent that appear in combined store (after matching)
   let numListings = items.length;
-
   if (link) {
     let listings = [];
     for (const item of items) {
