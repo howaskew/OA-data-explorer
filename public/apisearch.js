@@ -26,6 +26,13 @@ let store2 = {
   ingressOrder: 2
 };
 
+let storeSuperEvent = null;
+let storeSubEvent = null;
+
+let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
+let subEventFeedTypes = ['ScheduledSession', 'Slot'];
+
+let uniqueUrlStems = [];
 let link = null; //Linking variable between feeds
 
 // -------------------------------------------------------------------------------------------------
