@@ -122,8 +122,8 @@ function runDataQuality(store) {
     }
 
     if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
-        storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
-        link
+      storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
+      link
     ) {
       let combinedStoreItems = [];
       for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
@@ -145,8 +145,8 @@ function runDataQuality(store) {
       postDataQuality(combinedStoreItems);
     }
     else if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0) {
-        console.warn('No combined store, data quality from super-events only');
-        postDataQuality(Object.values(storeSuperEvent.items));
+      console.warn('No combined store, data quality from super-events only');
+      postDataQuality(Object.values(storeSuperEvent.items));
     }
     else if (storeSubEvent && Object.values(storeSubEvent.items).length > 0) {
       console.warn('No combined store, data quality from sub-events only');
@@ -203,6 +203,8 @@ function postDataQuality(items) {
   let numItemsNowToFuture = 0;
   let numItemsWithGeo = 0;
   let numItemsWithActivity = 0;
+  let numItemsWithName = 0;
+  let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
 
   for (const item of items) {
@@ -289,6 +291,35 @@ function postDataQuality(items) {
 
     // -------------------------------------------------------------------------------------------------
 
+    // Name info
+
+    const name = getProperty(item, 'name');
+
+    const hasValidName =
+      typeof name === 'string' &&
+      name.length > 0 &&
+      name != " ";
+
+    if (hasValidName) {
+      numItemsWithName++;
+    }
+    // -------------------------------------------------------------------------------------------------
+
+    // Description info
+
+    const description = getProperty(item, 'description');
+
+    const hasValidDescription =
+      typeof description === 'string' &&
+      description.length > 0 &&
+      description != " ";
+
+    if (hasValidDescription) {
+      numItemsWithDescription++;
+    }
+
+    // -------------------------------------------------------------------------------------------------
+
     // URL info
 
     if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
@@ -332,8 +363,18 @@ function postDataQuality(items) {
   console.log(`Number of items with matching activities: ${numItemsWithActivity}`);
   console.log(`Number of unique activities: ${activityCounts.size}`);
 
-  const percent3 = (numItemsWithActivity / numItems) * 100 || 0;
-  const rounded3 = percent3.toFixed(1);
+  const percent3_a = (numItemsWithActivity / numItems) * 100 || 0;
+  const rounded3_a = percent3_a.toFixed(1);
+
+  console.log(`Number of items with name: ${numItemsWithName}`);
+
+  const percent3_b = (numItemsWithName / numItems) * 100 || 0;
+  const rounded3_b = percent3_b.toFixed(1);
+
+  console.log(`Number of items with description: ${numItemsWithDescription}`);
+
+  const percent3_c = (numItemsWithDescription / numItems) * 100 || 0;
+  const rounded3_c = percent3_c.toFixed(1);
 
   // Sort the activityCounts Map by activity, in ascending order
   // TODO: Check if b[1] - a[1] is correct order, as this is different from sortedDateCounts
@@ -341,8 +382,8 @@ function postDataQuality(items) {
     Array.from(activityCounts.entries()).sort((a, b) => b[1] - a[1])
   );
 
-  // Create a new map from the first 10 entries
-  const top10activities = new Map(Array.from(sortedActivityCounts.entries()).slice(0, 6));
+  // Create a new map from the first x entries
+  const top10activities = new Map(Array.from(sortedActivityCounts.entries()).slice(0, 5));
 
   // -------------------------------------------------------------------------------------------------
 
@@ -399,7 +440,7 @@ function postDataQuality(items) {
       opacity: 0.8,
     },
     series: [{
-      name: 'Sessions/Slots',
+      name: 'Activity Series / Facility Types',
       data: Array.from(top10activities.values()),
     }],
     dataLabels: {
@@ -417,9 +458,9 @@ function postDataQuality(items) {
       }
     },
     subtitle: {
-      text: 'Listings',
+      text: 'Series / Facility Types',
       align: 'left',
-      offsetX: 0,
+      offsetY: 40,
       style: {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
@@ -442,7 +483,11 @@ function postDataQuality(items) {
       title: {
         text: "Top Activities",
         offsetX: -20,
-        offsetY: -15
+        offsetY: -8,          
+        style: {
+          fontSize: '14px',
+          fontWeight: 900,
+      },
       },
       tooltip: {
         enabled: false
@@ -520,11 +565,17 @@ function postDataQuality(items) {
       height: 300,
       type: 'radialBar',
     },
+    title: {
+      text: 'Valid Name, Description or Activity ID',
+      align: 'center',
+      offsetY: 280,
+    },
     fill: {
       colors: ['#A7ABDA'],
     },
-    series: [rounded3],
-    labels: [['Valid Activity', 'ID']],
+    series: [rounded3_a, rounded3_b, rounded3_c],
+    labels: ['Activity ID',
+    'Name','Description'],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -532,7 +583,7 @@ function postDataQuality(items) {
           size: "65%"
         },
         dataLabels: {
-          showOn: "always",
+          show: true,
           name: {
             offsetY: 25,
             show: true,
@@ -544,6 +595,14 @@ function postDataQuality(items) {
             color: "#111",
             fontSize: "30px",
             show: true
+          },
+          total: {
+            show: true,
+            label: ' ',
+            formatter: function (w) {
+              // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+              return Math.max(rounded3_a, rounded3_b, rounded3_c).toFixed(1) + "%";
+            }
           }
         }
       }
@@ -787,9 +846,9 @@ function postDataQuality(items) {
       }
     },
     subtitle: {
-      text: 'Bookable Opportunities',
+      text: ['Bookable Opportunities', '(Sessions / Slots)'],
       align: 'right',
-      offsetX: 0,
+      offsetY: 40,
       style: {
         fontSize: '18px',
         cssClass: 'apexcharts-yaxis-title'
