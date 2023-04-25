@@ -373,6 +373,7 @@ function postDataQuality(items) {
       id: 'bar1',
       group: 'sparklines',
       type: 'bar',
+      width: "100%",
       height: 300,
       toolbar: {
         show: false
@@ -515,6 +516,7 @@ function postDataQuality(items) {
 
   var options_percentItemsWithActivity = {
     chart: {
+      width: "100%",
       height: 300,
       type: 'radialBar',
     },
@@ -553,6 +555,7 @@ function postDataQuality(items) {
 
   var options_percentItemsWithGeo = {
     chart: {
+      width: "100%",
       height: 300,
       type: 'radialBar',
     },
@@ -592,6 +595,7 @@ function postDataQuality(items) {
 
   var options_percentItemsNowToFuture = {
     chart: {
+      width: "100%",
       height: 300,
       type: 'radialBar',
     },
@@ -631,6 +635,7 @@ function postDataQuality(items) {
 
   var options_percentItemsWithUrl = {
     chart: {
+      width: "100%",
       height: 300,
       type: 'radialBar',
     },
@@ -691,6 +696,7 @@ function postDataQuality(items) {
       id: 'sparkline1',
       group: 'sparklines',
       type: 'area',
+      width: "100%",
       height: 300,
       toolbar: {
         show: false
