@@ -228,7 +228,7 @@ function postDataQuality(items) {
       dateCounts.set(dateString, (dateCounts.get(dateString) || 0) + 1);
 
     } else {
-      console.log(`Invalid date: ${date}`);
+      //console.log(`Invalid date: ${date}`);
     }
 
     // -------------------------------------------------------------------------------------------------

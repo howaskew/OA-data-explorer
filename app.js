@@ -127,6 +127,7 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
           publisherName: dataset.publisher.name,
         })
       )))
+      .filter(x => x.type != 'CourseInstance')
       .filter(feed => feed.url && feed.name.substr(0,1).trim());
 
       console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
