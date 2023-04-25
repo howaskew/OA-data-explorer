@@ -28,167 +28,64 @@ function matchToActivityList(id) {
 
 // -------------------------------------------------------------------------------------------------
 
-function runDataQuality(store) {
+function runDataQuality() {
 
-  if (store && subEventFeedTypes.includes(store.feedType)) {
+  numListingsForDisplay = 0;
+  numOppsForDisplay = 0;
+  let storeItemsForDataQuality = [];
 
-    if (store.feedType === 'ScheduledSession') {
-      link = 'superEvent';
-    }
-    else if (store.feedType === 'Slot') {
-      link = 'facilityUse';
-    }
-
-    const urlStems = Object.values(store.items).reduce((accumulator, item) => {
-      if (link && item.data && item.data[link]) {
-        const lastSlashIndex = item.data[link].lastIndexOf('/');
-        const urlStem = item.data[link].substring(0, lastSlashIndex);
-        accumulator.push(urlStem);
-      }
-      return accumulator;
-    }, []);
-
-    uniqueUrlStems = [...new Set(urlStems)];
-
-    console.log(`Unique URL stems: ${uniqueUrlStems}`);
-    // Can be used as a check of the url(s) for related feeds
-  }
-
-  if (store.ingressOrder === 1) {
-
-    // TODO: We used to include this in the following ScheduledSession and Slot conditions, but not now
-    // in order to get store2 regardless. Is the uniqueUrlStems stuff now obsolete?
-    //   && uniqueUrlStems.length > 0
-    if (store.feedType === 'SessionSeries') {
-      store2.firstPage = store1.firstPage.replace('session-series', 'scheduled-sessions');
-    }
-    else if (store.feedType === 'ScheduledSession') {
-      store2.firstPage = store1.firstPage.replace('scheduled-sessions', 'session-series');
-    }
-    else if (store.feedType === 'FacilityUse') {
-      store2.firstPage = store1.firstPage.replace('facility-uses', 'slots');
-    }
-    else if (store.feedType === 'IndividualFacilityUse') {
-      store2.firstPage = store1.firstPage.replace('individual-facility-uses', 'slots');
-    }
-    else if (store.feedType === 'Slot') {
-      store2.firstPage = store1.firstPage.replace('slots', 'facility-uses');
-      if (!(store2.firstPage in feeds)) {
-        store2.firstPage = store1.firstPage.replace('slots', 'individual-facility-uses');
-        if (!(store2.firstPage in feeds)) {
-          store2.firstPage = null;
+  if (
+    storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
+    storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
+    link
+  ) {
+    let combinedStoreItems = [];
+    for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
+      if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
+        const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
+        const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
+        const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id === storeSuperEventItemId);
+        // If the match isn't found then the super-event has been deleted, so lose the sub-event info
+        if (storeSuperEventItem && storeSuperEventItem.data) {
+          // TODO: Double check if this deepcopy attempt correcty preserves type:
+          let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
+          let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
+          storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
+          combinedStoreItems.push(storeSubEventItemCopy);
         }
       }
     }
+    //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
 
-    if (store2.firstPage) {
-      console.log(`store1 endpoint: ${store1.firstPage}`);
-      console.log(`store2 endpoint: ${store2.firstPage}`);
-
-      let filters = {
-        activity: $('#activity-list-id').val(),
-        coverage: $("#Coverage").val(),
-        proximity: $("#Proximity").val(),
-        day: $("#Day").val(),
-        startTime: $("#StartTime").val(),
-        endTime: $("#EndTime").val(),
-        minAge: $("#minAge").val(),
-        maxAge: $("#maxAge").val(),
-        gender: $("#Gender").val(),
-        keywords: $("#Keywords").val(),
-        relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
+    let listings = [];
+    let uniqueListings = null;
+    for (const storeSubEventItem of combinedStoreItems) {
+      if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
+        listings.push(storeSubEventItem.data[link].identifier);
       }
+    }
+    uniqueListings = [...new Set(listings)];
 
-      setStoreItems(store2.firstPage, store2, filters);
-    }
-    else {
-      console.warn('No related feed, data quality from first store only');
-      postDataQuality(Object.values(store1.items));
-    }
+    numListingsForDisplay = uniqueListings.length.toLocaleString();
+    numOppsForDisplay = combinedStoreItems.length.toLocaleString();
+    storeItemsForDataQuality = combinedStoreItems;
   }
-  else if (store.ingressOrder === 2) {
-
-    if (superEventFeedTypes.includes(store1.feedType) && subEventFeedTypes.includes(store2.feedType)) {
-      storeSuperEvent = store1;
-      storeSubEvent = store2;
-    }
-    else if (subEventFeedTypes.includes(store1.feedType) && superEventFeedTypes.includes(store2.feedType)) {
-      storeSuperEvent = store2;
-      storeSubEvent = store1;
-    }
-
-    if (!link) {
-      console.warn('No feed linking variable, can\'t create combined store');
-    }
-
-    if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
-        storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
-        link
-    ) {
-      let combinedStoreItems = [];
-      for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
-        if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
-          const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
-          const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
-          const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id === storeSuperEventItemId);
-          // If the match isn't found then the super-event has been deleted, so lose the sub-event info
-          if (storeSuperEventItem && storeSuperEventItem.data) {
-            // TODO: Double check if this deepcopy attempt correcty preserves type:
-            let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
-            let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
-            storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
-            combinedStoreItems.push(storeSubEventItemCopy);
-          }
-        }
-      }
-      //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
-      postDataQuality(combinedStoreItems);
-    }
-    else if (storeSuperEvent && Object.values(storeSuperEvent.items).length > 0) {
-        console.warn('No combined store, data quality from super-events only');
-        postDataQuality(Object.values(storeSuperEvent.items));
-    }
-    else if (storeSubEvent && Object.values(storeSubEvent.items).length > 0) {
-      console.warn('No combined store, data quality from sub-events only');
-      postDataQuality(Object.values(storeSubEvent.items));
-    }
-    else {
-      console.warn('No combined store and no separate stores, so no data quality');
-    }
+  else {
+    numListingsForDisplay = Object.values(storeSuperEvent.items).length.toLocaleString();
+    numOppsForDisplay = Object.values(storeSubEvent.items).length.toLocaleString();
+    storeItemsForDataQuality = Object.values(storeIngressOrder1.items);
+    console.warn('No combined store, data quality from selected feed only');
   }
 
+  postDataQuality(storeItemsForDataQuality);
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function postDataQuality(items) {
 
-  console.log(items);
-
   $('#summary').empty();
 
-  // Count bookable opportunities - the number of unique items from subevent that appear in combined store (after matching)
-  let numOpps = 0;
-  if (link) {
-    numOpps = items.length;
-  }
-  const numOppsForDisplay = numOpps.toLocaleString();
-
-  // Count listings opportunities - the number of unique items from superevent that appear in combined store (after matching)
-  let numListings = items.length;
-  if (link) {
-    let listings = [];
-    for (const item of items) {
-      if (item.data && item.data[link] && item.data[link].identifier) {
-        listings.push(item.data[link].identifier);
-      }
-    }
-    let uniqueListings = [...new Set(listings)];
-    numListings = uniqueListings.length;
-  }
-  const numListingsForDisplay = numListings.toLocaleString();
-
-  // numItems still used in calculation of percentages
   const numItems = items.length;
 
   // -------------------------------------------------------------------------------------------------

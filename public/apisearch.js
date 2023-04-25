@@ -8,6 +8,7 @@ let activityListRefresh = 0;
 let loadingTimeout = null;
 let loadingDone = false;
 
+let filters;
 let coverage;
 let proximity;
 let day;
@@ -19,26 +20,27 @@ let keywords;
 
 let feeds = {};
 
-let store1 = {
-  ingressOrder: 1
-};
-let store2 = {
-  ingressOrder: 2
-};
-
-let storeSuperEvent = null;
-let storeSubEvent = null;
-
 let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
 let subEventFeedTypes = ['ScheduledSession', 'Slot'];
 
+let storeSuperEvent = {};
+let storeSubEvent = {};
+
+// These will simply point to storeSuperEvent and storeSubEvent:
+let storeIngressOrder1 = null;
+let storeIngressOrder2 = null;
+
 let uniqueUrlStems = [];
-let link = null; //Linking variable between feeds
+let link = null; // Linking variable between super-event and sub-event feeds
+
+let numListingsForDisplay = 0;
+let numOppsForDisplay = 0;
 
 // -------------------------------------------------------------------------------------------------
 
 function clearStore(store) {
   store.items = {};
+  store.ingressOrder = null;
   store.feedType = null;
   store.itemDataType = null;
   store.firstPage = null;
@@ -50,8 +52,8 @@ function clearStore(store) {
   store.uniqueActivities = new Set();
 }
 
-clearStore(store1);
-clearStore(store2);
+clearStore(storeSuperEvent);
+clearStore(storeSubEvent);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -83,7 +85,7 @@ function setStoreItems(url, store, filters) {
       progress.empty();
       progress.append("<div id='progressDiv1'</div>");
     }
-    if (store.ingressOrder === 2 && store.numItems === 0) {
+    else if (store.ingressOrder === 2 && store.numItems === 0) {
       progress.append("<div id='progressDiv2'</div>");
       progress = $("#progressDiv2");
     }
@@ -246,11 +248,26 @@ function setStoreItems(url, store, filters) {
       if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
         results.append("<div><p>No results found</p></div>");
       }
-      store.lastPage = url;
-      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
-      loadingComplete(store);
-    }
 
+      store.lastPage = url;
+      setStoreItemDataType(store);
+      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
+
+      // TODO: This is currently superfluous, check if still needed
+      if (subEventFeedTypes.includes(store.feedType)) {
+        setUniqueUrlStems();
+      }
+
+      console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
+
+      if (store.ingressOrder === 1) {
+        console.log(`Started loading storeIngressOrder2`);
+        setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
+      }
+      else if (store.ingressOrder === 2) {
+        loadingComplete();
+      }
+    }
   })
   .fail(function () {
     const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
@@ -282,38 +299,7 @@ function resolveDate(item, prop) {
 
 // -------------------------------------------------------------------------------------------------
 
-function loadingStart() {
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-  }
-  loadingTimeout = setTimeout(loadingTakingTime, 5000);
-  loadingDone = false;
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function loadingTakingTime() {
-  if (!loadingDone) {
-    $("#loading-time").show();
-  }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function loadingComplete(store) {
-
-  loadingDone = true;
-
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-    loadingTimeout = null;
-  }
-  $("#loading-time").hide();
-
-  console.log(`Finished loading store${store.ingressOrder}`);
-
-  store.feedType = feeds[store.firstPage].type;
-
+function setStoreItemDataType(store) {
   let itemDataTypes = Object.values(store.items).map(item => {
     if (item.data && ((typeof item.data.type === 'string') || (typeof item.data['@type'] === 'string'))) {
       return item.data.type || item.data['@type'];
@@ -337,9 +323,57 @@ function loadingComplete(store) {
   if (store.feedType !== store.itemDataType) {
     console.warn(`Feed type (${store.feedType}) doesn\'t match item data type (${store.itemDataType})`);
   }
+}
 
-  runDataQuality(store);
+// -------------------------------------------------------------------------------------------------
 
+// TODO: This is currently superfluous, check if still needed
+function setUniqueUrlStems() {
+  const urlStems = Object.values(storeSubEvent.items).reduce((accumulator, item) => {
+    if (link && item.data && item.data[link]) {
+      const lastSlashIndex = item.data[link].lastIndexOf('/');
+      const urlStem = item.data[link].substring(0, lastSlashIndex);
+      accumulator.push(urlStem);
+    }
+    return accumulator;
+  }, []);
+
+  // Can be used as a check of the url(s) for related feeds
+  uniqueUrlStems = [...new Set(urlStems)];
+
+  // console.log(`Unique URL stems of storeSubEvent: ${uniqueUrlStems}`);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function loadingStart() {
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+  }
+  loadingTimeout = setTimeout(loadingTakingTime, 5000);
+  loadingDone = false;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function loadingTakingTime() {
+  if (!loadingDone) {
+    $("#loading-time").show();
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function loadingComplete() {
+  loadingDone = true;
+
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+    loadingTimeout = null;
+  }
+  $("#loading-time").hide();
+
+  runDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -887,7 +921,7 @@ function runForm(pageNumber) {
   $("#resultTab").addClass("active");
   $("#resultPanel").addClass("active");
 
-  let filters = {
+  filters = {
     activity: $('#activity-list-id').val(),
     coverage: $("#Coverage").val(),
     proximity: $("#Proximity").val(),
@@ -908,13 +942,75 @@ function runForm(pageNumber) {
 
   loadingStart();
 
-  clearStore(store1);
-  clearStore(store2);
+  clearStore(storeSuperEvent);
+  clearStore(storeSubEvent);
   link = null;
 
-  store1.firstPage = $("#endpoint").val();
+  let storeIngressOrder1FeedTypeKnown = null;
+  if (superEventFeedTypes.includes(feeds[$("#endpoint").val()].type)) {
+    storeIngressOrder1FeedTypeKnown = true;
+    storeIngressOrder1 = storeSuperEvent;
+    storeIngressOrder2 = storeSubEvent;
+  }
+  else if (subEventFeedTypes.includes(feeds[$("#endpoint").val()].type)) {
+    storeIngressOrder1FeedTypeKnown = true;
+    storeIngressOrder1 = storeSubEvent;
+    storeIngressOrder2 = storeSuperEvent;
+  }
+  else {
+    console.error('Unknown initial store feed type, can\'t begin');
+  }
 
-  setStoreItems(store1.firstPage, store1, filters);
+  if (storeIngressOrder1FeedTypeKnown) {
+    storeIngressOrder1.ingressOrder = 1;
+    storeIngressOrder1.firstPage = $("#endpoint").val();
+    storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].type;
+
+    // TODO: We used to include this in the following ScheduledSession and Slot conditions, but not now
+    // in order to get storeIngressOrder2 regardless. Is the uniqueUrlStems stuff now obsolete?
+    //   && uniqueUrlStems.length > 0
+    storeIngressOrder2.ingressOrder = 2;
+    if (storeIngressOrder1.feedType === 'SessionSeries') {
+      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('session-series', 'scheduled-sessions');
+    }
+    else if (storeIngressOrder1.feedType === 'ScheduledSession') {
+      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('scheduled-sessions', 'session-series');
+    }
+    else if (storeIngressOrder1.feedType === 'FacilityUse') {
+      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('facility-uses', 'slots');
+    }
+    else if (storeIngressOrder1.feedType === 'IndividualFacilityUse') {
+      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('individual-facility-uses', 'slots');
+    }
+    else if (storeIngressOrder1.feedType === 'Slot') {
+      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('slots', 'facility-uses');
+      if (!(storeIngressOrder2.firstPage in feeds)) {
+        storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('slots', 'individual-facility-uses');
+        if (!(storeIngressOrder2.firstPage in feeds)) {
+          storeIngressOrder2.firstPage = null;
+        }
+      }
+    }
+    if (storeIngressOrder2.firstPage) {
+      storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
+    }
+
+    if (storeSubEvent.feedType === 'ScheduledSession') {
+      link = 'superEvent';
+    }
+    else if (storeSubEvent.feedType === 'Slot') {
+      link = 'facilityUse';
+    }
+    if (!link) {
+      console.warn('No feed linking variable, can\'t create combined store');
+    }
+
+    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
+    console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
+
+    console.log(`Started loading storeIngressOrder1`);
+    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
