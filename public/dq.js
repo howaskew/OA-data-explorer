@@ -75,6 +75,7 @@ function runDataQuality() {
     numOppsForDisplay = Object.values(storeSubEvent.items).length.toLocaleString();
     storeItemsForDataQuality = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
+  }
 
   postDataQuality(storeItemsForDataQuality);
 }
