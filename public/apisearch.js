@@ -243,7 +243,7 @@ function setStoreItems(url, store, filters) {
     }
     else {
       progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
-      if (page.items.length === 0 && store.numItemsMatchFilters === 0) {
+      if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
         results.append("<div><p>No results found</p></div>");
       }
       store.lastPage = url;
@@ -265,10 +265,11 @@ function setStoreItems(url, store, filters) {
 
 // -------------------------------------------------------------------------------------------------
 
-//Amended to handle embedded subsevents when merging sessions / series
+//Amended to handle embedded / nested subsevents 
 function resolveProperty(item, prop) {
   return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
     (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
+    (item.data.instanceOfCourse && item.data.instanceOfCourse[prop]) ||
     item.data[prop]);
 }
 
@@ -276,7 +277,7 @@ function resolveProperty(item, prop) {
 
 function resolveDate(item, prop) {
   return item.data &&
-  (item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop] ||
+  ((item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop]) ||
     item.data[prop]);
 }
 
