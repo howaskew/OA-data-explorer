@@ -163,7 +163,7 @@ function runDataQuality(store) {
 
 function postDataQuality(items) {
 
-  console.log(items);
+  //console.log(items);
 
   $('#summary').empty();
 
