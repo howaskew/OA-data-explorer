@@ -6,6 +6,7 @@ let scheme_2 = null;
 let activityListRefresh = 0;
 
 let loadingTimeout = null;
+let loadingStarted = null; 
 let loadingDone = false;
 
 let filters;
@@ -208,7 +209,7 @@ function setStoreItems(url, store, filters) {
               else if (store.numItemsMatchFilters === 100) {
                 results.append(
                   "<div class='row rowhover'>" +
-                  "    <div>Only the first 100 items are shown, the rest are hidden (TODO: Add paging)</div>" +
+                  "    <div>Only the first 100 items are shown</div>" +
                   "</div>"
                 );
               }
@@ -272,8 +273,8 @@ function setStoreItems(url, store, filters) {
   .fail(function () {
     const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
     $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
-    $("#results").empty().append("An error has occurred");
-    $("#results").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+    $("#progress").append("An error has occurred");
+    $("#progress").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
     $(".show-error").on("click", function () {
       runForm();
     });
@@ -352,6 +353,7 @@ function loadingStart() {
     clearTimeout(loadingTimeout);
   }
   loadingTimeout = setTimeout(loadingTakingTime, 5000);
+  loadingStarted = true;
   loadingDone = false;
 }
 
@@ -366,6 +368,7 @@ function loadingTakingTime() {
 // -------------------------------------------------------------------------------------------------
 
 function loadingComplete() {
+  loadingStarted = null;
   loadingDone = true;
 
   if (loadingTimeout) {
@@ -912,7 +915,7 @@ function runForm(pageNumber) {
 
   $("#results").empty();
   $("#tabs").show();
-  $("#results").empty();
+  $('#summary').empty();
   $("#graphTab").addClass("disabled").removeClass("active");
   $("#graphPanel").removeClass("active");
   $("#validateTab").removeClass("active").hide();
@@ -1066,7 +1069,9 @@ function setPage() {
     clearForm($("#endpoint").val());
   });
   $("#execute").on("click", function () {
+    if (!loadingStarted) {
     runForm();
+    }
   });
 
   if (getUrlParameter("endpoint") !== undefined) {
@@ -1080,7 +1085,7 @@ function setPage() {
     })
       .done(function () {
         updateEndpointUpdate();
-        if (getUrlParameter("execute") === "true") {
+        if (getUrlParameter("execute") === "true" && loadingStarted !== 'true') {
           runForm();
         }
       });
