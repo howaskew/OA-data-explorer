@@ -30,8 +30,8 @@ function matchToActivityList(id) {
 
 function runDataQuality() {
 
-  numListingsForDisplay = 0;
-  numOppsForDisplay = 0;
+  numListings = 0;
+  numOpps = 0;
   let storeItemsForDataQuality = [];
 
   if (
@@ -66,13 +66,13 @@ function runDataQuality() {
     }
     uniqueListings = [...new Set(listings)];
 
-    numListingsForDisplay = uniqueListings.length.toLocaleString();
-    numOppsForDisplay = combinedStoreItems.length.toLocaleString();
+    numListings = uniqueListings.length;
+    numOpps = combinedStoreItems.length;
     storeItemsForDataQuality = combinedStoreItems;
   }
   else {
-    numListingsForDisplay = Object.values(storeSuperEvent.items).length.toLocaleString();
-    numOppsForDisplay = Object.values(storeSubEvent.items).length.toLocaleString();
+    numListings = Object.values(storeSuperEvent.items).length;
+    numOpps = Object.values(storeSubEvent.items).length;
     storeItemsForDataQuality = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
@@ -306,6 +306,19 @@ function postDataQuality(items) {
     show_y_axis = true;
   }
 
+  let spark1SeriesName = '';
+  if (storeSuperEvent.feedType !== null) {
+    if (storeSuperEvent.feedType === 'SessionSeries') {
+      spark1SeriesName = 'Series';
+    }
+    else {
+      spark1SeriesName = 'Facility Use';
+      if (numListings !== 1) {
+        spark1SeriesName += 's';
+      }
+    }
+  }
+
   let spark1 = {
     chart: {
       id: 'bar1',
@@ -337,7 +350,7 @@ function postDataQuality(items) {
       opacity: 0.8,
     },
     series: [{
-      name: 'Activity Series / Facility Types',
+      name: spark1SeriesName,
       data: Array.from(top10activities.values()),
     }],
     dataLabels: {
@@ -346,7 +359,7 @@ function postDataQuality(items) {
     labels: Array.from(top10activities.keys()),
     colors: ['#71CBF2'],
     title: {
-      text: numListingsForDisplay,
+      text: numListings.toLocaleString(),
       align: 'left',
       offsetX: 0,
       style: {
@@ -355,7 +368,7 @@ function postDataQuality(items) {
       }
     },
     subtitle: {
-      text: 'Series / Facility Types',
+      text: spark1SeriesName,
       align: 'left',
       offsetY: 40,
       style: {
@@ -647,6 +660,22 @@ function postDataQuality(items) {
     };
   }
 
+  let spark6SeriesName = '';
+  if (storeSubEvent.feedType !== null) {
+    if (storeSubEvent.feedType === 'ScheduledSession') {
+      spark6SeriesName = 'Session';
+      if (numOpps !== 1) {
+        spark6SeriesName += 's';
+      }
+    }
+    else {
+      spark6SeriesName = 'Slot';
+      if (numOpps !== 1) {
+        spark6SeriesName += 's';
+      }
+    }
+  }
+
   let spark6 = {
     chart: {
       id: 'sparkline1',
@@ -690,7 +719,7 @@ function postDataQuality(items) {
     },
     annotations: annotation_text,
     series: [{
-      name: 'Sessions/Slots',
+      name: spark6SeriesName,
       data: Array.from(sortedDateCounts.values()),
     }],
     labels: Array.from(sortedDateCounts.keys()),
@@ -734,7 +763,7 @@ function postDataQuality(items) {
     },
     colors: ['#E21483'],
     title: {
-      text: numOppsForDisplay,
+      text: numOpps.toLocaleString(),
       align: 'right',
       offsetX: 0,
       style: {
@@ -743,7 +772,7 @@ function postDataQuality(items) {
       }
     },
     subtitle: {
-      text: ['Bookable Opportunities', '(Sessions / Slots)'],
+      text: spark6SeriesName,
       align: 'right',
       offsetY: 40,
       style: {
