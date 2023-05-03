@@ -33,8 +33,8 @@ let storeIngressOrder2 = null;
 let uniqueUrlStems = [];
 let link = null; // Linking variable between super-event and sub-event feeds
 
-let numListingsForDisplay = 0;
-let numOppsForDisplay = 0;
+let numListings = 0;
+let numOpps = 0;
 
 // -------------------------------------------------------------------------------------------------
 
