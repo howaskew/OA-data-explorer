@@ -1003,9 +1003,6 @@ function runForm(pageNumber) {
       storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
     }
 
-    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
-    console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
-
     if (!storeIngressOrder1.firstPage) {
       console.warn('No storeIngressOrder1 endpoint, can\'t begin');
     }
