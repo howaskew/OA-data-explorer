@@ -21,6 +21,37 @@ let keywords;
 
 let feeds = {};
 
+let sessionSeriesUrlParts = [
+  'session-series',
+  'sessionseries',
+];
+let scheduledSessionUrlParts = [
+  'scheduled-sessions',
+  'scheduledsessions',
+  'scheduled-session',
+  'scheduledsession',
+];
+let facilityUseUrlParts = [
+  'facility-uses',
+  'facilityuses',
+  'facility-use',
+  'facilityuse',
+];
+let individualFacilityUseUrlParts = [
+  'individual-facility-uses',
+  'individual-facilityuses',
+  'individualfacility-uses',
+  'individualfacilityuses',
+  'individual-facility-use',
+  'individual-facilityuse',
+  'individualfacility-use',
+  'individualfacilityuse',
+];
+let slotUrlParts = [
+  'slots',
+  'slot',
+];
+
 let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
 let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
 
@@ -268,7 +299,7 @@ function setStoreItems(url, store, filters) {
       }
       else if (store.ingressOrder === 1 && !link) {
         loadingComplete();
-      }  
+      }
       else if (store.ingressOrder === 2) {
         loadingComplete();
       }
@@ -287,7 +318,7 @@ function setStoreItems(url, store, filters) {
 
 // -------------------------------------------------------------------------------------------------
 
-//Amended to handle embedded / nested superevents 
+//Amended to handle embedded / nested superevents
 function resolveProperty(item, prop) {
   return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
     (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
@@ -301,6 +332,22 @@ function resolveDate(item, prop) {
   return item.data &&
   ((item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop]) ||
     item.data[prop]);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setStoreIngressOrder2FirstPage(feedType1UrlParts, feedType2UrlParts) {
+  for (const feedType1UrlPart of feedType1UrlParts) {
+    if (storeIngressOrder1.firstPage.includes(feedType1UrlPart)) {
+      for (const feedType2UrlPart of feedType2UrlParts) {
+        let storeIngressOrder2FirstPage = storeIngressOrder1.firstPage.replace(feedType1UrlPart, feedType2UrlPart);
+        if (storeIngressOrder2FirstPage in feeds) {
+          storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
+          return;
+        }
+      }
+    }
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -971,67 +1018,61 @@ function runForm(pageNumber) {
 
   if (storeIngressOrder1FeedTypeKnown) {
     storeIngressOrder1.ingressOrder = 1;
-    storeIngressOrder1.firstPage = $("#endpoint").val();
-    storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].type;
-
-    // TODO: We used to include this in the following ScheduledSession and Slot conditions, but not now
-    // in order to get storeIngressOrder2 regardless. Is the uniqueUrlStems stuff now obsolete?
-    //   && uniqueUrlStems.length > 0
     storeIngressOrder2.ingressOrder = 2;
-    if (storeIngressOrder1.feedType === 'SessionSeries') {
-      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('session-series', 'scheduled-sessions');
-    }
-    else if (storeIngressOrder1.feedType === 'ScheduledSession') {
-      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('scheduled-sessions', 'session-series');
-    }
-    else if (storeIngressOrder1.feedType === 'FacilityUse') {
-      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('facility-uses', 'slots');
-    }
-    else if (storeIngressOrder1.feedType === 'IndividualFacilityUse') {
-      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('individual-facility-uses', 'slots');
-    }
-    else if (storeIngressOrder1.feedType === 'Slot') {
-      storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('slots', 'facility-uses');
-      if (!(storeIngressOrder2.firstPage in feeds)) {
-        storeIngressOrder2.firstPage = storeIngressOrder1.firstPage.replace('slots', 'individual-facility-uses');
-        if (!(storeIngressOrder2.firstPage in feeds)) {
-          storeIngressOrder2.firstPage = null;
-        }
-      }
-    }
-    if (storeIngressOrder2.firstPage) {
-      storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
-    }
-
-    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
-    console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
+    storeIngressOrder1.firstPage = $("#endpoint").val();
 
     if (!storeIngressOrder1.firstPage) {
       console.warn('No storeIngressOrder1 endpoint, can\'t begin');
     }
-    if (!storeIngressOrder2.firstPage) {
-      console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
-    }
+    else {
+      storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].type;
 
-    if (storeSubEvent.feedType === 'ScheduledSession') {
-      link = 'superEvent';
-    }
-    else if (storeSubEvent.feedType === 'Slot') {
-      link = 'facilityUse';
-    }
-    if (!link) {
-      console.warn('No feed linking variable, can\'t create combined store');
-    }
+      switch(storeIngressOrder1.feedType) {
+        case 'SessionSeries':
+          setStoreIngressOrder2FirstPage(sessionSeriesUrlParts, scheduledSessionUrlParts);
+          break;
+        case 'ScheduledSession':
+          setStoreIngressOrder2FirstPage(scheduledSessionUrlParts, sessionSeriesUrlParts);
+          break;
+        case 'FacilityUse':
+          setStoreIngressOrder2FirstPage(facilityUseUrlParts, slotUrlParts);
+          break;
+        case 'IndividualFacilityUse':
+          setStoreIngressOrder2FirstPage(individualFacilityUseUrlParts, slotUrlParts);
+          break;
+        case 'Slot':
+          setStoreIngressOrder2FirstPage(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
+          break;
+        default:
+          break;
+      }
+      if (storeIngressOrder2.firstPage) {
+        storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
+      }
+      else {
+        console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
+      }
 
-    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
-    
-    if (link) {
-      console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
+      switch(storeSubEvent.feedType) {
+        case 'ScheduledSession':
+          link = 'superEvent';
+          break;
+        case 'Slot':
+          link = 'facilityUse';
+          break;
+        default:
+          console.warn('No feed linking variable, can\'t create combined store');
+          break;
+      }
+
+      console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
+      if (storeIngressOrder2.firstPage && link) {
+        console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
+      }
+
+      console.log(`Started loading storeIngressOrder1`);
+      setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
     }
-
-    console.log(`Started loading storeIngressOrder1`);
-    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
-
   }
 }
 
