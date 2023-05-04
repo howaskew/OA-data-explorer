@@ -44,8 +44,11 @@ function runDataQuality() {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
         const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
-        const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id === storeSuperEventItemId);
-        // If the match isn't found then the super-event has been deleted, so lose the sub-event info
+        // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
+        // which are purely numeric and stored as a number rather than a string, so we can still match on
+        // storeSuperEventItemId which is always a string:
+        const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+        // If the match isn't found then the super-event has been deleted, so lose the sub-event info:
         if (storeSuperEventItem && storeSuperEventItem.data) {
           // TODO: Double check if this deepcopy attempt correcty preserves type:
           let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
@@ -308,10 +311,10 @@ function postDataQuality(items) {
 
   let spark1SeriesName = '';
   if (storeSuperEvent.feedType !== null) {
-    if (storeSuperEvent.feedType === 'SessionSeries') {
+    if (['SessionSeries'].includes(storeSuperEvent.feedType)) {
       spark1SeriesName = 'Series';
     }
-    else {
+    else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEvent.feedType)) {
       spark1SeriesName = 'Facility Use';
       if (numListings !== 1) {
         spark1SeriesName += 's';
@@ -662,17 +665,17 @@ function postDataQuality(items) {
 
   let spark6SeriesName = '';
   if (storeSubEvent.feedType !== null) {
-    if (storeSubEvent.feedType === 'ScheduledSession') {
+    if (['ScheduledSession'].includes(storeSubEvent.feedType)) {
       spark6SeriesName = 'Session';
-      if (numOpps !== 1) {
-        spark6SeriesName += 's';
-      }
     }
-    else {
+    else if (['Slot'].includes(storeSubEvent.feedType)) {
       spark6SeriesName = 'Slot';
-      if (numOpps !== 1) {
-        spark6SeriesName += 's';
-      }
+    }
+    else if (['Event', 'OnDemandEvent'].includes(storeSubEvent.feedType)) {
+      spark6SeriesName = 'Event';
+    }
+    if (spark6SeriesName.length > 0 && numOpps !== 1) {
+      spark6SeriesName += 's';
     }
   }
 

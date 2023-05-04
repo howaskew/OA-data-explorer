@@ -116,6 +116,14 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       })))
       .filter(dataset => dataset);
 
+// Dataset providers should be encouraged to adjust the following in their dataset pages, and make
+// sure there are none which are undefined, then we won't need the normalisation in the following
+// code block:
+//
+//   'ScheduledSessions' -> 'ScheduledSession'
+//   'sessions' -> 'ScheduledSession'
+//   'Slot for FacilityUse' -> 'Slot'
+
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
           name: dataset.name,
@@ -127,8 +135,17 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
           publisherName: dataset.publisher.name,
         })
       )))
-      .filter(x => x.type != 'CourseInstance')
-      .filter(feed => feed.url && feed.name.substr(0,1).trim());
+      .filter(feed => feed.type !== 'CourseInstance')
+      .filter(feed => feed.url && feed.name.substr(0,1).trim())
+      .map(feed => {
+        if (['ScheduledSessions', 'sessions'].includes(feed.type)) {
+          feed.type = 'ScheduledSession';
+        }
+        else if (['Slot for FacilityUse'].includes(feed.type)) {
+          feed.type = 'Slot';
+        }
+        return feed;
+      });
 
       console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
