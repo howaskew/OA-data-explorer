@@ -33,8 +33,30 @@ function runDataQuality() {
   numListings = 0;
   numOpps = 0;
   let storeItemsForDataQuality = [];
+  let listings = [];
+  let uniqueListings = null;
 
-  if (
+  // First check for any unpacking of superevents or eventschedules
+
+  if (storeSubEvent.feedType === storeSuperEvent.feedType) {
+    console.log("UNPACK?");
+    console.log(Object.values(storeSuperEvent.items).length);
+    console.log(Object.values(storeSubEvent.items).length);
+    link = 'superEvent';
+    storeSubEvent.itemDataType = 'ScheduledSession';
+    for (storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+      if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
+        listings.push(storeSuperEventItem.data[link].identifier);
+      }
+    }
+    uniqueListings = [...new Set(listings)];
+
+    numListings = uniqueListings.length;
+    numOpps = Object.values(storeSuperEvent.items).length;
+    storeItemsForDataQuality = Object.values(storeSuperEvent.items);
+
+  }
+  else if (
     storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
@@ -60,8 +82,6 @@ function runDataQuality() {
     }
     //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
 
-    let listings = [];
-    let uniqueListings = null;
     for (const storeSubEventItem of combinedStoreItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
         listings.push(storeSubEventItem.data[link].identifier);
@@ -396,11 +416,11 @@ function postDataQuality(items) {
       title: {
         text: "Top Activities",
         offsetX: -20,
-        offsetY: -8,          
+        offsetY: -8,
         style: {
           fontSize: '14px',
           fontWeight: 900,
-      },
+        },
       },
       tooltip: {
         enabled: false
@@ -488,7 +508,7 @@ function postDataQuality(items) {
     },
     series: [rounded3_a, rounded3_b, rounded3_c],
     labels: ['Activity ID',
-    'Name','Description'],
+      'Name', 'Description'],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -664,6 +684,14 @@ function postDataQuality(items) {
   }
 
   let spark6SeriesName = '';
+
+
+  console.log(storeSubEvent.feedType);
+  console.log(storeSuperEvent.feedType);
+  console.log(storeSubEvent.itemDataType);
+  console.log(storeSuperEvent.itemDataType);
+
+
   if (storeSubEvent.feedType !== null) {
     if (['ScheduledSession'].includes(storeSubEvent.feedType)) {
       spark6SeriesName = 'Session';

@@ -261,15 +261,14 @@ function setStoreItems(url, store, filters) {
 
       console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
 
-      if (store.ingressOrder === 1) {
-        if (storeIngressOrder2.firstPage) {
-          console.log(`Started loading storeIngressOrder2`);
-          setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
-        }
-        else {
-          loadingComplete();
-        }
+
+      if (store.ingressOrder === 1 && link) {
+        console.log(`Started loading storeIngressOrder2`);
+        setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
       }
+      else if (store.ingressOrder === 1 && !link) {
+        loadingComplete();
+      }  
       else if (store.ingressOrder === 2) {
         loadingComplete();
       }
@@ -288,7 +287,7 @@ function setStoreItems(url, store, filters) {
 
 // -------------------------------------------------------------------------------------------------
 
-//Amended to handle embedded / nested subsevents 
+//Amended to handle embedded / nested superevents 
 function resolveProperty(item, prop) {
   return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
     (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
@@ -1024,10 +1023,15 @@ function runForm(pageNumber) {
       console.warn('No feed linking variable, can\'t create combined store');
     }
 
-    if (storeIngressOrder1.firstPage) {
-      console.log(`Started loading storeIngressOrder1`);
-      setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
+    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
+    
+    if (link) {
+      console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
     }
+
+    console.log(`Started loading storeIngressOrder1`);
+    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
+
   }
 }
 
