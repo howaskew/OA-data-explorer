@@ -137,6 +137,9 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       )))
       .filter(feed => feed.type !== 'CourseInstance')
       .filter(feed => feed.url && feed.name.substr(0,1).trim())
+      .sort(function(feed1, feed2) {
+         return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
+      })
       .map(feed => {
         if (['ScheduledSessions', 'sessions'].includes(feed.type)) {
           feed.type = 'ScheduledSession';
