@@ -22,7 +22,7 @@ let keywords;
 let feeds = {};
 
 let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-let subEventFeedTypes = ['ScheduledSession', 'Slot'];
+let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
 
 let storeSuperEvent = {};
 let storeSubEvent = {};
@@ -260,6 +260,7 @@ function setStoreItems(url, store, filters) {
       }
 
       console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
+
 
       if (store.ingressOrder === 1 && link) {
         console.log(`Started loading storeIngressOrder2`);
@@ -1002,6 +1003,16 @@ function runForm(pageNumber) {
       storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
     }
 
+    console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
+    console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
+
+    if (!storeIngressOrder1.firstPage) {
+      console.warn('No storeIngressOrder1 endpoint, can\'t begin');
+    }
+    if (!storeIngressOrder2.firstPage) {
+      console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
+    }
+
     if (storeSubEvent.feedType === 'ScheduledSession') {
       link = 'superEvent';
     }
@@ -1020,6 +1031,7 @@ function runForm(pageNumber) {
 
     console.log(`Started loading storeIngressOrder1`);
     setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
+
   }
 }
 
@@ -1106,6 +1118,8 @@ function setPage() {
 
 function setEndpoints() {
   $.getJSON("/feeds", function (data) {
+    // Show all unique feed types:
+    // console.log([... new Set(data.feeds.map(feed => feed.type))]);
     $("#endpoint").empty();
     $.each(data.feeds, function (index, feed) {
       feeds[feed.url] = feed;
