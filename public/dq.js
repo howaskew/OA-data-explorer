@@ -34,6 +34,52 @@ function runDataQuality() {
   numOpps = 0;
   let storeItemsForDataQuality = [];
 
+  // First check for any unpacking of superevents or eventschedules
+
+  if (storeSubEvent.feedType === storeSuperEvent.feedType) {
+    console.log("UNPACK?");
+
+    console.log(storeSuperEvent);
+    console.log(Object.values(storeSuperEvent.items).length);
+    console.log(Object.values(storeSubEvent.items).length);
+
+    let unpackedStoreItems = [];
+  
+    Object.values(storeSuperEvent.items).forEach(item => {
+      if (item.data) {
+        const itemType = item.data.type || item.data['@type'];
+        if (itemType === 'ScheduledSession') {
+          unpackedStoreItems[item.id] = {
+            data: {}
+          };
+          for (const key in item.data) {
+            if (key !== 'superEvent') {
+              if (key === '@context') {
+                unpackedStoreItems[item.id].data['@context'] = item.data['@context'];
+              }
+              scheduledSessions[item.id].data[key] = item.data[key];
+            }
+            if (key === 'superEvent') {
+              scheduledSessions[item.id].data[key] = item.data.superEvent.identifier;
+            }
+          }
+        }
+      }
+    });
+          // TODO: Double check if this deepcopy attempt correcty preserves type:
+          let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
+          let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
+          storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
+          combinedStoreItems.push(storeSubEventItemCopy);
+
+
+    //console.log(scheduledSessions);
+    storeSubEvent.items = scheduledSessions;
+    
+    link = 'superEvent';
+
+  }
+
   if (
     storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
@@ -393,11 +439,11 @@ function postDataQuality(items) {
       title: {
         text: "Top Activities",
         offsetX: -20,
-        offsetY: -8,          
+        offsetY: -8,
         style: {
           fontSize: '14px',
           fontWeight: 900,
-      },
+        },
       },
       tooltip: {
         enabled: false
@@ -485,7 +531,7 @@ function postDataQuality(items) {
     },
     series: [rounded3_a, rounded3_b, rounded3_c],
     labels: ['Activity ID',
-    'Name','Description'],
+      'Name', 'Description'],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -661,8 +707,14 @@ function postDataQuality(items) {
   }
 
   let spark6SeriesName = '';
-  if (storeSubEvent.feedType !== null) {
-    if (storeSubEvent.feedType === 'ScheduledSession') {
+
+  console.log(storeSubEvent.feedType);
+  console.log(storeSuperEvent.feedType);
+  console.log(storeSubEvent.itemDataType);
+  console.log(storeSuperEvent.itemDataType);
+
+  if (storeSubEvent.itemDataType !== null) {
+    if (storeSubEvent.itemDataType === 'ScheduledSession') {
       spark6SeriesName = 'Session';
       if (numOpps !== 1) {
         spark6SeriesName += 's';
