@@ -40,21 +40,72 @@ function runDataQuality() {
 
   if (storeSubEvent.feedType === storeSuperEvent.feedType) {
     console.log("UNPACK?");
-    console.log(Object.values(storeSuperEvent.items).length);
-    console.log(Object.values(storeSubEvent.items).length);
-    link = 'superEvent';
-    storeSubEvent.itemDataType = 'ScheduledSession';
-    for (storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-      if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
-        listings.push(storeSuperEventItem.data[link].identifier);
+    console.log(`storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
+    console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
+    console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
+
+    console.log(`storeSubEvent items: ${Object.values(storeSubEvent.items).length}`);
+    console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
+    console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
+
+    console.log(storeSuperEvent);
+
+    //BwD - embedded superevent with series data
+    if (storeSuperEvent.feedType === 'SessionSeries' &&
+      storeSuperEvent.itemDataType === 'ScheduledSession') {
+      link = 'superEvent';
+      storeSubEvent.itemDataType = 'ScheduledSession';
+      for (storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+        if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
+          listings.push(storeSuperEventItem.data[link].identifier);
+        }
       }
+      uniqueListings = [...new Set(listings)];
+
+      numListings = uniqueListings.length;
+      numOpps = Object.values(storeSuperEvent.items).length;
+      storeItemsForDataQuality = Object.values(storeSuperEvent.items);
     }
-    uniqueListings = [...new Set(listings)];
+    //SportSuite - embedded subevent with session data
+    if (storeSuperEvent.feedType === 'SessionSeries' &&
+      storeSuperEvent.itemDataType === 'mixed') {
+      link = 'subEvent';
+      storeSubEvent.itemDataType = 'ScheduledSession';
+      storeSubEvent.items = {};
 
-    numListings = uniqueListings.length;
-    numOpps = Object.values(storeSuperEvent.items).length;
-    storeItemsForDataQuality = Object.values(storeSuperEvent.items);
+      for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+        if (storeSuperEventItem.data && storeSuperEventItem.data[link]) {
+          if (Array.isArray(storeSuperEventItem.data[link])) {
+            const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
+            for (const subevent of storeSuperEventItem.data[link]) {
+              const subEventId = subevent.id || subevent['@id'];
+              storeSubEvent.items[subEventId] = {
+                data: Object.assign({}, subevent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
+              };
+            }
+          }
+        }
+      }
 
+      for (storeSuperEventItem of Object.values(storeSubEvent.items)) {
+        if (storeSuperEventItem.data && storeSuperEventItem.data.superEvent) {
+          const superEventId = storeSuperEventItem.data.superEvent.id ||
+            storeSuperEventItem.data.superEvent['@id'] ||
+            storeSuperEventItem.data.superEvent.identifier
+            ;
+          if (superEventId) {
+            listings.push(superEventId);
+          }
+        }
+
+      }
+
+      uniqueListings = [...new Set(listings)];
+
+      numListings = uniqueListings.length;
+      numOpps = Object.values(storeSubEvent.items).length;
+      storeItemsForDataQuality = Object.values(storeSubEvent.items);
+    }
   }
   else if (
     storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
@@ -684,13 +735,6 @@ function postDataQuality(items) {
   }
 
   let spark6SeriesName = '';
-
-
-  console.log(storeSubEvent.feedType);
-  console.log(storeSuperEvent.feedType);
-  console.log(storeSubEvent.itemDataType);
-  console.log(storeSuperEvent.itemDataType);
-
 
   if (storeSubEvent.feedType !== null) {
     if (['ScheduledSession'].includes(storeSubEvent.feedType)) {
