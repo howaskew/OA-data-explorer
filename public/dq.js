@@ -33,54 +33,30 @@ function runDataQuality() {
   numListings = 0;
   numOpps = 0;
   let storeItemsForDataQuality = [];
+  let listings = [];
+  let uniqueListings = null;
 
   // First check for any unpacking of superevents or eventschedules
 
   if (storeSubEvent.feedType === storeSuperEvent.feedType) {
     console.log("UNPACK?");
-
-    console.log(storeSuperEvent);
     console.log(Object.values(storeSuperEvent.items).length);
     console.log(Object.values(storeSubEvent.items).length);
-
-    let unpackedStoreItems = [];
-  
-    Object.values(storeSuperEvent.items).forEach(item => {
-      if (item.data) {
-        const itemType = item.data.type || item.data['@type'];
-        if (itemType === 'ScheduledSession') {
-          unpackedStoreItems[item.id] = {
-            data: {}
-          };
-          for (const key in item.data) {
-            if (key !== 'superEvent') {
-              if (key === '@context') {
-                unpackedStoreItems[item.id].data['@context'] = item.data['@context'];
-              }
-              scheduledSessions[item.id].data[key] = item.data[key];
-            }
-            if (key === 'superEvent') {
-              scheduledSessions[item.id].data[key] = item.data.superEvent.identifier;
-            }
-          }
-        }
-      }
-    });
-          // TODO: Double check if this deepcopy attempt correcty preserves type:
-          let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
-          let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
-          storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
-          combinedStoreItems.push(storeSubEventItemCopy);
-
-
-    //console.log(scheduledSessions);
-    storeSubEvent.items = scheduledSessions;
-    
     link = 'superEvent';
+    storeSubEvent.itemDataType = 'ScheduledSession';
+    for (storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+      if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
+        listings.push(storeSuperEventItem.data[link].identifier);
+      }
+    }
+    uniqueListings = [...new Set(listings)];
+
+    numListings = uniqueListings.length;
+    numOpps = Object.values(storeSuperEvent.items).length;
+    storeItemsForDataQuality = Object.values(storeSuperEvent.items);
 
   }
-
-  if (
+  else if (
     storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
@@ -103,8 +79,6 @@ function runDataQuality() {
     }
     //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
 
-    let listings = [];
-    let uniqueListings = null;
     for (const storeSubEventItem of combinedStoreItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
         listings.push(storeSubEventItem.data[link].identifier);
