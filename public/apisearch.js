@@ -177,81 +177,80 @@ function setStoreItems(url, store, filters) {
             ? true
             : resolveProperty(item, 'genderRestriction') === filters.gender;
 
-        if (itemMatchesActivity &&
+        if (
+          itemMatchesActivity &&
           itemMatchesDay &&
-          itemMatchesGender) {
-          let itemMatchesFilters =
-            itemMatchesActivity &&
-            itemMatchesDay &&
-            itemMatchesGender;
+          itemMatchesGender
+        ) {
 
           if (!store.items.hasOwnProperty(item.id)) {
             store.numItemsMatchFilters++;
           }
-          if (itemMatchesFilters) {
 
-            if (!store.items.hasOwnProperty(item.id) ||
-              (item.modified > store.items[item.id].modified)) {
-              store.items[item.id] = item;
+          if (
+            !store.items.hasOwnProperty(item.id) ||
+            (item.modified > store.items[item.id].modified)
+          ) {
+            store.items[item.id] = item;
+          }
+
+          if (store.ingressOrder === 1) {
+            if (store.numItemsMatchFilters < 100) {
+
+              results.append(
+                `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+                `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+                `    <div class='col'>${(resolveProperty (item, 'name') || '')}</div>` +
+                `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+                `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+                `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+                `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+                `    <div class='col'>` +
+                `        <div class='visualise'>` +
+                `            <div class='row'>` +
+                `                <div class='col' style='text-align: right'>` +
+                // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+                `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+                `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+                //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                `                </div>` +
+                `            </div>` +
+                `        </div>` +
+                `    </div>` +
+                `</div>`
+              );
+
+              $(`#json${store.numItemsMatchFilters}`).on("click", function () {
+                getVisualise(store, item.id);
+              });
+              $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
+                openValidator(store, item.id);
+                //getValidate(item.id);
+              });
+              $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
+                getRichness(store, item.id);
+              });
+
+              if (item.id.length > 8) {
+                $(`#col${store.numItemsMatchFilters}`).hover(
+                  function () {
+                    $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
+                    $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+                  },
+                  function () {
+                    $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
+                    $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+                  }
+                );
+              }
+
             }
-            if (store.ingressOrder === 1) {
-              if (store.numItemsMatchFilters < 100) {
-
-                results.append(
-                  `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-                  `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${(resolveProperty (item, 'name') || '')}</div>` +
-                  `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-                  `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
-                  `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
-                  `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-                  `    <div class='col'>` +
-                  `        <div class='visualise'>` +
-                  `            <div class='row'>` +
-                  `                <div class='col' style='text-align: right'>` +
-                  // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-                  `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-                  `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-                  //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-                  `                </div>` +
-                  `            </div>` +
-                  `        </div>` +
-                  `    </div>` +
-                  `</div>`
-                );
-
-                $(`#json${store.numItemsMatchFilters}`).on("click", function () {
-                  getVisualise(store, item.id);
-                });
-                $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
-                  openValidator(store, item.id);
-                  //getValidate(item.id);
-                });
-                $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
-                  getRichness(store, item.id);
-                });
-
-                if (item.id.length > 8) {
-                  $(`#col${store.numItemsMatchFilters}`).hover(
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
-                    },
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
-                    }
-                  );
-                }
-
-              }
-              else if (store.numItemsMatchFilters === 100) {
-                results.append(
-                  "<div class='row rowhover'>" +
-                  "    <div>Only the first 100 items are shown</div>" +
-                  "</div>"
-                );
-              }
+            else if (store.numItemsMatchFilters === 100) {
+              results.append(
+                "<div class='row rowhover'>" +
+                "    <div>Only the first 100 items are shown</div>" +
+                "</div>"
+              );
             }
           }
 
