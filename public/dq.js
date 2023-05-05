@@ -30,6 +30,8 @@ function matchToActivityList(id) {
 
 function runDataQuality() {
 
+  storeSuperEventContentType = null;
+  storeSubEventContentType = null;
   numListings = 0;
   numOpps = 0;
   let storeItemsForDataQuality = [];
@@ -37,25 +39,34 @@ function runDataQuality() {
   let uniqueListings = null;
 
   // First check for any unpacking of superevents or eventschedules
+  if (
+    storeSuperEvent &&
+    storeSubEvent &&
+    storeSuperEvent.feedType === storeSubEvent.feedType
+  ) {
+    console.log('UNPACK?');
 
-  if (storeSubEvent.feedType === storeSuperEvent.feedType) {
-    console.log("UNPACK?");
     console.log(`storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
     console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
+    console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
     console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
 
     console.log(`storeSubEvent items: ${Object.values(storeSubEvent.items).length}`);
     console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
+    console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
     console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
 
     console.log(storeSuperEvent);
 
     //BwD - embedded superevent with series data
-    if (storeSuperEvent.feedType === 'SessionSeries' &&
-      storeSuperEvent.itemDataType === 'ScheduledSession') {
+    if (
+      storeSuperEvent.feedType === 'SessionSeries' &&
+      storeSuperEvent.itemDataType === 'ScheduledSession'
+    ) {
       link = 'superEvent';
       storeSubEvent.itemDataType = 'ScheduledSession';
-      for (storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+
+      for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
         if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
           listings.push(storeSuperEventItem.data[link].identifier);
         }
@@ -66,9 +77,12 @@ function runDataQuality() {
       numOpps = Object.values(storeSuperEvent.items).length;
       storeItemsForDataQuality = Object.values(storeSuperEvent.items);
     }
+
     //SportSuite - embedded subevent with session data
-    if (storeSuperEvent.feedType === 'SessionSeries' &&
-      storeSuperEvent.itemDataType === 'mixed') {
+    else if (
+      storeSuperEvent.feedType === 'SessionSeries' &&
+      storeSuperEvent.itemDataType === 'mixed'
+    ) {
       link = 'subEvent';
       storeSubEvent.itemDataType = 'ScheduledSession';
       storeSubEvent.items = {};
@@ -77,29 +91,27 @@ function runDataQuality() {
         if (storeSuperEventItem.data && storeSuperEventItem.data[link]) {
           if (Array.isArray(storeSuperEventItem.data[link])) {
             const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
-            for (const subevent of storeSuperEventItem.data[link]) {
-              const subEventId = subevent.id || subevent['@id'];
+            for (const subEvent of storeSuperEventItem.data[link]) {
+              const subEventId = subEvent.id || subEvent['@id'];
               storeSubEvent.items[subEventId] = {
-                data: Object.assign({}, subevent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
+                data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
               };
             }
           }
         }
       }
 
-      for (storeSuperEventItem of Object.values(storeSubEvent.items)) {
+      for (const storeSuperEventItem of Object.values(storeSubEvent.items)) {
         if (storeSuperEventItem.data && storeSuperEventItem.data.superEvent) {
-          const superEventId = storeSuperEventItem.data.superEvent.id ||
+          const superEventId =
+            storeSuperEventItem.data.superEvent.id ||
             storeSuperEventItem.data.superEvent['@id'] ||
-            storeSuperEventItem.data.superEvent.identifier
-            ;
+            storeSuperEventItem.data.superEvent.identifier;
           if (superEventId) {
             listings.push(superEventId);
           }
         }
-
       }
-
       uniqueListings = [...new Set(listings)];
 
       numListings = uniqueListings.length;
@@ -131,7 +143,7 @@ function runDataQuality() {
         }
       }
     }
-    //console.log(`Combinded dataset contains: ${combinedStoreItems.length} items`);
+    //console.log(`Combined store contains: ${combinedStoreItems.length} items`);
 
     for (const storeSubEventItem of combinedStoreItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
@@ -145,8 +157,31 @@ function runDataQuality() {
     storeItemsForDataQuality = combinedStoreItems;
   }
   else {
-    numListings = Object.values(storeSuperEvent.items).length;
-    numOpps = Object.values(storeSubEvent.items).length;
+
+    if (!(storeSuperEvent && storeSubEvent)) {
+      // We are here if we don't have storeSuperEvent or storeSubEvent, which should occur only if
+      // storeIngressOrder1.feedType was not found in superEventFeedTypes or subEventFeedTypes when
+      // runForm() was called. In this case, we don't know ahead of reading the full RPDE feed what the
+      // content type is, but now we can try again with itemDataType instead of the unknown feedType. If
+      // the content type is still unknown after this check, then numListings and numOpps retain their
+      // default values of 0.
+      if (superEventFeedTypes.includes(storeIngressOrder1.itemDataType)) {
+        storeSuperEvent = storeIngressOrder1;
+        storeSuperEventContentType = storeIngressOrder1.itemDataType;
+        storeSubEventContentType = 'None';
+      }
+      else if (subEventFeedTypes.includes(storeIngressOrder1.itemDataType)) {
+        storeSubEvent = storeIngressOrder1;
+        storeSubEventContentType = storeIngressOrder1.itemDataType;
+        storeSuperEventContentType = 'None';
+      }
+      else {
+        console.warn('Unknown storeIngressOrder1 itemDataType, can\'t determine whether super-event or sub-event')
+      }
+    }
+
+    numListings = storeSuperEvent ? Object.values(storeSuperEvent.items).length : 0;
+    numOpps = storeSubEvent ? Object.values(storeSubEvent.items).length : 0;
     storeItemsForDataQuality = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
@@ -374,18 +409,20 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-
   let show_y_axis = false;
   if (activityCounts.size > 0) {
     show_y_axis = true;
   }
 
   let spark1SeriesName = '';
-  if (storeSuperEvent.feedType !== null) {
-    if (['SessionSeries'].includes(storeSuperEvent.feedType)) {
+  if (!storeSuperEventContentType && storeSuperEvent) {
+    storeSuperEventContentType = storeSuperEvent.feedType;
+  }
+  if (storeSuperEventContentType) {
+    if (['SessionSeries'].includes(storeSuperEventContentType)) {
       spark1SeriesName = 'Series';
     }
-    else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEvent.feedType)) {
+    else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEventContentType)) {
       spark1SeriesName = 'Facility Use';
       if (numListings !== 1) {
         spark1SeriesName += 's';
@@ -498,8 +535,8 @@ function postDataQuality(items) {
           let words = label.split(" ");
           let lines = [];
           let line = "";
-          for (var i = 0; i < words.length; i++) {
-            var testLine = line + words[i];
+          for (let i = 0; i < words.length; i++) {
+            let testLine = line + words[i];
             if (testLine.length > 10) { // Replace 10 with your desired line length
               lines.push(line.trim());
               line = words[i] + " ";
@@ -543,7 +580,7 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsWithActivity = {
+  let options_percentItemsWithActivity = {
     chart: {
       width: "100%",
       height: 300,
@@ -596,7 +633,7 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsWithGeo = {
+  let options_percentItemsWithGeo = {
     chart: {
       width: "100%",
       height: 300,
@@ -636,7 +673,7 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsNowToFuture = {
+  let options_percentItemsNowToFuture = {
     chart: {
       width: "100%",
       height: 300,
@@ -676,7 +713,7 @@ function postDataQuality(items) {
 
   // -------------------------------------------------------------------------------------------------
 
-  var options_percentItemsWithUrl = {
+  let options_percentItemsWithUrl = {
     chart: {
       width: "100%",
       height: 300,
@@ -735,15 +772,17 @@ function postDataQuality(items) {
   }
 
   let spark6SeriesName = '';
-
-  if (storeSubEvent.feedType !== null) {
-    if (['ScheduledSession'].includes(storeSubEvent.feedType)) {
+  if (!storeSubEventContentType && storeSubEvent) {
+    storeSubEventContentType = storeSubEvent.feedType;
+  }
+  if (storeSubEventContentType) {
+    if (['ScheduledSession'].includes(storeSubEventContentType)) {
       spark6SeriesName = 'Session';
     }
-    else if (['Slot'].includes(storeSubEvent.feedType)) {
+    else if (['Slot'].includes(storeSubEventContentType)) {
       spark6SeriesName = 'Slot';
     }
-    else if (['Event', 'OnDemandEvent'].includes(storeSubEvent.feedType)) {
+    else if (['Event', 'OnDemandEvent'].includes(storeSubEventContentType)) {
       spark6SeriesName = 'Event';
     }
     if (spark6SeriesName.length > 0 && numOpps !== 1) {

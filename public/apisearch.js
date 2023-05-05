@@ -6,7 +6,7 @@ let scheme_2 = null;
 let activityListRefresh = 0;
 
 let loadingTimeout = null;
-let loadingStarted = null; 
+let loadingStarted = null;
 let loadingDone = false;
 
 let filters;
@@ -20,6 +20,30 @@ let maxAge;
 let keywords;
 
 let feeds = {};
+
+let storeIngressOrder1 = {
+  ingressOrder: 1,
+};
+let storeIngressOrder2 = {
+  ingressOrder: 2,
+};
+
+// These will simply point to storeIngressOrder1 and storeIngressOrder2:
+let storeSuperEvent = null;
+let storeSubEvent = null;
+
+// These may be the feedType or the itemDataType, depending on conditions:
+let storeSuperEventContentType = null;
+let storeSubEventContentType = null;
+
+let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
+let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
+
+let uniqueUrlStems = [];
+let link = null; // Linking variable between super-event and sub-event feeds
+
+let numListings = 0;
+let numOpps = 0;
 
 let sessionSeriesUrlParts = [
   'session-series',
@@ -52,29 +76,13 @@ let slotUrlParts = [
   'slot',
 ];
 
-let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
-
-let storeSuperEvent = {};
-let storeSubEvent = {};
-
-// These will simply point to storeSuperEvent and storeSubEvent:
-let storeIngressOrder1 = null;
-let storeIngressOrder2 = null;
-
-let uniqueUrlStems = [];
-let link = null; // Linking variable between super-event and sub-event feeds
-
-let numListings = 0;
-let numOpps = 0;
-
 // -------------------------------------------------------------------------------------------------
 
 function clearStore(store) {
   store.items = {};
-  store.ingressOrder = null;
-  store.feedType = null;
-  store.itemDataType = null;
+  store.feedType = null; // From the dataset page, not the RPDE feed
+  store.itemKind = null; // From the RPDE feed
+  store.itemDataType = null; // From the RPDE feed
   store.firstPage = null;
   store.lastPage = null;
   store.numPages = 0;
@@ -84,8 +92,8 @@ function clearStore(store) {
   store.uniqueActivities = new Set();
 }
 
-clearStore(storeSuperEvent);
-clearStore(storeSubEvent);
+clearStore(storeIngressOrder1);
+clearStore(storeIngressOrder2);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -282,8 +290,28 @@ function setStoreItems(url, store, filters) {
       }
 
       store.lastPage = url;
+      setStoreItemKind(store);
       setStoreItemDataType(store);
-      updateActivityList(store.uniqueActivities); // TODO: Modify if an item has been deleted and was the only instance of that activity
+
+      // console.log(`feedType: ${store.feedType}`);
+      // console.log(`itemKind: ${store.itemKind}`);
+      // console.log(`itemDataType: ${store.itemDataType}`);
+
+      if (
+        (store.feedType !== store.itemKind) ||
+        (store.feedType !== store.itemDataType) ||
+        (store.itemKind !== store.itemDataType)
+      ) {
+        console.warn(
+          `Mismatched content types:\n` +
+          `  feedType: ${store.feedType}\n` +
+          `  itemKind: ${store.itemKind}\n` +
+          `  itemDataType: ${store.itemDataType}`
+        );
+      }
+
+      // TODO: Modify if an item is deleted and was the only instance of that activity
+      updateActivityList(store.uniqueActivities);
 
       // TODO: This is currently superfluous, check if still needed
       if (subEventFeedTypes.includes(store.feedType)) {
@@ -292,15 +320,11 @@ function setStoreItems(url, store, filters) {
 
       console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
 
-
-      if (store.ingressOrder === 1 && link) {
-        console.log(`Started loading storeIngressOrder2`);
+      if (store.ingressOrder === 1 && storeIngressOrder2.firstPage && link) {
+        console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
         setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
       }
-      else if (store.ingressOrder === 1 && !link) {
-        loadingComplete();
-      }
-      else if (store.ingressOrder === 2) {
+      else {
         loadingComplete();
       }
     }
@@ -340,10 +364,15 @@ function setStoreIngressOrder2FirstPage(feedType1UrlParts, feedType2UrlParts) {
   for (const feedType1UrlPart of feedType1UrlParts) {
     if (storeIngressOrder1.firstPage.includes(feedType1UrlPart)) {
       for (const feedType2UrlPart of feedType2UrlParts) {
-        let storeIngressOrder2FirstPage = storeIngressOrder1.firstPage.replace(feedType1UrlPart, feedType2UrlPart);
-        if (storeIngressOrder2FirstPage in feeds) {
-          storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
-          return;
+        // If the sets of URL parts have been properly defined, then we should never have a match here. If
+        // we did, then without this check we would get the same URL for storeIngressOrder1 and storeIngressOrder2,
+        // which would be problematic:
+        if (feedType1UrlPart !== feedType2UrlPart) {
+          let storeIngressOrder2FirstPage = storeIngressOrder1.firstPage.replace(feedType1UrlPart, feedType2UrlPart);
+          if (storeIngressOrder2FirstPage in feeds) {
+            storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
+            return;
+          }
         }
       }
     }
@@ -352,29 +381,56 @@ function setStoreIngressOrder2FirstPage(feedType1UrlParts, feedType2UrlParts) {
 
 // -------------------------------------------------------------------------------------------------
 
+function setStoreItemKind(store) {
+  let itemKinds = Object.values(store.items).map(item => {
+    if (typeof item.kind === 'string') {
+      return item.kind;
+    }
+  })
+  .filter(itemKind => itemKind);
+
+  let uniqueItemKinds = [...new Set(itemKinds)];
+
+  switch(uniqueItemKinds.length) {
+    case 0:
+      store.itemKind = null;
+      break;
+    case 1:
+      store.itemKind = uniqueItemKinds[0];
+      break;
+    default:
+      store.itemKind = 'mixed';
+      break;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function setStoreItemDataType(store) {
   let itemDataTypes = Object.values(store.items).map(item => {
-    if (item.data && ((typeof item.data.type === 'string') || (typeof item.data['@type'] === 'string'))) {
-      return item.data.type || item.data['@type'];
+    if (item.data) {
+      if (typeof item.data.type === 'string') {
+        return item.data.type;
+      }
+      else if (typeof item.data['@type'] === 'string') {
+        return item.data['@type'];
+      }
     }
-  }).filter(itemDataType => itemDataType);
+  })
+  .filter(itemDataType => itemDataType);
 
-  let uniqueitemDataTypes = [...new Set(itemDataTypes)];
+  let uniqueItemDataTypes = [...new Set(itemDataTypes)];
 
-  switch (uniqueitemDataTypes.length) {
+  switch(uniqueItemDataTypes.length) {
     case 0:
       store.itemDataType = null;
       break;
     case 1:
-      store.itemDataType = uniqueitemDataTypes[0];
+      store.itemDataType = uniqueItemDataTypes[0];
       break;
     default:
       store.itemDataType = 'mixed';
       break;
-  }
-
-  if (store.feedType !== store.itemDataType) {
-    console.warn(`Feed type (${store.feedType}) doesn\'t match item data type (${store.itemDataType})`);
   }
 }
 
@@ -997,83 +1053,72 @@ function runForm(pageNumber) {
 
   loadingStart();
 
-  clearStore(storeSuperEvent);
-  clearStore(storeSubEvent);
+  clearStore(storeIngressOrder1);
+  clearStore(storeIngressOrder2);
+  storeSuperEvent = null;
+  storeSubEvent = null;
   link = null;
 
-  let storeIngressOrder1FeedTypeKnown = null;
-  if (superEventFeedTypes.includes(feeds[$("#endpoint").val()].type)) {
-    storeIngressOrder1FeedTypeKnown = true;
-    storeIngressOrder1 = storeSuperEvent;
-    storeIngressOrder2 = storeSubEvent;
+  storeIngressOrder1.firstPage = $("#endpoint").val();
+  storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].hasOwnProperty('type') ? feeds[storeIngressOrder1.firstPage].type : null;
+
+  if (superEventFeedTypes.includes(storeIngressOrder1.feedType)) {
+    storeSuperEvent = storeIngressOrder1;
+    storeSubEvent = storeIngressOrder2;
   }
-  else if (subEventFeedTypes.includes(feeds[$("#endpoint").val()].type)) {
-    storeIngressOrder1FeedTypeKnown = true;
-    storeIngressOrder1 = storeSubEvent;
-    storeIngressOrder2 = storeSuperEvent;
+  else if (subEventFeedTypes.includes(storeIngressOrder1.feedType)) {
+    storeSubEvent = storeIngressOrder1;
+    storeSuperEvent = storeIngressOrder2;
   }
   else {
-    console.error('Unknown initial store feed type, can\'t begin');
+    console.warn('Unknown storeIngressOrder1 feedType, can\'t create combined store');
   }
 
-  if (storeIngressOrder1FeedTypeKnown) {
-    storeIngressOrder1.ingressOrder = 1;
-    storeIngressOrder2.ingressOrder = 2;
-    storeIngressOrder1.firstPage = $("#endpoint").val();
-
-    if (!storeIngressOrder1.firstPage) {
-      console.warn('No storeIngressOrder1 endpoint, can\'t begin');
+  if (storeSuperEvent && storeSubEvent) {
+    switch(storeIngressOrder1.feedType) {
+      case 'SessionSeries':
+        setStoreIngressOrder2FirstPage(sessionSeriesUrlParts, scheduledSessionUrlParts);
+        break;
+      case 'ScheduledSession':
+        setStoreIngressOrder2FirstPage(scheduledSessionUrlParts, sessionSeriesUrlParts);
+        break;
+      case 'FacilityUse':
+        setStoreIngressOrder2FirstPage(facilityUseUrlParts, slotUrlParts);
+        break;
+      case 'IndividualFacilityUse':
+        setStoreIngressOrder2FirstPage(individualFacilityUseUrlParts, slotUrlParts);
+        break;
+      case 'Slot':
+        setStoreIngressOrder2FirstPage(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
+        break;
+      default:
+        break;
+    }
+    if (storeIngressOrder2.firstPage) {
+      storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].hasOwnProperty('type') ? feeds[storeIngressOrder2.firstPage].type : null;
+      if (storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
+        console.warn(`Matching feedType for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1.feedType}'`);
+      }
     }
     else {
-      storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].type;
+      console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
+    }
 
-      switch(storeIngressOrder1.feedType) {
-        case 'SessionSeries':
-          setStoreIngressOrder2FirstPage(sessionSeriesUrlParts, scheduledSessionUrlParts);
-          break;
-        case 'ScheduledSession':
-          setStoreIngressOrder2FirstPage(scheduledSessionUrlParts, sessionSeriesUrlParts);
-          break;
-        case 'FacilityUse':
-          setStoreIngressOrder2FirstPage(facilityUseUrlParts, slotUrlParts);
-          break;
-        case 'IndividualFacilityUse':
-          setStoreIngressOrder2FirstPage(individualFacilityUseUrlParts, slotUrlParts);
-          break;
-        case 'Slot':
-          setStoreIngressOrder2FirstPage(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
-          break;
-        default:
-          break;
-      }
-      if (storeIngressOrder2.firstPage) {
-        storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].type;
-      }
-      else {
-        console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
-      }
-
-      switch(storeSubEvent.feedType) {
-        case 'ScheduledSession':
-          link = 'superEvent';
-          break;
-        case 'Slot':
-          link = 'facilityUse';
-          break;
-        default:
-          console.warn('No feed linking variable, can\'t create combined store');
-          break;
-      }
-
-      console.log(`storeIngressOrder1 endpoint: ${storeIngressOrder1.firstPage}`);
-      if (storeIngressOrder2.firstPage && link) {
-        console.log(`storeIngressOrder2 endpoint: ${storeIngressOrder2.firstPage}`);
-      }
-
-      console.log(`Started loading storeIngressOrder1`);
-      setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
+    switch(storeSubEvent.feedType) {
+      case 'ScheduledSession':
+        link = 'superEvent';
+        break;
+      case 'Slot':
+        link = 'facilityUse';
+        break;
+      default:
+        console.warn('No feed linking variable, can\'t create combined store');
+        break;
     }
   }
+
+  console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
+  setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, filters);
 }
 
 // -------------------------------------------------------------------------------------------------
