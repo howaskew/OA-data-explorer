@@ -117,226 +117,227 @@ function setStoreItems(url, store, filters) {
     url: '/fetch?url=' + encodeURIComponent(url),
     timeout: 30000
   })
-  .done(async function (page) {
+    .done(async function (page) {
 
-    if (store.ingressOrder === 1 && store.numItems === 0) {
-      results.empty();
-      results.append("<div id='resultsDiv'</div>");
-      progress.empty();
-      progress.append("<div id='progressDiv1'</div>");
-    }
-    else if (store.ingressOrder === 2 && store.numItems === 0) {
-      progress.append("<div id='progressDiv2'</div>");
-      progress = $("#progressDiv2");
-    }
+      if (store.ingressOrder === 1 && store.numItems === 0) {
+        results.empty();
+        results.append("<div id='resultsDiv'</div>");
+        progress.empty();
+        progress.append("<div id='progressDiv1'</div>");
+      }
+      else if (store.ingressOrder === 2 && store.numItems === 0) {
+        progress.append("<div id='progressDiv2'</div>");
+        progress = $("#progressDiv2");
+      }
 
-    results = $("#resultsDiv");
-    if (store.ingressOrder === 1) {
-      progress = $("#progressDiv1");
-      progress_text = "Selected feed:"
-    } else {
-      progress = $("#progressDiv2");
-      progress_text = "Related feed:"
-    }
-    $.each(page.content ? page.content : page.items, function (_, item) {
+      results = $("#resultsDiv");
+      if (store.ingressOrder === 1) {
+        progress = $("#progressDiv1");
+        progress_text = "Selected feed:"
+      } else {
+        progress = $("#progressDiv2");
+        progress_text = "Related feed:"
+      }
+      $.each(page.content ? page.content : page.items, function (_, item) {
 
-      store.numItems++;
+        store.numItems++;
 
-      if (item.state === 'updated') {
+        if (item.state === 'updated') {
 
-        let activities = resolveProperty(item, 'activity');
-        if (Array.isArray(activities)) {
-          activities
-            .map(activity => activity.id || activity['@id'])
-            .filter(activityId => activityId)
-            .forEach(activityId => store.uniqueActivities.add(activityId));
-        }
-
-        //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
-
-        //console.log(activities);
-
-        let itemMatchesActivity =
-          !filters.relevantActivitySet
-            ? true
-            : (resolveProperty(item, 'activity') || []).filter(activity =>
-              filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
-            ).length > 0;
-        let itemMatchesDay =
-          !filters.day
-            ? true
-            : item.data
-            && item.data.eventSchedule
-            && item.data.eventSchedule.filter(x =>
-              x.byDay
-              && x.byDay.includes(filters.day)
-              || x.byDay.includes(filters.day.replace('https', 'http'))
-            ).length > 0;
-        let itemMatchesGender =
-          !filters.gender
-            ? true
-            : resolveProperty(item, 'genderRestriction') === filters.gender;
-
-        if (
-          itemMatchesActivity &&
-          itemMatchesDay &&
-          itemMatchesGender
-        ) {
-
-          if (!store.items.hasOwnProperty(item.id)) {
-            store.numItemsMatchFilters++;
+          let activities = resolveProperty(item, 'activity');
+          if (Array.isArray(activities)) {
+            activities
+              .map(activity => activity.id || activity['@id'])
+              .filter(activityId => activityId)
+              .forEach(activityId => store.uniqueActivities.add(activityId));
           }
+
+          //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
+
+          //console.log(activities);
+
+          let itemMatchesActivity =
+            !filters.relevantActivitySet
+              ? true
+              : (resolveProperty(item, 'activity') || []).filter(activity =>
+                filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+              ).length > 0;
+          let itemMatchesDay =
+            !filters.day
+              ? true
+              : item.data
+              && item.data.eventSchedule
+              && item.data.eventSchedule.filter(x =>
+                x.byDay
+                && x.byDay.includes(filters.day)
+                || x.byDay.includes(filters.day.replace('https', 'http'))
+              ).length > 0;
+          let itemMatchesGender =
+            !filters.gender
+              ? true
+              : resolveProperty(item, 'genderRestriction') === filters.gender;
 
           if (
-            !store.items.hasOwnProperty(item.id) ||
-            (item.modified > store.items[item.id].modified)
+            itemMatchesActivity &&
+            itemMatchesDay &&
+            itemMatchesGender
           ) {
-            store.items[item.id] = item;
-          }
 
-          if (store.ingressOrder === 1) {
-            if (store.numItemsMatchFilters < 100) {
+            if (!store.items.hasOwnProperty(item.id)) {
+              store.numItemsMatchFilters++;
+            }
 
-              results.append(
-                `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-                `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                `    <div class='col'>${(resolveProperty (item, 'name') || '')}</div>` +
-                `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-                `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
-                `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
-                `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-                `    <div class='col'>` +
-                `        <div class='visualise'>` +
-                `            <div class='row'>` +
-                `                <div class='col' style='text-align: right'>` +
-                // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-                `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-                `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-                //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-                `                </div>` +
-                `            </div>` +
-                `        </div>` +
-                `    </div>` +
-                `</div>`
-              );
+            if (
+              !store.items.hasOwnProperty(item.id) ||
+              (item.modified > store.items[item.id].modified)
+            ) {
+              store.items[item.id] = item;
+            }
 
-              $(`#json${store.numItemsMatchFilters}`).on("click", function () {
-                getVisualise(store, item.id);
-              });
-              $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
-                openValidator(store, item.id);
-                //getValidate(item.id);
-              });
-              $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
-                getRichness(store, item.id);
-              });
+            if (store.ingressOrder === 1) {
+              if (store.numItemsMatchFilters < 100) {
 
-              if (item.id.length > 8) {
-                $(`#col${store.numItemsMatchFilters}`).hover(
-                  function () {
-                    $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
-                    $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
-                  },
-                  function () {
-                    $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
-                    $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
-                  }
+                results.append(
+                  `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+                  `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+                  `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
+                  `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+                  `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+                  `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+                  `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+                  `    <div class='col'>` +
+                  `        <div class='visualise'>` +
+                  `            <div class='row'>` +
+                  `                <div class='col' style='text-align: right'>` +
+                  // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+                  `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+                  `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+                  //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+                  `                </div>` +
+                  `            </div>` +
+                  `        </div>` +
+                  `    </div>` +
+                  `</div>`
+                );
+
+                $(`#json${store.numItemsMatchFilters}`).on("click", function () {
+                  getVisualise(store, item.id);
+                });
+                $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
+                  openValidator(store, item.id);
+                  //getValidate(item.id);
+                });
+                $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
+                  getRichness(store, item.id);
+                });
+
+                if (item.id.length > 8) {
+                  $(`#col${store.numItemsMatchFilters}`).hover(
+                    function () {
+                      $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
+                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+                    },
+                    function () {
+                      $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
+                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+                    }
+                  );
+                }
+
+              }
+              else if (store.numItemsMatchFilters === 100) {
+                results.append(
+                  "<div class='row rowhover'>" +
+                  "    <div>Only the first 100 items are shown</div>" +
+                  "</div>"
                 );
               }
+            }
 
-            }
-            else if (store.numItemsMatchFilters === 100) {
-              results.append(
-                "<div class='row rowhover'>" +
-                "    <div>Only the first 100 items are shown</div>" +
-                "</div>"
-              );
-            }
           }
 
         }
+        else if ((item.state === 'deleted') &&
+          store.items.hasOwnProperty(item.id)) {
+          delete store.items[item.id];
+          store.numItemsMatchFilters--;
+        }
 
-      }
-      else if ((item.state === 'deleted') &&
-        store.items.hasOwnProperty(item.id)) {
-        delete store.items[item.id];
-        store.numItemsMatchFilters--;
-      }
+      });
 
-    });
-
-    let pageNo = page.number ? page.number : page.page;
-    let firstPage = "";
-    if (page.first === true) {
-      firstPage = "disabled='disabled'";
-    }
-
-    let lastPage = "";
-    if (page.last === true) {
-      lastPage = "disabled='disabled'";
-    }
-
-    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-    if (url !== page.next) {
-      progress.empty();
-      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
-      setStoreItems(page.next, store, filters);
-    }
-    else {
-      progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
-      if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
-        results.append("<div><p>No results found</p></div>");
+      let pageNo = page.number ? page.number : page.page;
+      let firstPage = "";
+      if (page.first === true) {
+        firstPage = "disabled='disabled'";
       }
 
-      store.lastPage = url;
-      setStoreItemKind(store);
-      setStoreItemDataType(store);
-
-      // console.log(`feedType: ${store.feedType}`);
-      // console.log(`itemKind: ${store.itemKind}`);
-      // console.log(`itemDataType: ${store.itemDataType}`);
-
-      if (
-        (store.feedType !== store.itemKind) ||
-        (store.feedType !== store.itemDataType) ||
-        (store.itemKind !== store.itemDataType)
-      ) {
-        console.warn(
-          `Mismatched content types:\n` +
-          `  feedType: ${store.feedType}\n` +
-          `  itemKind: ${store.itemKind}\n` +
-          `  itemDataType: ${store.itemDataType}`
-        );
+      let lastPage = "";
+      if (page.last === true) {
+        lastPage = "disabled='disabled'";
       }
 
-      // TODO: Modify if an item is deleted and was the only instance of that activity
-      updateActivityList(store.uniqueActivities);
-
-      // TODO: This is currently superfluous, check if still needed
-      if (subEventFeedTypes.includes(store.feedType)) {
-        setUniqueUrlStems();
-      }
-
-      console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
-
-      if (store.ingressOrder === 1 && storeIngressOrder2.firstPage && link) {
-        console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
-        setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      if (url !== page.next) {
+        progress.empty();
+        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
+        setStoreItems(page.next, store, filters);
       }
       else {
-        loadingComplete();
+        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+        if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
+          results.append("<div><p>No results found</p></div>");
+        }
+
+        store.lastPage = url;
+        clearCache(store);
+        setStoreItemKind(store);
+        setStoreItemDataType(store);
+
+        // console.log(`feedType: ${store.feedType}`);
+        // console.log(`itemKind: ${store.itemKind}`);
+        // console.log(`itemDataType: ${store.itemDataType}`);
+
+        if (
+          (store.feedType !== store.itemKind) ||
+          (store.feedType !== store.itemDataType) ||
+          (store.itemKind !== store.itemDataType)
+        ) {
+          console.warn(
+            `Mismatched content types:\n` +
+            `  feedType: ${store.feedType}\n` +
+            `  itemKind: ${store.itemKind}\n` +
+            `  itemDataType: ${store.itemDataType}`
+          );
+        }
+
+        // TODO: Modify if an item is deleted and was the only instance of that activity
+        updateActivityList(store.uniqueActivities);
+
+        // TODO: This is currently superfluous, check if still needed
+        if (subEventFeedTypes.includes(store.feedType)) {
+          setUniqueUrlStems();
+        }
+
+        console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
+
+        if (store.ingressOrder === 1 && storeIngressOrder2.firstPage && link) {
+          console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
+          setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
+        }
+        else {
+          loadingComplete();
+        }
       }
-    }
-  })
-  .fail(function () {
-    const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-    $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
-    $("#progress").append("An error has occurred");
-    $("#progress").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
-    $(".show-error").on("click", function () {
-      runForm();
+    })
+    .fail(function () {
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
+      $("#progress").append("An error has occurred");
+      $("#progress").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+      $(".show-error").on("click", function () {
+        runForm();
+      });
     });
-  });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -353,8 +354,8 @@ function resolveProperty(item, prop) {
 
 function resolveDate(item, prop) {
   return item.data &&
-  ((item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop]) ||
-    item.data[prop]);
+    ((item.data.superEvent && item.data.superEvent.eventSchedule && item.data.superEvent.eventSchedule[prop]) ||
+      item.data[prop]);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -386,11 +387,11 @@ function setStoreItemKind(store) {
       return item.kind;
     }
   })
-  .filter(itemKind => itemKind);
+    .filter(itemKind => itemKind);
 
   let uniqueItemKinds = [...new Set(itemKinds)];
 
-  switch(uniqueItemKinds.length) {
+  switch (uniqueItemKinds.length) {
     case 0:
       store.itemKind = null;
       break;
@@ -416,11 +417,11 @@ function setStoreItemDataType(store) {
       }
     }
   })
-  .filter(itemDataType => itemDataType);
+    .filter(itemDataType => itemDataType);
 
   let uniqueItemDataTypes = [...new Set(itemDataTypes)];
 
-  switch(uniqueItemDataTypes.length) {
+  switch (uniqueItemDataTypes.length) {
     case 0:
       store.itemDataType = null;
       break;
@@ -469,6 +470,28 @@ function loadingTakingTime() {
   if (!loadingDone) {
     $("#loading-time").show();
   }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearCache(store) {
+
+  // Call the clear cache endpoint with URL parameter
+  fetch('http://localhost:3000/api/clear-cache', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: store.lastPage })
+  })
+    .then(response => {
+      return response.text();
+    })
+    .then(data => {
+      console.log(data);
+    })
+    .catch(error => {
+      console.log(error);
+    });
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1074,7 +1097,7 @@ function runForm(pageNumber) {
   }
 
   if (storeSuperEvent && storeSubEvent) {
-    switch(storeIngressOrder1.feedType) {
+    switch (storeIngressOrder1.feedType) {
       case 'SessionSeries':
         setStoreIngressOrder2FirstPage(sessionSeriesUrlParts, scheduledSessionUrlParts);
         break;
@@ -1103,7 +1126,7 @@ function runForm(pageNumber) {
       console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
     }
 
-    switch(storeSubEvent.feedType) {
+    switch (storeSubEvent.feedType) {
       case 'ScheduledSession':
         link = 'superEvent';
         break;
@@ -1173,7 +1196,7 @@ function setPage() {
   });
   $("#execute").on("click", function () {
     if (!loadingStarted) {
-    runForm();
+      runForm();
     }
   });
 

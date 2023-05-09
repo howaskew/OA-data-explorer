@@ -171,6 +171,12 @@ app.get('/feeds', function (req, res) {
   res.send({"feeds": feeds});
 });
 
+app.post('/api/clear-cache', (req, res) => {
+  const url = req.body.url;
+  apicache.clear(url);
+  res.send(`Cache cleared for ${url}`);
+});
+
 async function harvest(url) {
   console.log(`Prefetch: ${url}`);
   const { data } = await axios.get(`http://localhost:${port}/fetch?url=` + encodeURIComponent(url));
