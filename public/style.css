@@ -1,3 +1,14 @@
+.mainheading {
+  margin: 1%;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.flex_row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 #api {
   height: 150px;
   overflow-y: scroll;
@@ -12,12 +23,6 @@
   margin-left: 10px;
 }
 
-.mainheading {
-  text-align: center;
-  margin-top: 1%;
-  margin-bottom: 1%;
-}
-
 div.col-md-2, div.col-md-6 {
   margin-right: 0px;
   margin-left: 0px;
@@ -28,11 +33,6 @@ div.col-md-2, div.col-md-6 {
 .top {
   margin-right: 10px;
   margin-left: 10px;
-}
-
-.flex_row {
-  display: flex;
-  flex-wrap: wrap;
 }
 
 .rowhover:hover {
@@ -72,19 +72,20 @@ div.col-md-2, div.col-md-6 {
   padding: 5px;
 }
 
-#summary {
-  height: 150px;
+#summaryPanel {
+  height: 480px !important;
   position: relative;
   bottom: 0;
-  overflow-y: scroll;
+  overflow-y: none;
 }
 
 .sparkboxes .box {
   padding: 3px 0 0 0;
   position: relative;
+  height: 300px !important;
 }
 
-#spark1, #spark2, #spark3, #spark4, #spark5, #spark6 {
+#spark1, #spark2, #spark3, #spark4, #spark5, #spark6, .explainer {
   position: relative;
   padding-right: 15px;
   padding-left: 15px;

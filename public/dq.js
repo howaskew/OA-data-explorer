@@ -26,6 +26,15 @@ function matchToActivityList(id) {
   return null;
 }
 
+function matchToFacilityList(id) {
+  let concept = scheme_2.getConceptByID(id);
+  if (concept) {
+    return concept.prefLabel;
+  }
+  return null;
+}
+
+
 // -------------------------------------------------------------------------------------------------
 
 function runDataQuality() {
@@ -274,6 +283,7 @@ function postDataQuality(items) {
         .map(activity => activity.id || activity['@id'])
         .filter(activityId => activityId)
         .forEach((activityId) => {
+
           // See if there is a matching id / label
           let label = matchToActivityList(activityId);
 
@@ -582,21 +592,39 @@ function postDataQuality(items) {
 
   let options_percentItemsWithActivity = {
     chart: {
-      width: "100%",
       height: 300,
       type: 'radialBar',
-    },
-    title: {
-      text: 'Valid Name, Description or Activity ID',
-      align: 'center',
-      offsetY: 280,
-    },
+      events: {
+        click: function (event, chartContext, config) {
+          //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
+          //alert('Chart clicked')
+          console.log(event)
+          console.log(chartContext)
+          console.log(config)
+        }
+        }
+      },
+    //title: {
+    //  text: 'Valid Name, Description or Activity ID',
+    //  align: 'center',
+    //  offsetY: 280,
+    //},
     fill: {
       colors: ['#A7ABDA'],
     },
+    //fill: {
+    //  colors: [function({ value, seriesIndex, w }) {
+    //    if(value < 55) {
+    //        return '#7E36AF'
+    //    } else if (value >= 55 && value < 80) {
+    //        return '#164666'
+    //    } else {
+    //        return '#D9534F'
+    //    }
+    //  }]
+    //},
     series: [rounded3_a, rounded3_b, rounded3_c],
-    labels: ['Activity ID',
-      'Name', 'Description'],
+    labels: ['Activity ID', 'Name', 'Description'],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -619,10 +647,12 @@ function postDataQuality(items) {
           },
           total: {
             show: true,
-            label: ' ',
+            label: 'Valid Activity ID',
+            color: "#888",
+            fontSize: "18px",
             formatter: function (w) {
               // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-              return Math.max(rounded3_a, rounded3_b, rounded3_c).toFixed(1) + "%";
+              return Math.max(rounded3_a).toFixed(1) + "%";
             }
           }
         }
