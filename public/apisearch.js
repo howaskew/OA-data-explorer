@@ -276,7 +276,7 @@ function setStoreItems(url, store, filters) {
         lastPage = "disabled='disabled'";
       }
 
-      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next) {
         progress.empty();
         progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
@@ -347,6 +347,7 @@ function resolveProperty(item, prop) {
   return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
     (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
     (item.data.instanceOfCourse && item.data.instanceOfCourse[prop]) ||
+    (item.data.facilityUse && item.data.facilityUse[prop]) ||
     item.data[prop]);
 }
 
