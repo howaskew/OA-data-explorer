@@ -32,6 +32,9 @@ let storeIngressOrder2 = {
 let storeSuperEvent = null;
 let storeSubEvent = null;
 
+// This is used to store the results of DQ tests for filtering
+let storeItemsForDataQuality = [];
+
 // These may be the feedType or the itemDataType, depending on conditions:
 let storeSuperEventContentType = null;
 let storeSubEventContentType = null;
@@ -138,12 +141,18 @@ function setStoreItems(url, store, filters) {
         progress = $("#progressDiv2");
         progress_text = "Related feed:"
       }
+
       $.each(page.content ? page.content : page.items, function (_, item) {
 
-        store.numItems++;
+        // Processing each item on the page returned from the API
+
+        store.numItems++; // Count total number of records returned
+
+        // For those records that are 'live' in the feed...
 
         if (item.state === 'updated') {
 
+          // Add activity to list of unique activities (one of the original filters) 
           let activities = resolveProperty(item, 'activity');
           if (Array.isArray(activities)) {
             activities
@@ -155,6 +164,8 @@ function setStoreItems(url, store, filters) {
           //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
 
           //console.log(activities);
+
+          // Filters 
 
           let itemMatchesActivity =
             !filters.relevantActivitySet
@@ -508,6 +519,9 @@ function loadingComplete() {
   $("#loading-time").hide();
 
   runDataQuality();
+
+  console.log(storeItemsForDataQuality);
+
 }
 
 // -------------------------------------------------------------------------------------------------

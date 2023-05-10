@@ -43,7 +43,6 @@ function runDataQuality() {
   storeSubEventContentType = null;
   numListings = 0;
   numOpps = 0;
-  let storeItemsForDataQuality = [];
   let listings = [];
   let uniqueListings = null;
 
@@ -232,6 +231,7 @@ function postDataQuality(items) {
       // Check if the date is greater than or equal to today's date
       if (date >= dateNow) {
         numItemsNowToFuture++;
+        item.DQ_futureDate = 1;
       }
 
       // Get the string representation of the date in the format "YYYY-MM-DD"
@@ -263,6 +263,7 @@ function postDataQuality(items) {
 
     if (hasValidPostalCode || hasValidLatLon) {
       numItemsWithGeo++;
+      item.DQ_validGeo = 1;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -299,6 +300,7 @@ function postDataQuality(items) {
       // Update the count if a matching label found
       if (activityLabelsSet.size > 0) {
         numItemsWithActivity++;
+        item.DQ_validActivity = 1;
       }
 
     }
@@ -316,6 +318,7 @@ function postDataQuality(items) {
 
     if (hasValidName) {
       numItemsWithName++;
+      item.DQ_validName = 1;
     }
     // -------------------------------------------------------------------------------------------------
 
@@ -330,6 +333,7 @@ function postDataQuality(items) {
 
     if (hasValidDescription) {
       numItemsWithDescription++;
+      item.DQ_validDescription = 1;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -338,6 +342,7 @@ function postDataQuality(items) {
 
     if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
       numItemsWithUrl++;
+      item.DQ_validUrl = 1;
     }
     else if (item.data && item.data.url && typeof item.data.url === 'string') {
       urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
@@ -404,7 +409,13 @@ function postDataQuality(items) {
   // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
   // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
   // be the metric we're after, but this may not truly be the case and needs to be investigated.
-  urlCounts.forEach((val, key) => { if (val === 1) { numItemsWithUrl++ } });
+  urlCounts.forEach((val, key) => { if (val === 1) { 
+    numItemsWithUrl++ 
+    //Go back to items and set DQ_validUrl to 1 where key matches url
+    //items.DQ_validGeo = 1;
+  } });
+
+
 
   console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
 
