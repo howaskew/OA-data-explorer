@@ -19,6 +19,13 @@ let minAge;
 let maxAge;
 let keywords;
 
+let chart1;
+let chart2;
+let chart3;
+let chart4;
+let chart5;
+let chart6;
+
 let feeds = {};
 
 let storeIngressOrder1 = {
@@ -31,6 +38,9 @@ let storeIngressOrder2 = {
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
 let storeSuperEvent = null;
 let storeSubEvent = null;
+
+// This is used to store the results of DQ tests for filtering
+let storeItemsForDataQuality = [];
 
 // These may be the feedType or the itemDataType, depending on conditions:
 let storeSuperEventContentType = null;
@@ -94,6 +104,128 @@ function clearStore(store) {
 
 clearStore(storeIngressOrder1);
 clearStore(storeIngressOrder2);
+clearStore(storeItemsForDataQuality);
+
+// -------------------------------------------------------------------------------------------------
+
+// Pulling the display of results out of the API paging loop
+// This is to allow the DQ filters to be applied along with original filters
+
+function postResults(store, filters) {
+
+  //console.log(`DQ Filter Dates: ${filters.DQ_filterDates}`);
+
+  store.numItemsMatchFilters = 0;
+
+  for (const item of Object.values(store.items)) {
+
+    // Add activity to list of unique activities (one of the original filters) 
+    let activities = resolveProperty(item, 'activity');
+    if (Array.isArray(activities)) {
+      activities
+        .map(activity => activity.id || activity['@id'])
+        .filter(activityId => activityId)
+        .forEach(activityId => store.uniqueActivities.add(activityId));
+    }
+
+    // Filters 
+
+    let itemMatchesActivity =
+      !filters.relevantActivitySet
+        ? true
+        : (resolveProperty(item, 'activity') || []).filter(activity =>
+          filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+        ).length > 0;
+    let itemMatchesDay =
+      !filters.day
+        ? true
+        : item.data
+        && item.data.eventSchedule
+        && item.data.eventSchedule.filter(x =>
+          x.byDay
+          && x.byDay.includes(filters.day)
+          || x.byDay.includes(filters.day.replace('https', 'http'))
+        ).length > 0;
+    let itemMatchesGender =
+      !filters.gender
+        ? true
+        : resolveProperty(item, 'genderRestriction') === filters.gender;
+    let itemMatchesDQDateFilter =
+      filters.DQ_filterDates === false || (filters.DQ_filterDates === true && !item.DQ_futureDate);
+
+    if (
+      (itemMatchesActivity &&
+        itemMatchesDay &&
+        itemMatchesGender &&
+        itemMatchesDQDateFilter)
+    ) {
+
+      store.numItemsMatchFilters++;
+
+      if (store.ingressOrder === 1) {
+        if (store.numItemsMatchFilters < 100) {
+          results = $("#resultsDiv");
+          results.append(
+            `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
+            `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+            `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
+            `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+            `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+            `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+            `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+            `    <div class='col'>` +
+            `        <div class='visualise'>` +
+            `            <div class='row'>` +
+            `                <div class='col' style='text-align: right'>` +
+            // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
+            `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+            `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+            //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
+            `                </div>` +
+            `            </div>` +
+            `        </div>` +
+            `    </div>` +
+            `</div>`
+          );
+
+          $(`#json${store.numItemsMatchFilters}`).on("click", function () {
+            getVisualise(store, item.id);
+          });
+          $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
+            openValidator(store, item.id);
+            //getValidate(item.id);
+          });
+          $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
+            getRichness(store, item.id);
+          });
+
+          if (item.id.length > 8) {
+            $(`#col${store.numItemsMatchFilters}`).hover(
+              function () {
+                $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
+                $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+              },
+              function () {
+                $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
+                $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+              }
+            );
+          }
+
+        }
+        else if (store.numItemsMatchFilters === 100) {
+          results.append(
+            "<div class='row rowhover'>" +
+            "    <div>Only the first 100 items are shown</div>" +
+            "</div>"
+          );
+        }
+      }
+    }
+
+
+  }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -130,7 +262,6 @@ function setStoreItems(url, store, filters) {
         progress = $("#progressDiv2");
       }
 
-      results = $("#resultsDiv");
       if (store.ingressOrder === 1) {
         progress = $("#progressDiv1");
         progress_text = "Selected feed:"
@@ -138,129 +269,24 @@ function setStoreItems(url, store, filters) {
         progress = $("#progressDiv2");
         progress_text = "Related feed:"
       }
+
       $.each(page.content ? page.content : page.items, function (_, item) {
 
-        store.numItems++;
+        // Processing each item on the page returned from the API
 
+        store.numItems++; // Count total number of records returned
+
+        // For those records that are 'live' in the feed...
         if (item.state === 'updated') {
-
-          let activities = resolveProperty(item, 'activity');
-          if (Array.isArray(activities)) {
-            activities
-              .map(activity => activity.id || activity['@id'])
-              .filter(activityId => activityId)
-              .forEach(activityId => store.uniqueActivities.add(activityId));
+          //Update the store (check against modified dates for existing items)
+          if (!store.items.hasOwnProperty(item.id) || (item.modified > store.items[item.id].modified)) {
+            store.items[item.id] = item;
           }
-
-          //console.log(`Unique Actvities: ${Object.values(store.uniqueActivities)}`);
-
-          //console.log(activities);
-
-          let itemMatchesActivity =
-            !filters.relevantActivitySet
-              ? true
-              : (resolveProperty(item, 'activity') || []).filter(activity =>
-                filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
-              ).length > 0;
-          let itemMatchesDay =
-            !filters.day
-              ? true
-              : item.data
-              && item.data.eventSchedule
-              && item.data.eventSchedule.filter(x =>
-                x.byDay
-                && x.byDay.includes(filters.day)
-                || x.byDay.includes(filters.day.replace('https', 'http'))
-              ).length > 0;
-          let itemMatchesGender =
-            !filters.gender
-              ? true
-              : resolveProperty(item, 'genderRestriction') === filters.gender;
-
-          if (
-            itemMatchesActivity &&
-            itemMatchesDay &&
-            itemMatchesGender
-          ) {
-
-            if (!store.items.hasOwnProperty(item.id)) {
-              store.numItemsMatchFilters++;
-            }
-
-            if (
-              !store.items.hasOwnProperty(item.id) ||
-              (item.modified > store.items[item.id].modified)
-            ) {
-              store.items[item.id] = item;
-            }
-
-            if (store.ingressOrder === 1) {
-              if (store.numItemsMatchFilters < 100) {
-
-                results.append(
-                  `<div id='col ${store.numItemsMatchFilters}' class='row rowhover'>` +
-                  `    <div id='text ${store.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
-                  `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
-                  `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-                  `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
-                  `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
-                  `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
-                  `    <div class='col'>` +
-                  `        <div class='visualise'>` +
-                  `            <div class='row'>` +
-                  `                <div class='col' style='text-align: right'>` +
-                  // `                    <button id='${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1 visualiseButton'>Visualise</button>` +
-                  `                    <button id='json${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-                  `                    <button id='validate${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
-                  //`                    <button id='richness${store.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Richness</button>` +
-                  `                </div>` +
-                  `            </div>` +
-                  `        </div>` +
-                  `    </div>` +
-                  `</div>`
-                );
-
-                $(`#json${store.numItemsMatchFilters}`).on("click", function () {
-                  getVisualise(store, item.id);
-                });
-                $(`#validate${store.numItemsMatchFilters}`).on("click", function () {
-                  openValidator(store, item.id);
-                  //getValidate(item.id);
-                });
-                $(`#richness${store.numItemsMatchFilters}`).on("click", function () {
-                  getRichness(store, item.id);
-                });
-
-                if (item.id.length > 8) {
-                  $(`#col${store.numItemsMatchFilters}`).hover(
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).removeClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 70%");
-                    },
-                    function () {
-                      $(`#text${store.numItemsMatchFilters}`).addClass("text-truncate");
-                      $(`#text${store.numItemsMatchFilters}`).prop("style", "font-size: 100%");
-                    }
-                  );
-                }
-
-              }
-              else if (store.numItemsMatchFilters === 100) {
-                results.append(
-                  "<div class='row rowhover'>" +
-                  "    <div>Only the first 100 items are shown</div>" +
-                  "</div>"
-                );
-              }
-            }
-
-          }
-
         }
-        else if ((item.state === 'deleted') &&
-          store.items.hasOwnProperty(item.id)) {
+        // For those records that are no longer 'live'...
+        else if ((item.state === 'deleted') && store.items.hasOwnProperty(item.id)) {
+          //Delete any matching items from the store
           delete store.items[item.id];
-          store.numItemsMatchFilters--;
         }
 
       });
@@ -275,6 +301,8 @@ function setStoreItems(url, store, filters) {
       if (page.last === true) {
         lastPage = "disabled='disabled'";
       }
+
+      postResults(store, filters);
 
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next) {
@@ -292,6 +320,8 @@ function setStoreItems(url, store, filters) {
         clearCache(store);
         setStoreItemKind(store);
         setStoreItemDataType(store);
+
+        //console.log(Array.from(store.uniqueActivities));
 
         // console.log(`feedType: ${store.feedType}`);
         // console.log(`itemKind: ${store.itemKind}`);
@@ -313,11 +343,6 @@ function setStoreItems(url, store, filters) {
         // TODO: Modify if an item is deleted and was the only instance of that activity
         updateActivityList(store.uniqueActivities);
 
-        // TODO: This is currently superfluous, check if still needed
-        if (subEventFeedTypes.includes(store.feedType)) {
-          setUniqueUrlStems();
-        }
-
         console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
 
         if (store.ingressOrder === 1 && storeIngressOrder2.firstPage && link) {
@@ -325,7 +350,7 @@ function setStoreItems(url, store, filters) {
           setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2, filters);
         }
         else {
-          loadingComplete();
+          loadingComplete(filters);
         }
       }
     })
@@ -437,25 +462,6 @@ function setStoreItemDataType(store) {
 
 // -------------------------------------------------------------------------------------------------
 
-// TODO: This is currently superfluous, check if still needed
-function setUniqueUrlStems() {
-  const urlStems = Object.values(storeSubEvent.items).reduce((accumulator, item) => {
-    if (link && item.data && item.data[link]) {
-      const lastSlashIndex = item.data[link].lastIndexOf('/');
-      const urlStem = item.data[link].substring(0, lastSlashIndex);
-      accumulator.push(urlStem);
-    }
-    return accumulator;
-  }, []);
-
-  // Can be used as a check of the url(s) for related feeds
-  uniqueUrlStems = [...new Set(urlStems)];
-
-  // console.log(`Unique URL stems of storeSubEvent: ${uniqueUrlStems}`);
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function loadingStart() {
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
@@ -497,7 +503,7 @@ function clearCache(store) {
 
 // -------------------------------------------------------------------------------------------------
 
-function loadingComplete() {
+function loadingComplete(filters) {
   loadingStarted = null;
   loadingDone = true;
 
@@ -507,7 +513,20 @@ function loadingComplete() {
   }
   $("#loading-time").hide();
 
-  runDataQuality();
+
+  if (chart1) {chart1.destroy();}
+  if (chart2) {chart2.destroy();}
+  if (chart3) {chart3.destroy();}
+  if (chart4) {chart4.destroy();}
+  if (chart5) {chart5.destroy();}
+  if (chart6) {chart6.destroy();}
+
+
+
+  runDataQuality(filters);
+  console.log(storeItemsForDataQuality);
+  postResults(storeItemsForDataQuality, filters);
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -615,15 +634,6 @@ function getRelevantActivitySet(id) {
   }
   return null;
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// function getRawJSON(id) {
-//   let url;
-//   url = config.schemaType === "OpenReferral" ? $("#endpoint").val() + "/" + "services" + "/complete/" + id : $("#endpoint").val() + "/" + "services" + "/" + id;
-//   let win = window.open(url, "_blank");
-//   win.focus();
-// }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -909,6 +919,8 @@ function updateParameters(parm, parmVal) {
 
 function updateEndpoint() {
   $("#results").empty();
+  $("#summary").empty();
+  $("tabs").hide();
   $("#graphTab").addClass("disabled").removeClass("active");
   $("#validatePanel").addClass("disabled").removeClass("active");
   $("#validateTab").addClass("disabled").removeClass("active");
@@ -921,7 +933,6 @@ function updateEndpoint() {
   clearForm(endpoint);
 
   $("#Gender").val("");
-  $("#TaxonomyTerm").val("");
   $("#Coverage").val("");
 }
 
@@ -929,18 +940,43 @@ function updateEndpoint() {
 
 function updateEndpointUpdate() {
   if (endpoint !== "") {
-    // $("#TaxonomyType").prop('disabled', false);
-    // $("#Gender").prop('disabled', false);
     $("#execute").prop('disabled', false);
   }
   if (endpoint === "") {
-    $("#TaxonomyType").prop('disabled', true);
     $("#Vocabulary").prop('disabled', true);
     $("#TaxonomyTerm").prop('disabled', true);
     $("#execute").prop('disabled', false);
   }
-  // updateParameters("execute", true);
 }
+
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterDates() {
+  DQ_filterDates = $("#DQ_filterDates").prop("checked");
+  updateParameters("DQ_filterDates", DQ_filterDates);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterActivities() {
+  DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
+  updateParameters("DQ_filterActivities", DQ_filterActivities);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterGeos() {
+  DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
+  updateParameters("DQ_filterGeos", DQ_filterGeos);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterUrls() {
+  DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
+  updateParameters("DQ_filterUrls", DQ_filterUrls);
+}
+
 
 // -------------------------------------------------------------------------------------------------
 
@@ -1022,10 +1058,6 @@ function runForm(pageNumber) {
     error = true;
     alert("Missing Endpoint");
   }
-  if ($("#TaxonomyType").val() === "") {
-    error = true;
-    alert("Missing Taxonomy Type");
-  }
   if ($("#Proximity").val() !== "") {
     if (isNaN($("#Proximity").val())) {
       error = true;
@@ -1045,7 +1077,6 @@ function runForm(pageNumber) {
 
   $("#results").empty();
   $("#tabs").show();
-  $('#summary').empty();
   $("#graphTab").addClass("disabled").removeClass("active");
   $("#graphPanel").removeClass("active");
   $("#validateTab").removeClass("active").hide();
@@ -1057,6 +1088,10 @@ function runForm(pageNumber) {
 
   filters = {
     activity: $('#activity-list-id').val(),
+    DQ_filterDates: $('#DQ_filterDates').prop("checked"),
+    DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
+    DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
+    DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
     proximity: $("#Proximity").val(),
     day: $("#Day").val(),
@@ -1078,6 +1113,8 @@ function runForm(pageNumber) {
 
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
+  clearStore(storeItemsForDataQuality);
+
   storeSuperEvent = null;
   storeSubEvent = null;
   link = null;
@@ -1151,21 +1188,18 @@ function setPage() {
   $("#endpoint").on("change", function () {
     updateEndpoint();
   });
-  // $("#TaxonomyType").on("change", function () {
-  //   updateTaxonomyType(); // TODO: This function doesn't exist ... needed???
-  // });
-  // $("#TaxonomyTerm").on("change", function () {
-  //   updateTaxonomyTerm(); // TODO: This function doesn't exist ... needed???
-  // });
-  // $("#ChildTaxonomyTerm").on("change", function () {
-  //   updateChildTaxonomyTerm(); // TODO: This function doesn't exist ... needed???
-  // });
-  // $("#ChildChildTaxonomyTerm").on("change", function () {
-  //   updateChildChildTaxonomyTerm(); // TODO: This function doesn't exist ... needed???
-  // });
-  // $("#Gender").on("change", function () {
-  //   // TODO: This function doesn't exist ... needed???
-  // });
+  $("#DQ_filterDates").on("change", function () {
+    updateDQ_filterDates();
+  });
+  $("#DQ_filterActivities").on("change", function () {
+    updateDQ_filterActivities();
+  });
+  $("#DQ_filterGeos").on("change", function () {
+    updateDQ_filterGeos();
+  });
+  $("#DQ_filterUrls").on("change", function () {
+    updateDQ_filterUrls();
+  });
   $("#Coverage").on("change", function () {
     updateCoverage();
   });
@@ -1260,8 +1294,6 @@ $(function () {
   $.getJSON('https://openactive.io/facility-types/facility-types.jsonld', function (data) {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
     scheme_2 = new skos.ConceptScheme(data);
-
-    //console.log(scheme_2);
 
   });
 });

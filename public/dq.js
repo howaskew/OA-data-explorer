@@ -37,13 +37,14 @@ function matchToFacilityList(id) {
 
 // -------------------------------------------------------------------------------------------------
 
-function runDataQuality() {
+// This feeds the right data store into the DQ metrics
+
+function runDataQuality(filters) {
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
   numListings = 0;
   numOpps = 0;
-  let storeItemsForDataQuality = [];
   let listings = [];
   let uniqueListings = null;
 
@@ -84,7 +85,7 @@ function runDataQuality() {
 
       numListings = uniqueListings.length;
       numOpps = Object.values(storeSuperEvent.items).length;
-      storeItemsForDataQuality = Object.values(storeSuperEvent.items);
+      storeItemsForDataQuality.items = Object.values(storeSuperEvent.items);
     }
 
     //SportSuite - embedded subevent with session data
@@ -125,7 +126,7 @@ function runDataQuality() {
 
       numListings = uniqueListings.length;
       numOpps = Object.values(storeSubEvent.items).length;
-      storeItemsForDataQuality = Object.values(storeSubEvent.items);
+      storeItemsForDataQuality.items = Object.values(storeSubEvent.items);
     }
   }
   else if (
@@ -163,7 +164,7 @@ function runDataQuality() {
 
     numListings = uniqueListings.length;
     numOpps = combinedStoreItems.length;
-    storeItemsForDataQuality = combinedStoreItems;
+    storeItemsForDataQuality.items = combinedStoreItems;
   }
   else {
 
@@ -191,34 +192,25 @@ function runDataQuality() {
 
     numListings = storeSuperEvent ? Object.values(storeSuperEvent.items).length : 0;
     numOpps = storeSubEvent ? Object.values(storeSubEvent.items).length : 0;
-    storeItemsForDataQuality = Object.values(storeIngressOrder1.items);
+    storeItemsForDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
 
-  postDataQuality(storeItemsForDataQuality);
+  measureDataQuality(storeItemsForDataQuality.items, filters);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function postDataQuality(items) {
 
-  const numItems = items.length;
+// This applies the DQ checks to the whole data store
 
-  // -------------------------------------------------------------------------------------------------
+function measureDataQuality(items, filters) {
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
   const dateNow = new Date();
-  let dateCounts = new Map();
-  let activityCounts = new Map();
-  let urlCounts = new Map();
 
-  let numItemsNowToFuture = 0;
-  let numItemsWithGeo = 0;
-  let numItemsWithActivity = 0;
-  let numItemsWithName = 0;
-  let numItemsWithDescription = 0;
-  let numItemsWithUrl = 0;
+  let urlCounts = new Map();
 
   for (const item of items) {
 
@@ -231,17 +223,9 @@ function postDataQuality(items) {
 
       // Check if the date is greater than or equal to today's date
       if (date >= dateNow) {
-        numItemsNowToFuture++;
+        item.DQ_futureDate = 1;
       }
 
-      // Get the string representation of the date in the format "YYYY-MM-DD"
-      const dateString = date.toISOString().slice(0, 10);
-
-      // Increment the count for the date in the Map
-      dateCounts.set(dateString, (dateCounts.get(dateString) || 0) + 1);
-
-    } else {
-      //console.log(`Invalid date: ${date}`);
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -262,7 +246,7 @@ function postDataQuality(items) {
       typeof longitude === 'number';
 
     if (hasValidPostalCode || hasValidLatLon) {
-      numItemsWithGeo++;
+      item.DQ_validGeo = 1;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -275,9 +259,6 @@ function postDataQuality(items) {
 
     if (Array.isArray(activities)) {
 
-      // Use a set to avoid counting multiple prefLabels for the same row
-      let activityLabelsSet = new Set();
-
       // Unpack the activity json
       activities
         .map(activity => activity.id || activity['@id'])
@@ -288,20 +269,14 @@ function postDataQuality(items) {
           let label = matchToActivityList(activityId);
 
           if (label) {
-            // Add to row level list of labels
-            activityLabelsSet.add(label);
-            // Add to feed level list of labels
-            activityCounts.set(label, (activityCounts.get(label) || 0) + 1);
+            // Update item if a matching label found
+            item.DQ_validActivity = 1;
           }
 
         });
 
-      // Update the count if a matching label found
-      if (activityLabelsSet.size > 0) {
-        numItemsWithActivity++;
-      }
-
     }
+
 
     // -------------------------------------------------------------------------------------------------
 
@@ -315,7 +290,7 @@ function postDataQuality(items) {
       name != " ";
 
     if (hasValidName) {
-      numItemsWithName++;
+      item.DQ_validName = 1;
     }
     // -------------------------------------------------------------------------------------------------
 
@@ -329,7 +304,7 @@ function postDataQuality(items) {
       description != " ";
 
     if (hasValidDescription) {
-      numItemsWithDescription++;
+      item.DQ_validDescription = 1;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -337,12 +312,243 @@ function postDataQuality(items) {
     // URL info
 
     if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
-      numItemsWithUrl++;
+      item.DQ_validUrl = 1;
     }
     else if (item.data && item.data.url && typeof item.data.url === 'string') {
       urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
     }
 
+  }
+
+  // After looping through all items and adding all urls to list - now go back and assign flag to those items with unique urls
+  urlCounts.forEach((val, key) => {
+    if (val === 1) {
+      items.forEach(item => {
+        if (item.data && item.data.url && typeof item.data.url === 'string' && item.data.url === key) {
+          item.DQ_validUrl = 1;
+        }
+      });
+    }
+  });
+
+  postDataQuality(items, filters);
+
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// This calculates DQ scores for the filtered data
+
+function postDataQuality(items, filters) {
+
+  console.log(filters);
+
+  let numItems = 0;
+
+  // -------------------------------------------------------------------------------------------------
+
+  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+
+  const dateNow = new Date();
+  let dateCounts = new Map();
+  let activityCounts = new Map();
+  let urlCounts = new Map();
+
+
+  let numItemsNowToFuture = 0;
+  let numItemsWithGeo = 0;
+  let numItemsWithActivity = 0;
+  let numItemsWithName = 0;
+  let numItemsWithDescription = 0;
+  let numItemsWithUrl = 0;
+
+  for (const item of items) {
+
+    // Filters 
+
+    let itemMatchesActivity =
+      !filters.relevantActivitySet
+        ? true
+        : (resolveProperty(item, 'activity') || []).filter(activity =>
+          filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
+        ).length > 0;
+    let itemMatchesDay =
+      !filters.day
+        ? true
+        : item.data
+        && item.data.eventSchedule
+        && item.data.eventSchedule.filter(x =>
+          x.byDay
+          && x.byDay.includes(filters.day)
+          || x.byDay.includes(filters.day.replace('https', 'http'))
+        ).length > 0;
+    let itemMatchesGender =
+      !filters.gender
+        ? true
+        : resolveProperty(item, 'genderRestriction') === filters.gender;
+
+
+    let itemPassedDQDates =
+      item.DQ_futureDate || 0;
+    let itemMatchesDQDateFilter =
+      filters.DQ_filterDates === false || (filters.DQ_filterDates === true && itemPassedDQDates === 0);
+
+    let itemPassedDQActivities =
+      item.DQ_validActivity || 0;
+    let itemMatchesDQActivityFilter =
+      filters.DQ_filterActivities === false || (filters.DQ_filterActivities === true && itemPassedDQActivities === 0);
+
+    let itemPassedDQGeo =
+      item.DQ_validGeo || 0;
+    let itemMatchesDQGeoFilter =
+      filters.DQ_filterGeos === false || (filters.DQ_filterGeos === true && itemPassedDQGeo === 0);
+
+    let itemPassedDQUrl =
+      item.DQ_validUrl || 0;
+    let itemMatchesDQUrlFilter =
+      filters.DQ_filterUrls === false || (filters.DQ_filterUrls === true && itemPassedDQUrl === 0);
+
+
+    if (
+      (itemMatchesActivity &&
+        itemMatchesDay &&
+        itemMatchesGender &&
+        itemMatchesDQDateFilter &&
+        itemMatchesDQActivityFilter &&
+        itemMatchesDQGeoFilter &&
+        itemMatchesDQUrlFilter)
+    ) {
+
+      numItems++;
+
+      // Date info
+
+      // Convert the date to a JavaScript Date object
+      const date = new Date(item.data.startDate);
+
+      if (!isNaN(date)) {
+
+        // Check if the date is greater than or equal to today's date
+        if (date >= dateNow) {
+          numItemsNowToFuture++;
+          item.DQ_futureDate = 1;
+        }
+
+        // Get the string representation of the date in the format "YYYY-MM-DD"
+        const dateString = date.toISOString().slice(0, 10);
+
+        // Increment the count for the date in the Map
+        dateCounts.set(dateString, (dateCounts.get(dateString) || 0) + 1);
+
+      } else {
+        //console.log(`Invalid date: ${date}`);
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // Geo info
+
+      const postalCode = getProperty(item, 'postalCode');
+      const latitude = getProperty(item, 'latitude');
+      const longitude = getProperty(item, 'longitude');
+
+      const hasValidPostalCode =
+        typeof postalCode === 'string' &&
+        postalCode.length > 0 &&
+        ukPostalCodeRegex.test(postalCode);
+
+      const hasValidLatLon =
+        typeof latitude === 'number' &&
+        typeof longitude === 'number';
+
+      if (hasValidPostalCode || hasValidLatLon) {
+        numItemsWithGeo++;
+        item.DQ_validGeo = 1;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // Activity info
+
+      // Count any ids/label that match in activityCounts
+      // But only increment items with matching activities once
+      let activities = resolveProperty(item, 'activity');
+
+      if (Array.isArray(activities)) {
+
+        // Use a set to avoid counting multiple prefLabels for the same row
+        let activityLabelsSet = new Set();
+
+        // Unpack the activity json
+        activities
+          .map(activity => activity.id || activity['@id'])
+          .filter(activityId => activityId)
+          .forEach((activityId) => {
+
+            // See if there is a matching id / label
+            let label = matchToActivityList(activityId);
+
+            if (label) {
+              // Add to row level list of labels
+              activityLabelsSet.add(label);
+              // Add to feed level list of labels
+              activityCounts.set(label, (activityCounts.get(label) || 0) + 1);
+            }
+
+          });
+
+        // Update the count if a matching label found
+        if (activityLabelsSet.size > 0) {
+          numItemsWithActivity++;
+          item.DQ_validActivity = 1;
+        }
+
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // Name info
+
+      const name = getProperty(item, 'name');
+
+      const hasValidName =
+        typeof name === 'string' &&
+        name.length > 0 &&
+        name != " ";
+
+      if (hasValidName) {
+        numItemsWithName++;
+        item.DQ_validName = 1;
+      }
+      // -------------------------------------------------------------------------------------------------
+
+      // Description info
+
+      const description = getProperty(item, 'description');
+
+      const hasValidDescription =
+        typeof description === 'string' &&
+        description.length > 0 &&
+        description != " ";
+
+      if (hasValidDescription) {
+        numItemsWithDescription++;
+        item.DQ_validDescription = 1;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // URL info
+
+      if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
+        numItemsWithUrl++;
+        item.DQ_validUrl = 1;
+      }
+      else if (item.data && item.data.url && typeof item.data.url === 'string') {
+        urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
+      }
+
+    }
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -404,7 +610,14 @@ function postDataQuality(items) {
   // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
   // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
   // be the metric we're after, but this may not truly be the case and needs to be investigated.
-  urlCounts.forEach((val, key) => { if (val === 1) { numItemsWithUrl++ } });
+  urlCounts.forEach((val, key) => {
+    if (val === 1) {
+      numItemsWithUrl++
+      //    //Go back to items and set DQ_validUrl to 1 where key matches url
+      //    //items.DQ_validGeo = 1;
+    }
+  });
+
 
   console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
 
@@ -415,7 +628,6 @@ function postDataQuality(items) {
 
   // OUTPUT THE METRICS TO THE HTML...
 
-  $('#summary').empty();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -585,7 +797,8 @@ function postDataQuality(items) {
 
   }
 
-  new ApexCharts(document.querySelector("#apexchart1"), spark1).render();
+  chart1 = new ApexCharts(document.querySelector("#apexchart1"), spark1);
+  chart1.render();
 
 
   // -------------------------------------------------------------------------------------------------
@@ -602,8 +815,8 @@ function postDataQuality(items) {
           console.log(chartContext)
           console.log(config)
         }
-        }
-      },
+      }
+    },
     //title: {
     //  text: 'Valid Name, Description or Activity ID',
     //  align: 'center',
@@ -659,7 +872,8 @@ function postDataQuality(items) {
       }
     }
   }
-  new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity).render();
+  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
+  chart2.render();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -699,7 +913,8 @@ function postDataQuality(items) {
     }
   }
 
-  new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo).render();
+  chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
+  chart3.render();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -739,7 +954,8 @@ function postDataQuality(items) {
     }
   }
 
-  new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture).render();
+  chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
+  chart4.render();
 
   // -------------------------------------------------------------------------------------------------
 
@@ -778,7 +994,8 @@ function postDataQuality(items) {
       }
     }
   }
-  new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl).render();
+  chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
+  chart5.render();
 
 
   // -------------------------------------------------------------------------------------------------
@@ -926,6 +1143,7 @@ function postDataQuality(items) {
     }
   }
 
-  new ApexCharts(document.querySelector("#apexchart6"), spark6).render();
+  chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
+  chart6.render();
 
 }
