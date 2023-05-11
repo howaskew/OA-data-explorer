@@ -613,8 +613,6 @@ function postDataQuality(items, filters) {
   urlCounts.forEach((val, key) => {
     if (val === 1) {
       numItemsWithUrl++
-      //    //Go back to items and set DQ_validUrl to 1 where key matches url
-      //    //items.DQ_validGeo = 1;
     }
   });
 
@@ -631,12 +629,45 @@ function postDataQuality(items, filters) {
 
   // -------------------------------------------------------------------------------------------------
 
+  // Hide y axis if no chart to display
   let show_y_axis = false;
+
   if (activityCounts.size > 0) {
     show_y_axis = true;
   }
 
+  // Show a message if no chart / no matching activities
+
+  let x_axis_title = {};
+
+  if (activityCounts.size < 1) {
+    x_axis_title = {
+      text: "No Matching Activity IDs",
+      offsetX: -5,
+      offsetY: -150,
+      style: {
+        fontSize: '20px',
+        fontWeight: 900,
+      },
+    }
+  } 
+  else {
+    x_axis_title = {
+      text: "Top Activities",
+      offsetX: -20,
+      offsetY: -8,
+      style: {
+        fontSize: '14px',
+        fontWeight: 900,
+      },
+    }
+  }
+
+
+  // Show relevant name based on parent in feed, if present
+
   let spark1SeriesName = '';
+
   if (!storeSuperEventContentType && storeSuperEvent) {
     storeSuperEventContentType = storeSuperEvent.feedType;
   }
@@ -665,13 +696,13 @@ function postDataQuality(items, filters) {
       sparkline: {
         enabled: false,
       },
-      events: {
-        click: function (event) {
-          if ([...event.target.classList].includes('apexcharts-title-text')) {
-            alert('Title clicked')
-          }
-        }
-      }
+      //events: {
+      //  click: function (event) {
+      //    if ([...event.target.classList].includes('apexcharts-title-text')) {
+      //      alert('Title clicked')
+      //    }
+      //  }
+      //}
     },
     plotOptions: {
       bar: {
@@ -723,15 +754,7 @@ function postDataQuality(items, filters) {
       labels: {
         show: false,
       },
-      title: {
-        text: "Top Activities",
-        offsetX: -20,
-        offsetY: -8,
-        style: {
-          fontSize: '14px',
-          fontWeight: 900,
-        },
-      },
+      title: x_axis_title,
       tooltip: {
         enabled: false
       },

@@ -1,12 +1,12 @@
-.mainheading {
-  margin: 1%;
-  justify-content: space-evenly;
-  align-items: center;
-}
-
 .flex_row {
   display: flex;
   flex-wrap: wrap;
+}
+
+.mainheading {
+  margin: 5px;
+  justify-content: space-evenly;
+  align-items: center;
 }
 
 #api {
@@ -68,6 +68,7 @@ div.col-md-2, div.col-md-6 {
   background-image: linear-gradient(to right, rgba(113,203,242,0.8), rgba(226,20,131,0.8));
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
   color: #fff;
   padding: 5px;
