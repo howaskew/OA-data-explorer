@@ -41,9 +41,13 @@ div.col-md-2, div.col-md-6 {
 }
 
 .graph {
+  display: flex;
+  flex-wrap: wrap;
   text-align: left;
-  width: 85vh;
-  height: 85vw;
+}
+
+.visual {
+  width: 50%;
 }
 
 .noPadding {

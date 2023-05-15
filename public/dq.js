@@ -37,9 +37,68 @@ function matchToFacilityList(id) {
 
 // -------------------------------------------------------------------------------------------------
 
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// -------------------------------------------------------------------------------------------------
+
+
+// Pulling the display of results out of the API paging loop
+// This is to allow the DQ filters to be applied along with original filters
+
+function postResults(item) {
+
+  results = $("#resultsDiv");
+  results.append(
+    `<div id='col ${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
+    `    <div id='text ${storeItemsForDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+    `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
+    `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+    `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+    `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+    `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+    `    <div class='col'>` +
+    `        <div class='visualise'>` +
+    `            <div class='row'>` +
+    `                <div class='col' style='text-align: right'>` +
+    `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+    `                    <button id='validate${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+    `                </div>` +
+    `            </div>` +
+    `        </div>` +
+    `    </div>` +
+    `</div>`
+  );
+
+  $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
+    getVisualise(item.id);
+  });
+  $(`#validate${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
+    openValidator(storeItemsForDataQuality, item.id);
+  });
+
+  if (item.id.length > 8) {
+    $(`#col${storeItemsForDataQuality.numItemsMatchFilters}`).hover(
+      function () {
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+      },
+      function () {
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).addClass("text-truncate");
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+      }
+    );
+  }
+
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // This feeds the right data store into the DQ metrics
 
-function runDataQuality(filters) {
+function runDataQuality() {
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
@@ -196,7 +255,7 @@ function runDataQuality(filters) {
     console.warn('No combined store, data quality from selected feed only');
   }
 
-  measureDataQuality(storeItemsForDataQuality.items, filters);
+  measureDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -204,7 +263,7 @@ function runDataQuality(filters) {
 
 // This applies the DQ checks to the whole data store
 
-function measureDataQuality(items, filters) {
+function measureDataQuality() {
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
@@ -212,7 +271,7 @@ function measureDataQuality(items, filters) {
 
   let urlCounts = new Map();
 
-  for (const item of items) {
+  for (const item of storeItemsForDataQuality.items) {
 
     // Date info
 
@@ -331,16 +390,29 @@ function measureDataQuality(items, filters) {
     }
   });
 
-  postDataQuality(items, filters);
+  postDataQuality();
 
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// This calculates DQ scores for the filtered data
+// This calculates DQ scores for the filtered data, and shows results
 
-function postDataQuality(items, filters) {
+function postDataQuality() {
 
+  clearCharts();
+  $("#resultTab").addClass("active");
+  $("#graphTab").removeClass("active");
+  $("#graphPanel").removeClass("active");
+  $("#resultPanel").addClass("active");
+  $("#resultPanel").hide();
+  results = $("#results");
+  results.empty();
+  results.append("<div id='resultsDiv'</div>");
+
+  storeItemsForDataQuality.numItemsMatchFilters = 0;
+
+  getFilters();
   console.log(filters);
 
   let numItems = 0;
@@ -362,7 +434,7 @@ function postDataQuality(items, filters) {
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
 
-  for (const item of items) {
+  for (const item of storeItemsForDataQuality.items) {
 
     // Filters 
 
@@ -421,6 +493,8 @@ function postDataQuality(items, filters) {
 
       numItems++;
 
+      storeItemsForDataQuality.numItemsMatchFilters++;
+
       // Date info
 
       // Convert the date to a JavaScript Date object
@@ -431,7 +505,6 @@ function postDataQuality(items, filters) {
         // Check if the date is greater than or equal to today's date
         if (date >= dateNow) {
           numItemsNowToFuture++;
-          item.DQ_futureDate = 1;
         }
 
         // Get the string representation of the date in the format "YYYY-MM-DD"
@@ -463,7 +536,6 @@ function postDataQuality(items, filters) {
 
       if (hasValidPostalCode || hasValidLatLon) {
         numItemsWithGeo++;
-        item.DQ_validGeo = 1;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -483,7 +555,11 @@ function postDataQuality(items, filters) {
         activities
           .map(activity => activity.id || activity['@id'])
           .filter(activityId => activityId)
-          .forEach((activityId) => {
+
+          .forEach(activityId => {
+            // Add activity to list of unique activities (one of the original filters) - may be superceded
+            storeItemsForDataQuality.uniqueActivities.add(activityId)
+            // New DQ measures
 
             // See if there is a matching id / label
             let label = matchToActivityList(activityId);
@@ -500,7 +576,6 @@ function postDataQuality(items, filters) {
         // Update the count if a matching label found
         if (activityLabelsSet.size > 0) {
           numItemsWithActivity++;
-          item.DQ_validActivity = 1;
         }
 
       }
@@ -518,7 +593,7 @@ function postDataQuality(items, filters) {
 
       if (hasValidName) {
         numItemsWithName++;
-        item.DQ_validName = 1;
+
       }
       // -------------------------------------------------------------------------------------------------
 
@@ -533,7 +608,7 @@ function postDataQuality(items, filters) {
 
       if (hasValidDescription) {
         numItemsWithDescription++;
-        item.DQ_validDescription = 1;
+
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -548,7 +623,31 @@ function postDataQuality(items, filters) {
         urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
       }
 
+      // -------------------------------------------------------------------------------------------------
+
+      //Post results for matching items...
+
+      if (storeItemsForDataQuality.numItemsMatchFilters < 100) {
+        postResults(item);
+      }
+      else if (storeItemsForDataQuality.numItemsMatchFilters === 100) {
+        results.append(
+          "<div class='row rowhover'>" +
+          "    <div>Only the first 100 items are shown</div>" +
+          "</div>"
+        );
+      }
     }
+
+  }
+
+  if (storeItemsForDataQuality.numItemsMatchFilters === 0) {
+    results.empty();
+    results.append(
+      "<div class='row rowhover'>" +
+      "    <div>No matching results found.</div>" +
+      "</div>"
+    );
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -650,7 +749,7 @@ function postDataQuality(items, filters) {
         fontWeight: 900,
       },
     }
-  } 
+  }
   else {
     x_axis_title = {
       text: "Top Activities",
@@ -896,7 +995,8 @@ function postDataQuality(items, filters) {
     }
   }
   chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
-  chart2.render();
+
+  sleep(1000).then(() => {   chart2.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -937,7 +1037,7 @@ function postDataQuality(items, filters) {
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  chart3.render();
+  sleep(2000).then(() => {   chart3.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -978,7 +1078,7 @@ function postDataQuality(items, filters) {
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  chart4.render();
+  sleep(3000).then(() => {   chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1018,7 +1118,7 @@ function postDataQuality(items, filters) {
     }
   }
   chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
-  chart5.render();
+  sleep(4000).then(() => {   chart5.render(); });
 
 
   // -------------------------------------------------------------------------------------------------
@@ -1167,6 +1267,9 @@ function postDataQuality(items, filters) {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  chart6.render();
+  sleep(5000).then(() => {   chart6.render(); });
 
+
+  sleep(6000).then(() => {    $("#resultPanel").fadeIn("slow");  });
 }
+
