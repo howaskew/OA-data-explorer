@@ -37,9 +37,68 @@ function matchToFacilityList(id) {
 
 // -------------------------------------------------------------------------------------------------
 
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// -------------------------------------------------------------------------------------------------
+
+
+// Pulling the display of results out of the API paging loop
+// This is to allow the DQ filters to be applied along with original filters
+
+function postResults(item) {
+
+  results = $("#resultsDiv");
+  results.append(
+    `<div id='col ${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
+    `    <div id='text ${storeItemsForDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+    `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
+    `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
+    `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
+    `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+    `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+    `    <div class='col'>` +
+    `        <div class='visualise'>` +
+    `            <div class='row'>` +
+    `                <div class='col' style='text-align: right'>` +
+    `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+    `                    <button id='validate${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
+    `                </div>` +
+    `            </div>` +
+    `        </div>` +
+    `    </div>` +
+    `</div>`
+  );
+
+  $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
+    getVisualise(item.id);
+  });
+  $(`#validate${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
+    openValidator(storeItemsForDataQuality, item.id);
+  });
+
+  if (item.id.length > 8) {
+    $(`#col${storeItemsForDataQuality.numItemsMatchFilters}`).hover(
+      function () {
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+      },
+      function () {
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).addClass("text-truncate");
+        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+      }
+    );
+  }
+
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // This feeds the right data store into the DQ metrics
 
-function runDataQuality(filters) {
+function runDataQuality() {
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
@@ -196,7 +255,7 @@ function runDataQuality(filters) {
     console.warn('No combined store, data quality from selected feed only');
   }
 
-  measureDataQuality(storeItemsForDataQuality.items, filters);
+  measureDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -204,7 +263,7 @@ function runDataQuality(filters) {
 
 // This applies the DQ checks to the whole data store
 
-function measureDataQuality(items, filters) {
+function measureDataQuality() {
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
@@ -212,7 +271,7 @@ function measureDataQuality(items, filters) {
 
   let urlCounts = new Map();
 
-  for (const item of items) {
+  for (const item of storeItemsForDataQuality.items) {
 
     // Date info
 
@@ -331,16 +390,29 @@ function measureDataQuality(items, filters) {
     }
   });
 
-  postDataQuality(items, filters);
+  postDataQuality();
 
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// This calculates DQ scores for the filtered data
+// This calculates DQ scores for the filtered data, and shows results
 
-function postDataQuality(items, filters) {
+function postDataQuality() {
 
+  clearCharts();
+  $("#resultTab").addClass("active");
+  $("#graphTab").removeClass("active");
+  $("#graphPanel").removeClass("active");
+  $("#resultPanel").addClass("active");
+  $("#resultPanel").hide();
+  results = $("#results");
+  results.empty();
+  results.append("<div id='resultsDiv'</div>");
+
+  storeItemsForDataQuality.numItemsMatchFilters = 0;
+
+  getFilters();
   console.log(filters);
 
   let numItems = 0;
@@ -362,7 +434,7 @@ function postDataQuality(items, filters) {
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
 
-  for (const item of items) {
+  for (const item of storeItemsForDataQuality.items) {
 
     // Filters 
 
@@ -421,6 +493,8 @@ function postDataQuality(items, filters) {
 
       numItems++;
 
+      storeItemsForDataQuality.numItemsMatchFilters++;
+
       // Date info
 
       // Convert the date to a JavaScript Date object
@@ -431,7 +505,6 @@ function postDataQuality(items, filters) {
         // Check if the date is greater than or equal to today's date
         if (date >= dateNow) {
           numItemsNowToFuture++;
-          item.DQ_futureDate = 1;
         }
 
         // Get the string representation of the date in the format "YYYY-MM-DD"
@@ -463,7 +536,6 @@ function postDataQuality(items, filters) {
 
       if (hasValidPostalCode || hasValidLatLon) {
         numItemsWithGeo++;
-        item.DQ_validGeo = 1;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -483,7 +555,11 @@ function postDataQuality(items, filters) {
         activities
           .map(activity => activity.id || activity['@id'])
           .filter(activityId => activityId)
-          .forEach((activityId) => {
+
+          .forEach(activityId => {
+            // Add activity to list of unique activities (one of the original filters) - may be superceded
+            storeItemsForDataQuality.uniqueActivities.add(activityId)
+            // New DQ measures
 
             // See if there is a matching id / label
             let label = matchToActivityList(activityId);
@@ -500,7 +576,6 @@ function postDataQuality(items, filters) {
         // Update the count if a matching label found
         if (activityLabelsSet.size > 0) {
           numItemsWithActivity++;
-          item.DQ_validActivity = 1;
         }
 
       }
@@ -518,7 +593,7 @@ function postDataQuality(items, filters) {
 
       if (hasValidName) {
         numItemsWithName++;
-        item.DQ_validName = 1;
+
       }
       // -------------------------------------------------------------------------------------------------
 
@@ -533,7 +608,7 @@ function postDataQuality(items, filters) {
 
       if (hasValidDescription) {
         numItemsWithDescription++;
-        item.DQ_validDescription = 1;
+
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -548,7 +623,31 @@ function postDataQuality(items, filters) {
         urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
       }
 
+      // -------------------------------------------------------------------------------------------------
+
+      //Post results for matching items...
+
+      if (storeItemsForDataQuality.numItemsMatchFilters < 100) {
+        postResults(item);
+      }
+      else if (storeItemsForDataQuality.numItemsMatchFilters === 100) {
+        results.append(
+          "<div class='row rowhover'>" +
+          "    <div>Only the first 100 items are shown</div>" +
+          "</div>"
+        );
+      }
     }
+
+  }
+
+  if (storeItemsForDataQuality.numItemsMatchFilters === 0) {
+    results.empty();
+    results.append(
+      "<div class='row rowhover'>" +
+      "    <div>No matching results found.</div>" +
+      "</div>"
+    );
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -650,7 +749,7 @@ function postDataQuality(items, filters) {
         fontWeight: 900,
       },
     }
-  } 
+  }
   else {
     x_axis_title = {
       text: "Top Activities",
@@ -826,41 +925,26 @@ function postDataQuality(items, filters) {
 
   // -------------------------------------------------------------------------------------------------
 
-  let options_percentItemsWithActivity = {
+
+  let filter_chart = {
     chart: {
       height: 300,
       type: 'radialBar',
-      events: {
-        click: function (event, chartContext, config) {
-          //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
-          //alert('Chart clicked')
-          console.log(event)
-          console.log(chartContext)
-          console.log(config)
-        }
-      }
     },
-    //title: {
-    //  text: 'Valid Name, Description or Activity ID',
-    //  align: 'center',
-    //  offsetY: 280,
-    //},
-    fill: {
-      colors: ['#A7ABDA'],
+    title: {
+      text: "Filter Active",
+      align: 'center',
+      margin: 0,
+      offsetX: 0,
+      offsetY: 120,
+      style: {
+        fontSize: '30px',
+        fontWeight: 'bold',
+        color: '#2196F3'
+      },
     },
-    //fill: {
-    //  colors: [function({ value, seriesIndex, w }) {
-    //    if(value < 55) {
-    //        return '#7E36AF'
-    //    } else if (value >= 55 && value < 80) {
-    //        return '#164666'
-    //    } else {
-    //        return '#D9534F'
-    //    }
-    //  }]
-    //},
-    series: [rounded3_a, rounded3_b, rounded3_c],
-    labels: ['Activity ID', 'Name', 'Description'],
+    series: [],
+    labels: [''],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -868,157 +952,233 @@ function postDataQuality(items, filters) {
           size: "65%"
         },
         dataLabels: {
-          show: true,
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+          show: false,
+        },
+      }
+    }
+  }
+
+  let options_percentItemsWithActivity = {};
+
+  if (filters.DQ_filterActivities !== true) {
+
+    options_percentItemsWithActivity = {
+      chart: {
+        height: 300,
+        type: 'radialBar',
+        events: {
+          click: function (event, chartContext, config) {
+            //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
+            //alert('Chart clicked')
+            console.log(event)
+            console.log(chartContext)
+            console.log(config)
+          }
+        }
+      },
+      fill: {
+        colors: ['#A7ABDA'],
+      },
+      //fill: {
+      //  colors: [function({ value, seriesIndex, w }) {
+      //    if(value < 55) {
+      //        return '#7E36AF'
+      //    } else if (value >= 55 && value < 80) {
+      //        return '#164666'
+      //    } else {
+      //        return '#D9534F'
+      //    }
+      //  }]
+      //},
+      series: [rounded3_a, rounded3_b, rounded3_c],
+      labels: ['Activity ID', 'Name', 'Description'],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          },
-          total: {
+          dataLabels: {
             show: true,
-            label: 'Valid Activity ID',
-            color: "#888",
-            fontSize: "18px",
-            formatter: function (w) {
-              // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-              return Math.max(rounded3_a).toFixed(1) + "%";
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            },
+            total: {
+              show: true,
+              label: "Valid Activity ID",
+              color: "#888",
+              fontSize: "18px",
+              formatter: function (w) {
+                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+                return Math.max(rounded3_a).toFixed(1) + "%";
+              }
+            },
+          }
+        }
+      }
+    }
+
+  }
+
+  else {
+    options_percentItemsWithActivity = filter_chart
+  }
+
+  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
+
+  sleep(500).then(() => { chart2.render(); });
+
+  // -------------------------------------------------------------------------------------------------
+
+  let options_percentItemsWithGeo = {};
+
+  if (filters.DQ_filterGeos !== true) {
+    options_percentItemsWithGeo = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#B196CB'],
+      },
+      series: [rounded2],
+      labels: [['Valid postcode', 'or coordinates']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
+          },
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
             }
           }
         }
       }
     }
   }
-  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
-  chart2.render();
-
-  // -------------------------------------------------------------------------------------------------
-
-  let options_percentItemsWithGeo = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#B196CB'],
-    },
-    series: [rounded2],
-    labels: [['Valid postcode', 'or coordinates']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    }
+  else {
+    options_percentItemsWithGeo = filter_chart;
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  chart3.render();
+  sleep(1000).then(() => { chart3.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
-  let options_percentItemsNowToFuture = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#BD82BB'],
-    },
-    series: [rounded1],
-    labels: [['Valid', 'Start Date']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+  let options_percentItemsNowToFuture = {};
+
+  if (filters.DQ_filterDates !== true) {
+    options_percentItemsNowToFuture = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#BD82BB'],
+      },
+      series: [rounded1],
+      labels: [['Valid', 'Start Date']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            }
           }
         }
       }
     }
+  }
+  else {
+    options_percentItemsNowToFuture = filter_chart
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  chart4.render();
+  sleep(1500).then(() => { chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
+  let options_percentItemsWithUrl = {};
 
-  let options_percentItemsWithUrl = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#C76DAC'],
-    },
-    series: [rounded4],
-    labels: [['Unique', 'URLs']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+  if (filters.DQ_filterUrls !== true) {
+    options_percentItemsWithUrl = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#C76DAC'],
+      },
+      series: [rounded4],
+      labels: [['Unique', 'URLs']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            }
           }
         }
       }
     }
   }
+  else {
+    options_percentItemsWithUrl = filter_chart;
+  }
+
   chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
-  chart5.render();
+  sleep(2000).then(() => { chart5.render(); });
 
 
   // -------------------------------------------------------------------------------------------------
@@ -1167,6 +1327,9 @@ function postDataQuality(items, filters) {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  chart6.render();
+  sleep(2500).then(() => { chart6.render(); });
 
+
+  sleep(3000).then(() => { $("#resultPanel").fadeIn("slow"); });
 }
+

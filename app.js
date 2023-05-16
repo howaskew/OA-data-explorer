@@ -116,6 +116,27 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       })))
       .filter(dataset => dataset);
 
+
+      //console.log(datasets);
+
+      console.log("Unique Types in feeds (untreated):");
+      const typeCounts = {};
+      
+      datasets.forEach(dataset => {
+        (dataset?.distribution ?? []).forEach(feedInfo => {
+          const { name } = feedInfo;
+          typeCounts[name] = (typeCounts[name] || 0) + 1;
+        });
+      });
+      
+      const sortedTypes = Object.keys(typeCounts).sort((a, b) => typeCounts[b] - typeCounts[a]);
+      
+      sortedTypes.forEach(type => {
+        console.log(`${type} (${typeCounts[type]})`);
+      });
+      
+      
+
 // Dataset providers should be encouraged to adjust the following in their dataset pages, and make
 // sure there are none which are undefined, then we won't need the normalisation in the following
 // code block:
@@ -136,6 +157,9 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         })
       )))
       .filter(feed => feed.type !== 'CourseInstance')
+      .filter(feed => feed.type !== 'Event')
+      .filter(feed => feed.type !== undefined)
+      .filter(feed => feed.type !== 'OnDemandEvent')
       .filter(feed => feed.url && feed.name.substr(0,1).trim())
       .sort(function(feed1, feed2) {
          return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
@@ -150,7 +174,9 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         return feed;
       });
 
-      console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
+
+
+      //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
       // Prefetch pages into cache to reduce initial load
       //for (const feed of feeds) {

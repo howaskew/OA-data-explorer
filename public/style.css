@@ -41,9 +41,13 @@ div.col-md-2, div.col-md-6 {
 }
 
 .graph {
+  display: flex;
+  flex-wrap: wrap;
   text-align: left;
-  width: 85vh;
-  height: 85vw;
+}
+
+.visual {
+  width: 50%;
 }
 
 .noPadding {
@@ -72,6 +76,7 @@ div.col-md-2, div.col-md-6 {
   width: 100%;
   color: #fff;
   padding: 5px;
+  border-radius: 8px 8px 0px 0px; 
 }
 
 #summaryPanel {
