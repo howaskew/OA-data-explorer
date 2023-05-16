@@ -925,41 +925,26 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  let options_percentItemsWithActivity = {
+
+  let filter_chart = {
     chart: {
       height: 300,
       type: 'radialBar',
-      events: {
-        click: function (event, chartContext, config) {
-          //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
-          //alert('Chart clicked')
-          console.log(event)
-          console.log(chartContext)
-          console.log(config)
-        }
-      }
     },
-    //title: {
-    //  text: 'Valid Name, Description or Activity ID',
-    //  align: 'center',
-    //  offsetY: 280,
-    //},
-    fill: {
-      colors: ['#A7ABDA'],
+    title: {
+      text: "Filter Active",
+      align: 'center',
+      margin: 0,
+      offsetX: 0,
+      offsetY: 120,
+      style: {
+        fontSize: '30px',
+        fontWeight: 'bold',
+        color: '#2196F3'
+      },
     },
-    //fill: {
-    //  colors: [function({ value, seriesIndex, w }) {
-    //    if(value < 55) {
-    //        return '#7E36AF'
-    //    } else if (value >= 55 && value < 80) {
-    //        return '#164666'
-    //    } else {
-    //        return '#D9534F'
-    //    }
-    //  }]
-    //},
-    series: [rounded3_a, rounded3_b, rounded3_c],
-    labels: ['Activity ID', 'Name', 'Description'],
+    series: [],
+    labels: [''],
     plotOptions: {
       radialBar: {
         hollow: {
@@ -967,158 +952,233 @@ function postDataQuality() {
           size: "65%"
         },
         dataLabels: {
-          show: true,
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+          show: false,
+        },
+      }
+    }
+  }
+
+  let options_percentItemsWithActivity = {};
+
+  if (filters.DQ_filterActivities !== true) {
+
+    options_percentItemsWithActivity = {
+      chart: {
+        height: 300,
+        type: 'radialBar',
+        events: {
+          click: function (event, chartContext, config) {
+            //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
+            //alert('Chart clicked')
+            console.log(event)
+            console.log(chartContext)
+            console.log(config)
+          }
+        }
+      },
+      fill: {
+        colors: ['#A7ABDA'],
+      },
+      //fill: {
+      //  colors: [function({ value, seriesIndex, w }) {
+      //    if(value < 55) {
+      //        return '#7E36AF'
+      //    } else if (value >= 55 && value < 80) {
+      //        return '#164666'
+      //    } else {
+      //        return '#D9534F'
+      //    }
+      //  }]
+      //},
+      series: [rounded3_a, rounded3_b, rounded3_c],
+      labels: ['Activity ID', 'Name', 'Description'],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          },
-          total: {
+          dataLabels: {
             show: true,
-            label: 'Valid Activity ID',
-            color: "#888",
-            fontSize: "18px",
-            formatter: function (w) {
-              // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-              return Math.max(rounded3_a).toFixed(1) + "%";
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            },
+            total: {
+              show: true,
+              label: "Valid Activity ID",
+              color: "#888",
+              fontSize: "18px",
+              formatter: function (w) {
+                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+                return Math.max(rounded3_a).toFixed(1) + "%";
+              }
+            },
+          }
+        }
+      }
+    }
+
+  }
+
+  else {
+    options_percentItemsWithActivity = filter_chart
+  }
+
+  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
+
+  sleep(500).then(() => { chart2.render(); });
+
+  // -------------------------------------------------------------------------------------------------
+
+  let options_percentItemsWithGeo = {};
+
+  if (filters.DQ_filterGeos !== true) {
+    options_percentItemsWithGeo = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#B196CB'],
+      },
+      series: [rounded2],
+      labels: [['Valid postcode', 'or coordinates']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
+          },
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
             }
           }
         }
       }
     }
   }
-  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
-
-  sleep(1000).then(() => {   chart2.render(); });
-
-  // -------------------------------------------------------------------------------------------------
-
-  let options_percentItemsWithGeo = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#B196CB'],
-    },
-    series: [rounded2],
-    labels: [['Valid postcode', 'or coordinates']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    }
+  else {
+    options_percentItemsWithGeo = filter_chart;
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  sleep(2000).then(() => {   chart3.render(); });
+  sleep(1000).then(() => { chart3.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
-  let options_percentItemsNowToFuture = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#BD82BB'],
-    },
-    series: [rounded1],
-    labels: [['Valid', 'Start Date']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+  let options_percentItemsNowToFuture = {};
+
+  if (filters.DQ_filterDates !== true) {
+    options_percentItemsNowToFuture = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#BD82BB'],
+      },
+      series: [rounded1],
+      labels: [['Valid', 'Start Date']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            }
           }
         }
       }
     }
+  }
+  else {
+    options_percentItemsNowToFuture = filter_chart
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  sleep(3000).then(() => {   chart4.render(); });
+  sleep(1500).then(() => { chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
+  let options_percentItemsWithUrl = {};
 
-  let options_percentItemsWithUrl = {
-    chart: {
-      width: "100%",
-      height: 300,
-      type: 'radialBar',
-    },
-    fill: {
-      colors: ['#C76DAC'],
-    },
-    series: [rounded4],
-    labels: [['Unique', 'URLs']],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
-          showOn: "always",
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
+  if (filters.DQ_filterUrls !== true) {
+    options_percentItemsWithUrl = {
+      chart: {
+        width: "100%",
+        height: 300,
+        type: 'radialBar',
+      },
+      fill: {
+        colors: ['#C76DAC'],
+      },
+      series: [rounded4],
+      labels: [['Unique', 'URLs']],
+      plotOptions: {
+        radialBar: {
+          hollow: {
+            margin: 15,
+            size: "65%"
           },
-          value: {
-            offsetY: -30,
-            color: "#111",
-            fontSize: "30px",
-            show: true
+          dataLabels: {
+            showOn: "always",
+            name: {
+              offsetY: 25,
+              show: true,
+              color: "#888",
+              fontSize: "18px"
+            },
+            value: {
+              offsetY: -30,
+              color: "#111",
+              fontSize: "30px",
+              show: true
+            }
           }
         }
       }
     }
   }
+  else {
+    options_percentItemsWithUrl = filter_chart;
+  }
+
   chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
-  sleep(4000).then(() => {   chart5.render(); });
+  sleep(2000).then(() => { chart5.render(); });
 
 
   // -------------------------------------------------------------------------------------------------
@@ -1267,9 +1327,9 @@ function postDataQuality() {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(5000).then(() => {   chart6.render(); });
+  sleep(2500).then(() => { chart6.render(); });
 
 
-  sleep(6000).then(() => {    $("#resultPanel").fadeIn("slow");  });
+  sleep(3000).then(() => { $("#resultPanel").fadeIn("slow"); });
 }
 

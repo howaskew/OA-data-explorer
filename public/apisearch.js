@@ -549,8 +549,29 @@ function getVisualise(itemId) {
   $("#resultPanel").removeClass("active");
   $("#graphPanel").addClass("active");
   $("#tabs")[0].scrollIntoView();
-  $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre></div>
+
+  // Output both relevant feeds if combined
+  if (
+    storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
+    storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
+    link
+  ) {
+      const storeSubEventItem = storeSubEvent.items[itemId];
+      const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
+      const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
+      // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
+      // which are purely numeric and stored as a number rather than a string, so we can still match on
+      // storeSuperEventItemId which is always a string:
+      const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+
+      $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeItemForJson, null, 2)}</pre></div>
+      <div class="visual"><h2>${storeSubEvent.itemDataType}</h2><pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre></div>`);
+
+  }
+  else {
+    $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre></div>
   <div class="visual"><h2>${storeSubEvent.itemDataType}</h2><pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre></div>`);
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
