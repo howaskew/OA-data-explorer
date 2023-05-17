@@ -18,10 +18,10 @@
 <body>
     <div class="flex_row mainheading">
         <div class="col-md-6 col-sm-8">
-        <h3 style="text-align:center;">Data Visualiser / Data Quality Explorer</h3>
+            <h3 style="text-align:center;">Data Visualiser / Data Quality Explorer</h3>
         </div>
         <div class="col-md-6 col-sm-8">
-        <img src="images/OpenActive-Landscape-Logo-2.png"></img>
+            <img src="images/OpenActive-Landscape-Logo-2.png"></img>
         </div>
     </div>
 
@@ -29,9 +29,16 @@
         <div class="flex_row">
             <div class="col-md-6 col-sm-8">
                 <div class="flex_row top">
-                    <h5>Choose a data feed API endpoint:</h5>
-                    <select id="endpoint" class="form-control"></select>
+                    <div style="width:48%; margin-left: 1%;margin-right:1%;">
+                        <h5>Choose a data feed provider:</h5>
+                        <select id="provider" class="form-control"></select>
+                    </div>
+                    <div style="width:48%; margin-left: 1%;margin-right:1%;">
+                        <h5>Choose a data feed type:</h5>
+                        <select id="endpoint" class="form-control"></select>
+                    </div>
                 </div>
+
                 <div class="flex_row top " style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
@@ -181,17 +188,13 @@
 
             <div class="col-md-6 col-sm-8 ">
                 <div class="flex_row top">
-                    <h5>API calls made:</h5>
+                    <h5>Progress:</h5>
                 </div>
                 <div id="loading-time" style="display: none;">
                     <h5>Loading feed pages...</h5>
-                    <p>Note: the initial query can take up to 30 seconds for larger feeds, but takes less than 1 second
-                        on average for subsequent queries.</p>
-                    <p>You can change your filter and "Execute query" again while the feed pages load to filter the
-                        results from the pages loaded so far.</p>
+                    <p>Note: the initial query can take up to 5 minutes for the largest feeds.</p>
                 </div>
                 <div id="progress"></div>
-                <div id="api"></div>
             </div>
         </div>
     </div>
@@ -251,7 +254,7 @@
                         <div class="explainer">
                             <p>Having a URL link directly to the booking page for a specific session significantly
                                 improves user experience.</p>
-                            </div>
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <div class="box box6">
@@ -311,6 +314,8 @@
                         Results </a></li>
                 <li class="nav-item"><a id="graphTab" class="nav-link disabled" href="#graphPanel" data-toggle="tab">
                         View Raw JSON Data</a></li>
+                <li class="nav-item"><a id="apiTab" class="nav-link disabled" href="#apiPanel" data-toggle="tab">
+                        View API calls</a></li>
             </ul>
 
             <div class="tab-content">
@@ -320,7 +325,11 @@
                     </div>
                 </div>
                 <div class="tab-pane" id="graphPanel">
-                        <div id="graph" class="graph">
+                    <div id="graph" class="graph">
+                    </div>
+                </div>
+                <div class="tab-pane" id="apiPanel">
+                    <div id="api">
                     </div>
                 </div>
             </div>

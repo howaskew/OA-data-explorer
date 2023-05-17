@@ -64,7 +64,6 @@ function postResults(item) {
     `            <div class='row'>` +
     `                <div class='col' style='text-align: right'>` +
     `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
-    `                    <button id='validate${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>Validate</button>` +
     `                </div>` +
     `            </div>` +
     `        </div>` +
@@ -74,9 +73,6 @@ function postResults(item) {
 
   $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
     getVisualise(item.id);
-  });
-  $(`#validate${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
-    openValidator(storeItemsForDataQuality, item.id);
   });
 
   if (item.id.length > 8) {
@@ -99,6 +95,8 @@ function postResults(item) {
 // This feeds the right data store into the DQ metrics
 
 function runDataQuality() {
+
+  progress.append(`Processing data feeds</br>`);
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
@@ -400,6 +398,7 @@ function measureDataQuality() {
 
 function postDataQuality() {
 
+  $("#tabs").fadeIn("slow");
   clearCharts();
   $("#resultTab").addClass("active");
   $("#graphTab").removeClass("active");
@@ -1035,7 +1034,7 @@ function postDataQuality() {
 
   chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
 
-  sleep(500).then(() => { chart2.render(); });
+  sleep(200).then(() => { chart2.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1083,7 +1082,7 @@ function postDataQuality() {
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  sleep(1000).then(() => { chart3.render(); });
+  sleep(400).then(() => { chart3.render(); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1131,7 +1130,7 @@ function postDataQuality() {
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  sleep(1500).then(() => { chart4.render(); });
+  sleep(600).then(() => { chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
   let options_percentItemsWithUrl = {};
@@ -1178,7 +1177,7 @@ function postDataQuality() {
   }
 
   chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
-  sleep(2000).then(() => { chart5.render(); });
+  sleep(800).then(() => { chart5.render(); });
 
 
   // -------------------------------------------------------------------------------------------------
@@ -1327,9 +1326,9 @@ function postDataQuality() {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(2500).then(() => { chart6.render(); });
+  sleep(1000).then(() => { chart6.render(); });
 
 
-  sleep(3000).then(() => { $("#resultPanel").fadeIn("slow"); });
+  sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
 }
 

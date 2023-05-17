@@ -1,4 +1,6 @@
 let endpoint;
+let provider;
+
 let scheme_1 = null;
 let scheme_2 = null;
 
@@ -26,6 +28,7 @@ let chart5;
 let chart6;
 
 let feeds = {};
+let providers = {};
 
 let storeIngressOrder1 = {
   ingressOrder: 1,
@@ -135,12 +138,7 @@ function getFilters() {
 function setStoreItems(url, store) {
 
   store.numPages++;
-  if (store.numPages < 50) {
-    addApiPanel(url, true);
-  }
-  else if (store.numPages === 50) {
-    addApiPanel('Page URLs past this point are hidden for efficiency', false);
-  }
+  addApiPanel(url, true);
 
   let results = $("#results");
   let progress = $("#progress");
@@ -158,18 +156,16 @@ function setStoreItems(url, store) {
         results.append("<div id='resultsDiv'</div>");
         progress.empty();
         progress.append("<div id='progressDiv1'</div>");
+
       }
       else if (store.ingressOrder === 2 && store.numItems === 0) {
         progress.append("<div id='progressDiv2'</div>");
-        progress = $("#progressDiv2");
       }
 
       if (store.ingressOrder === 1) {
         progress = $("#progressDiv1");
-        progress_text = "Selected feed:"
       } else {
         progress = $("#progressDiv2");
-        progress_text = "Related feed:"
       }
 
       $.each(page.content ? page.content : page.items, function (_, item) {
@@ -209,11 +205,14 @@ function setStoreItems(url, store) {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next) {
         progress.empty();
-        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters} in ${elapsed} seconds...`);
+        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "'>" + store.firstPage + "</a></br>");
+        progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
         setStoreItems(page.next, store);
       }
       else {
-        progress.text(`${progress_text} Pages loaded: ${store.numPages}; Items: ${store.numItems}; Results: ${store.numItemsMatchFilters}; Loading complete in ${elapsed} seconds`);
+        progress.empty();
+        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "'>" + store.firstPage + "</a></br>");
+        progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
         if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
           results.append("<div><p>No results found</p></div>");
         }
@@ -388,7 +387,7 @@ function loadingTakingTime() {
 function clearCache(store) {
 
   // Call the clear cache endpoint with URL parameter
-  fetch('http://localhost:3000/api/clear-cache', {
+  fetch('/api/clear-cache', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url: store.lastPage })
@@ -429,7 +428,7 @@ function loadingComplete() {
   }
   $("#loading-time").hide();
   runDataQuality();
-  console.log(storeItemsForDataQuality);
+  //console.log(storeItemsForDataQuality);
 
 }
 
@@ -556,17 +555,34 @@ function getVisualise(itemId) {
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
   ) {
-      const storeSubEventItem = storeSubEvent.items[itemId];
-      const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
-      const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
-      // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
-      // which are purely numeric and stored as a number rather than a string, so we can still match on
-      // storeSuperEventItemId which is always a string:
-      const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+    const storeSubEventItem = storeSubEvent.items[itemId];
+    const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
+    const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
+    // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
+    // which are purely numeric and stored as a number rather than a string, so we can still match on
+    // storeSuperEventItemId which is always a string:
+ 
+    const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
 
-      $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeItemForJson, null, 2)}</pre></div>
-      <div class="visual"><h2>${storeSubEvent.itemDataType}</h2><pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre></div>`);
+    $("#graph").html(`<div class="visual">
+    <h2>${storeSuperEvent.itemDataType}
+    <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
+    </h2>
+    <pre>${JSON.stringify(storeItemForJson, null, 2)}</pre>
+    </div>
+    <div class="visual">
+    <h2>${storeSubEvent.itemDataType}
+    <button id='validateChild' class='btn btn-secondary btn-sm mb-1'>Validate</button>
+    </h2>
+    <pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre>
+    </div>`);
 
+    $(`#validateParent`).on("click", function () {
+      openValidator2(storeItemForJson);
+    });
+    $(`#validateChild`).on("click", function () {
+      openValidator(storeSubEvent, itemId);
+    });
   }
   else {
     $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre></div>
@@ -577,7 +593,14 @@ function getVisualise(itemId) {
 // -------------------------------------------------------------------------------------------------
 
 function openValidator(store, itemId) {
-  const jsonString = JSON.stringify(store.items[itemId], null, 2);
+  const jsonString = JSON.stringify(store.items[itemId].data, null, 2);
+  // console.log(jsonString)
+  const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
+  const win = window.open(url, "_blank", "height=800,width=1200");
+  win.focus();
+}
+function openValidator2(item) {
+  const jsonString = JSON.stringify(item.data, null, 2);
   // console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
   const win = window.open(url, "_blank", "height=800,width=1200");
@@ -676,18 +699,45 @@ function updateParameters(parm, parmVal) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateEndpoint() {
+function updateProvider() {
+  provider = $("#provider").val();
+  $("#tabs").hide();
   $("#results").empty();
-  $("#summary").empty();
-  $("tabs").hide();
-  $("#graphTab").addClass("disabled").removeClass("active");
-  $("#validatePanel").addClass("disabled").removeClass("active");
-  $("#validateTab").addClass("disabled").removeClass("active");
-  $("#graphPanel").removeClass("active");
-  $("#resultTab").addClass("active");
-  $("#resultPanel").addClass("active");
+  $("#progress").empty();
+  $("#api").empty();
+  //Replicating setEndpoints, without the page reset
+  $.getJSON("/feeds", function (data) {
+    $("#endpoint").empty();
+    $.each(data.feeds, function (index, feed) {
+      feeds[feed.url] = feed;
+      if (feed.publisherName === $("#provider").val()) {
+        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+      }
+    });
+  })
+    .done(function () {
+      updateParameters("endpoint", $("#endpoint").val());
+    });
+}
 
+// -------------------------------------------------------------------------------------------------
+
+function updateEndpoint() {
+  $("#tabs").hide();
+  $("#results").empty();
+  $("#progress").empty();
+  $("#api").empty();
+
+  //$("#graphTab").addClass("disabled").removeClass("active");
+  //$("#validatePanel").addClass("disabled").removeClass("active");
+  //$("#validateTab").addClass("disabled").removeClass("active");
+  //$("#graphPanel").removeClass("active");
+  //$("#resultTab").addClass("active");
+  //$("#resultPanel").addClass("active");
+
+  provider = $("#provider").val();
   endpoint = $("#endpoint").val();
+
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
 
@@ -804,7 +854,7 @@ function updateKeywords() {
 
 function clearForm(endpoint) {
   if (endpoint) {
-    window.location.search = "?endpoint=" + endpoint;
+  //  window.location.search = "?endpoint=" + endpoint;
   }
   else {
     window.location.search = "";
@@ -841,20 +891,14 @@ function runForm(pageNumber) {
     updateParameters("page", pageNumber);
   }
 
+  $("#tabs").hide();
   $("#results").empty();
-  $("#tabs").show();
-  $("#graphTab").addClass("disabled").removeClass("active");
-  $("#graphPanel").removeClass("active");
-  $("#validateTab").removeClass("active").hide();
-  $("#validatePanel").removeClass("active");
-  $("#richnessTab").removeClass("active").hide();
-  $("#richnessPanel").removeClass("active");
-  $("#resultTab").addClass("active");
-  $("#resultPanel").addClass("active");
+  $("#progress").empty();
+  $("#api").empty();
 
   updateScroll();
-  $("#results").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
-  $("#progress").text(`Loading first page...`);
+  $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
+
   clearApiPanel();
 
   loadingStart();
@@ -933,6 +977,9 @@ function runForm(pageNumber) {
 
 function setPage() {
 
+  $("#provider").on("change", function () {
+    updateProvider();
+  });
   $("#endpoint").on("change", function () {
     updateEndpoint();
   });
@@ -1002,24 +1049,38 @@ function setPage() {
       });
   }
   else {
-    updateParameters("endpoint", $("#endpoint").val());
-    setEndpoints();
+    //updateParameters("endpoint", $("#endpoint").val());
+    //setEndpoints();
   }
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setEndpoints() {
+function setProvider() {
   $.getJSON("/feeds", function (data) {
-    // Show all unique feed types:
-    // console.log([... new Set(data.feeds.map(feed => feed.type))]);
-    $("#endpoint").empty();
-    $.each(data.feeds, function (index, feed) {
-      feeds[feed.url] = feed;
-      $("#endpoint").append("<option value='" + feed.url + "'>" + feed.name + " - " + feed.type + "</option>");
+    $("#provider").empty()
+    providers = [... new Set(data.feeds.map(feed => feed.publisherName))];
+    $.each(providers, function (index, name) {
+      $("#provider").append("<option value='" + name + "'>" + name + "</option>");
     });
   })
     .done(function () {
+      setEndpoints();
+    });
+}
+
+function setEndpoints() {
+  $.getJSON("/feeds", function (data) {
+    $("#endpoint").empty();
+    $.each(data.feeds, function (index, feed) {
+      feeds[feed.url] = feed;
+      if (feed.publisherName === $("#provider").val()) {
+        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+      }
+    });
+  })
+    .done(function () {
+      updateParameters("endpoint", $("#endpoint").val());
       setPage();
     });
 }
@@ -1051,5 +1112,5 @@ $(function () {
 // -------------------------------------------------------------------------------------------------
 
 $(function () {
-  setEndpoints();
+  setProvider();
 });
