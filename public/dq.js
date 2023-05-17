@@ -96,7 +96,6 @@ function postResults(item) {
 
 function runDataQuality() {
 
-  progress.append(`Processing data feeds</br>`);
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
@@ -111,7 +110,7 @@ function runDataQuality() {
     storeSubEvent &&
     storeSuperEvent.feedType === storeSubEvent.feedType
   ) {
-    console.log('UNPACK?');
+    progress.append("Unpacking Data Feed");
 
     console.log(`storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
     console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
@@ -191,8 +190,18 @@ function runDataQuality() {
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
   ) {
+    progress.append(`<div id='combineProgress'</div>`);
+    let cp = $("#combineProgress");
+  
+  
+    let ccounter = 0;
+
     let combinedStoreItems = [];
     for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
+
+      ccounter++;
+      cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
+
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
         const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
@@ -263,13 +272,20 @@ function runDataQuality() {
 
 function measureDataQuality() {
 
+  progress.append(`<div id='DQProgress'</div>`);
+  let dqp = $("#DQProgress");
+
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
   const dateNow = new Date();
+  dateNow.setHours(0,0,0,0);
 
   let urlCounts = new Map();
 
+  let counter = 0;
   for (const item of storeItemsForDataQuality.items) {
+    counter++;
+    dqp.text("Measuring Data Quality: " + counter + " of " + storeItemsForDataQuality.items.length + " items");
 
     // Date info
 
@@ -403,6 +419,8 @@ function postDataQuality() {
   $("#resultTab").addClass("active");
   $("#graphTab").removeClass("active");
   $("#graphPanel").removeClass("active");
+  $("#apiTab").removeClass("active");
+  $("#apiPanel").removeClass("active");
   $("#resultPanel").addClass("active");
   $("#resultPanel").hide();
   results = $("#results");
@@ -420,7 +438,7 @@ function postDataQuality() {
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
-  const dateNow = new Date();
+  const dateNow = new Date().setHours(0,0,0,0);
   let dateCounts = new Map();
   let activityCounts = new Map();
   let urlCounts = new Map();

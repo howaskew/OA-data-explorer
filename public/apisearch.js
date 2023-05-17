@@ -26,6 +26,7 @@ let chart3;
 let chart4;
 let chart5;
 let chart6;
+let progress;
 
 let feeds = {};
 let providers = {};
@@ -141,7 +142,7 @@ function setStoreItems(url, store) {
   addApiPanel(url, true);
 
   let results = $("#results");
-  let progress = $("#progress");
+  progress = $("#progress");
 
   $.ajax({
     async: true,
@@ -205,13 +206,13 @@ function setStoreItems(url, store) {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next) {
         progress.empty();
-        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "'>" + store.firstPage + "</a></br>");
+        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
         setStoreItems(page.next, store);
       }
       else {
         progress.empty();
-        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "'>" + store.firstPage + "</a></br>");
+        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
         if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
           results.append("<div><p>No results found</p></div>");
@@ -854,7 +855,7 @@ function updateKeywords() {
 
 function clearForm(endpoint) {
   if (endpoint) {
-  //  window.location.search = "?endpoint=" + endpoint;
+   //window.location.search = "?endpoint=" + endpoint;
   }
   else {
     window.location.search = "";
