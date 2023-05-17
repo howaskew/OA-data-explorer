@@ -50,6 +50,10 @@ div.col-md-2, div.col-md-6 {
   width: 50%;
 }
 
+#validateParent, #validateChild {
+margin-left: 20px;
+}
+
 .noPadding {
   padding: 0 !important;
   margin: 0 !important;
