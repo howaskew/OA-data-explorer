@@ -256,11 +256,16 @@ function setStoreItems(url, store) {
         }
       }
     })
-    .fail(function () {
+    .fail(function (jqXHR, textStatus, errorThrown) {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-      $("#progress").text(`Pages loaded ${store.numPages}; Items loaded ${store.numItems}; results ${store.numItemsMatchFilters} in ${elapsed} seconds; An error occurred, please retry.`);
-      $("#progress").append("An error has occurred");
-      $("#progress").append('<div><button class="show-error btn btn-secondary">Retry</button></div>');
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+      }$("#loading-time").hide();
+      progress.empty();
+      progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
+      progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
+      progress.append("API Request failed with status: " + jqXHR.status + " - " + jqXHR.statusText + " " + errorThrown);
+      progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
       $(".show-error").on("click", function () {
         runForm();
       });
@@ -379,7 +384,7 @@ function loadingStart() {
 
 function loadingTakingTime() {
   if (!loadingDone) {
-    $("#loading-time").show();
+    $("#loading-time").fadeIn();
   }
 }
 
@@ -701,7 +706,7 @@ function updateParameters(parm, parmVal) {
 // -------------------------------------------------------------------------------------------------
 
 function updateProvider() {
-  provider = $("#provider").val();
+  provider = $("#provider option:selected").text();
   $("#tabs").hide();
   $("#results").empty();
   $("#progress").empty();
@@ -710,8 +715,7 @@ function updateProvider() {
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
     $.each(data.feeds, function (index, feed) {
-      feeds[feed.url] = feed;
-      if (feed.publisherName === $("#provider").val()) {
+      if (feed.publisherName === provider) {
         $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
       }
     });
@@ -736,7 +740,7 @@ function updateEndpoint() {
   //$("#resultTab").addClass("active");
   //$("#resultPanel").addClass("active");
 
-  provider = $("#provider").val();
+  provider = $("#provider option:selected").text();
   endpoint = $("#endpoint").val();
 
   updateParameters("endpoint", endpoint);
@@ -1071,11 +1075,12 @@ function setProvider() {
 }
 
 function setEndpoints() {
+  provider = $("#provider option:selected").text();
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
     $.each(data.feeds, function (index, feed) {
       feeds[feed.url] = feed;
-      if (feed.publisherName === $("#provider").val()) {
+      if (feed.publisherName === provider) {
         $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
       }
     });
