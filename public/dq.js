@@ -192,8 +192,8 @@ function runDataQuality() {
   ) {
     progress.append(`<div id='combineProgress'</div>`);
     let cp = $("#combineProgress");
-  
-  
+
+
     let ccounter = 0;
 
     let combinedStoreItems = [];
@@ -278,7 +278,7 @@ function measureDataQuality() {
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
   const dateNow = new Date();
-  dateNow.setHours(0,0,0,0);
+  dateNow.setHours(0, 0, 0, 0);
 
   let urlCounts = new Map();
 
@@ -404,8 +404,8 @@ function measureDataQuality() {
     }
   });
 
+  $("#tabs").fadeIn("slow");
   postDataQuality();
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -414,7 +414,12 @@ function measureDataQuality() {
 
 function postDataQuality() {
 
-  $("#tabs").fadeIn("slow");
+  document.getElementById("DQ_filterActivities").disabled = true;
+  document.getElementById("DQ_filterGeos").disabled = true;
+  document.getElementById("DQ_filterDates").disabled = true;
+  document.getElementById("DQ_filterUrls").disabled = true;
+
+
   clearCharts();
   $("#resultTab").addClass("active");
   $("#graphTab").removeClass("active");
@@ -438,7 +443,7 @@ function postDataQuality() {
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
-  const dateNow = new Date().setHours(0,0,0,0);
+  const dateNow = new Date().setHours(0, 0, 0, 0);
   let dateCounts = new Map();
   let activityCounts = new Map();
   let urlCounts = new Map();
@@ -1348,5 +1353,11 @@ function postDataQuality() {
 
 
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
+  sleep(1400).then(() => {
+    document.getElementById("DQ_filterActivities").disabled = false;
+    document.getElementById("DQ_filterGeos").disabled = false;
+    document.getElementById("DQ_filterDates").disabled = false;
+    document.getElementById("DQ_filterUrls").disabled = false;
+  });
 }
 
