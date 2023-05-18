@@ -53,7 +53,7 @@ let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUs
 let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
 
 let link = null; // Linking variable between super-event and sub-event feeds
-
+let combinedStoreItems = [];
 let numListings = 0;
 let numOpps = 0;
 
@@ -87,6 +87,9 @@ let slotUrlParts = [
   'slots',
   'slot',
 ];
+
+
+let cp = $("#combineProgress");
 
 // -------------------------------------------------------------------------------------------------
 
@@ -138,11 +141,25 @@ function getFilters() {
 
 function setStoreItems(url, store) {
 
-  store.numPages++;
-  addApiPanel(url, true);
-
   let results = $("#results");
   progress = $("#progress");
+
+  if (store.ingressOrder === 1 && store.numItems === 0) {
+    results.empty();
+    results.append("<div id='resultsDiv'</div>");
+    progress.empty();
+    progress.append("<div id='progressDiv1'</div>");
+    $("#progressDiv1").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
+  }
+  else if (store.ingressOrder === 2 && store.numItems === 0) {
+    progress.append("<div id='progressDiv2'</div>");
+  }
+
+  if (store.ingressOrder === 1) {
+    progress = $("#progressDiv1");
+  } else {
+    progress = $("#progressDiv2");
+  }
 
   $.ajax({
     async: true,
@@ -152,22 +169,8 @@ function setStoreItems(url, store) {
   })
     .done(async function (page) {
 
-      if (store.ingressOrder === 1 && store.numItems === 0) {
-        results.empty();
-        results.append("<div id='resultsDiv'</div>");
-        progress.empty();
-        progress.append("<div id='progressDiv1'</div>");
-
-      }
-      else if (store.ingressOrder === 2 && store.numItems === 0) {
-        progress.append("<div id='progressDiv2'</div>");
-      }
-
-      if (store.ingressOrder === 1) {
-        progress = $("#progressDiv1");
-      } else {
-        progress = $("#progressDiv2");
-      }
+      store.numPages++;
+      addApiPanel(url, store.ingressOrder);
 
       $.each(page.content ? page.content : page.items, function (_, item) {
 
@@ -214,6 +217,7 @@ function setStoreItems(url, store) {
         progress.empty();
         progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
+
         if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
           results.append("<div><p>No results found</p></div>");
         }
@@ -252,22 +256,24 @@ function setStoreItems(url, store) {
           setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
         }
         else {
-          loadingComplete();
+          progress.append("<div id='combineProgress'></div>");
+          cp = $("#combineProgress");
+          cp.text("Processing data feed...");
+          cp.append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
+          sleep(100).then(() => { loadingComplete(); });
         }
       }
     })
     .fail(function (jqXHR, textStatus, errorThrown) {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-      if (loadingTimeout) {
-        clearTimeout(loadingTimeout);
-      }$("#loading-time").hide();
+      $("#loading-time").hide();
       progress.empty();
       progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
       progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
       progress.append("API Request failed with status: " + jqXHR.status + " - " + jqXHR.statusText + " " + errorThrown);
       progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
       $(".show-error").on("click", function () {
-        runForm();
+        setStoreItems(url, store);;
       });
     });
 }
@@ -371,7 +377,7 @@ function setStoreItemDataType(store) {
 
 function loadingStart() {
   clearCharts();
-  $("#resultPanel").hide();
+  $("#tabs").hide();
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
   }
@@ -410,7 +416,6 @@ function clearCache(store) {
 
 }
 
-
 // -------------------------------------------------------------------------------------------------
 
 function clearCharts() {
@@ -425,6 +430,8 @@ function clearCharts() {
 // -------------------------------------------------------------------------------------------------
 
 function loadingComplete() {
+
+
   loadingStarted = null;
   loadingDone = true;
 
@@ -547,7 +554,7 @@ function getRelevantActivitySet(id) {
 // -------------------------------------------------------------------------------------------------
 
 function getVisualise(itemId) {
-  console.log(itemId)
+
   $("#resultTab").removeClass("active");
   $("#graphTab").removeClass("disabled");
   $("#graphTab").addClass("active");
@@ -558,8 +565,8 @@ function getVisualise(itemId) {
   // Output both relevant feeds if combined
   if (
     storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
-    storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
-    link
+    storeSubEvent && Object.values(storeSubEvent.items).length > 0
+    && storeSubEvent.feedType !== null
   ) {
     const storeSubEventItem = storeSubEvent.items[itemId];
     const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
@@ -567,7 +574,7 @@ function getVisualise(itemId) {
     // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
     // which are purely numeric and stored as a number rather than a string, so we can still match on
     // storeSuperEventItemId which is always a string:
- 
+
     const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
 
     $("#graph").html(`<div class="visual">
@@ -589,10 +596,29 @@ function getVisualise(itemId) {
     $(`#validateChild`).on("click", function () {
       openValidator(storeSubEvent, itemId);
     });
-  }
-  else {
-    $("#graph").html(`<div class="visual"><h2>${storeSuperEvent.itemDataType}</h2><pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre></div>
-  <div class="visual"><h2>${storeSubEvent.itemDataType}</h2><pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre></div>`);
+  } else {
+    console.log("Displaying storeIngressOrder1 and 2");
+    $("#graph").html(`<div class="visual">
+    <h2>${storeIngressOrder1.feedType}
+    <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
+    </h2>
+    <pre>${JSON.stringify(storeIngressOrder1.items[itemId], null, 2)}</pre>
+    </div>   
+    <div class="visual">
+    <h2>${storeIngressOrder2.itemDataType}
+    <button id='validateChild' class='btn btn-secondary btn-sm mb-1'>Validate</button>
+    </h2>
+    <pre>${JSON.stringify(storeIngressOrder2.items[itemId], null, 2)}</pre>
+    </div>`);
+
+    $(`#validateParent`).on("click", function () {
+      openValidator(storeIngressOrder1, itemId);
+    });
+
+    $(`#validateChild`).on("click", function () {
+      openValidator(storeIngressOrder2, itemId);
+    });
+
   }
 }
 
@@ -621,13 +647,13 @@ function clearApiPanel() {
 
 // -------------------------------------------------------------------------------------------------
 
-function addApiPanel(text, code) {
-  if (code === undefined) {
-    code = true;
-  }
+function addApiPanel(text, storeIngressOrder) {
   let panel = $("#api");
   let colour = "";
-  if (code) {
+  if (storeIngressOrder === 1) {
+    colour = "lightblue";
+  }
+  else {
     colour = "lightgray";
   }
   panel
@@ -694,6 +720,14 @@ function updateURLParameter(url, param, paramVal) {
 
   const rows_txt = temp + "" + param + "=" + paramVal;
   return baseURL + "?" + newAdditionalURL + rows_txt;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+function clearURLParameters(endpoint) {
+  let tempArray = window.location.href.split("?");
+  let baseURL = tempArray[0];
+  return baseURL + "?endpoint=" + endpoint;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -859,7 +893,7 @@ function updateKeywords() {
 
 function clearForm(endpoint) {
   if (endpoint) {
-   //window.location.search = "?endpoint=" + endpoint;
+    window.history.replaceState('', '', window.location.href.split("?")[0] + "?endpoint=" + endpoint);
   }
   else {
     window.location.search = "";
@@ -869,6 +903,7 @@ function clearForm(endpoint) {
 // -------------------------------------------------------------------------------------------------
 
 function runForm(pageNumber) {
+  console.log("runForm");
 
   if (pageNumber === undefined) {
     pageNumber = null;
@@ -951,6 +986,7 @@ function runForm(pageNumber) {
       default:
         break;
     }
+
     if (storeIngressOrder2.firstPage) {
       storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].hasOwnProperty('type') ? feeds[storeIngressOrder2.firstPage].type : null;
       if (storeIngressOrder1.feedType === storeIngressOrder2.feedType) {

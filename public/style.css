@@ -36,6 +36,12 @@ div.col-md-2, div.col-md-6 {
   background-color: lightgrey;
 }
 
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
 .graph {
   display: flex;
   flex-wrap: wrap;
@@ -62,7 +68,6 @@ margin-left: 20px;
 #loading-time {
   background-color: yellow;
   margin: 5px;
-  padding: 10px;
   border-radius: 5px;
   margin-right: 10px;
   margin-left: 10px;

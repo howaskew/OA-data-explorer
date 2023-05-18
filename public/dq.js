@@ -37,7 +37,6 @@ function matchToFacilityList(id) {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -49,11 +48,11 @@ function sleep(ms) {
 // This is to allow the DQ filters to be applied along with original filters
 
 function postResults(item) {
-
+ 
   results = $("#resultsDiv");
   results.append(
-    `<div id='col ${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
-    `    <div id='text ${storeItemsForDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id}</div>` +
+    `<div id='row${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
+    `    <div id='text${storeItemsForDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
     `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
@@ -72,11 +71,11 @@ function postResults(item) {
   );
 
   $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
-    getVisualise(item.id);
+    getVisualise(item.id || item.data['@id']);
   });
 
-  if (item.id.length > 8) {
-    $(`#col${storeItemsForDataQuality.numItemsMatchFilters}`).hover(
+  if ((item.id && item.id.length > 8) || (item.data['@id'] && item.data['@id'].length > 8)) {
+    $(`#row${storeItemsForDataQuality.numItemsMatchFilters}`).hover(
       function () {
         $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
         $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
@@ -96,7 +95,6 @@ function postResults(item) {
 
 function runDataQuality() {
 
-
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
   numListings = 0;
@@ -104,13 +102,16 @@ function runDataQuality() {
   let listings = [];
   let uniqueListings = null;
 
+
+console.log(link);
+console.log(storeSuperEvent);
+console.log(storeSubEvent);
+
   // First check for any unpacking of superevents or eventschedules
   if (
-    storeSuperEvent &&
-    storeSubEvent &&
-    storeSuperEvent.feedType === storeSubEvent.feedType
+    storeSuperEvent && link === null
   ) {
-    progress.append("Unpacking Data Feed");
+    cp.text("Unpacking Data Feed");
 
     console.log(`storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
     console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
@@ -129,6 +130,9 @@ function runDataQuality() {
       storeSuperEvent.feedType === 'SessionSeries' &&
       storeSuperEvent.itemDataType === 'ScheduledSession'
     ) {
+
+      cp.text("Unpacking data feed - embedded SuperEvent with Series data");
+
       link = 'superEvent';
       storeSubEvent.itemDataType = 'ScheduledSession';
 
@@ -149,6 +153,10 @@ function runDataQuality() {
       storeSuperEvent.feedType === 'SessionSeries' &&
       storeSuperEvent.itemDataType === 'mixed'
     ) {
+
+      console.log("2");
+      cp.text("Unpacking data feed - embedded SubEvent with session data");
+
       link = 'subEvent';
       storeSubEvent.itemDataType = 'ScheduledSession';
       storeSubEvent.items = {};
@@ -190,17 +198,16 @@ function runDataQuality() {
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
   ) {
-    progress.append(`<div id='combineProgress'</div>`);
-    let cp = $("#combineProgress");
 
+    console.log("3");
 
     let ccounter = 0;
 
     let combinedStoreItems = [];
-    for (const storeSubEventItem of Object.values(storeSubEvent.items)) {
+    let items = Object.values(storeSubEvent.items);
+    for (const storeSubEventItem of items) {
 
       ccounter++;
-      cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
 
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
@@ -219,11 +226,18 @@ function runDataQuality() {
         }
       }
     }
-    //console.log(`Combined store contains: ${combinedStoreItems.length} items`);
+
+    cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
+
+    console.log(`Combined store contains: ${combinedStoreItems.length} items`);
+    console.log(combinedStoreItems);
 
     for (const storeSubEventItem of combinedStoreItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
         listings.push(storeSubEventItem.data[link].identifier);
+      }
+      else if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link]['@id']) {
+        listings.push(storeSubEventItem.data[link]['@id']);
       }
     }
     uniqueListings = [...new Set(listings)];
@@ -233,6 +247,8 @@ function runDataQuality() {
     storeItemsForDataQuality.items = combinedStoreItems;
   }
   else {
+    cp.empty(); 
+    console.log("4");
 
     if (!(storeSuperEvent && storeSubEvent)) {
       // We are here if we don't have storeSuperEvent or storeSubEvent, which should occur only if
@@ -261,7 +277,7 @@ function runDataQuality() {
     storeItemsForDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
-
+  
   measureDataQuality();
 }
 
@@ -285,7 +301,7 @@ function measureDataQuality() {
   let counter = 0;
   for (const item of storeItemsForDataQuality.items) {
     counter++;
-    dqp.text("Measuring Data Quality: " + counter + " of " + storeItemsForDataQuality.items.length + " items");
+
 
     // Date info
 
@@ -393,6 +409,8 @@ function measureDataQuality() {
 
   }
 
+
+
   // After looping through all items and adding all urls to list - now go back and assign flag to those items with unique urls
   urlCounts.forEach((val, key) => {
     if (val === 1) {
@@ -403,6 +421,8 @@ function measureDataQuality() {
       });
     }
   });
+
+  dqp.text("Measuring Data Quality: " + counter + " of " + storeItemsForDataQuality.items.length + " items");
 
   $("#tabs").fadeIn("slow");
   postDataQuality();
@@ -435,7 +455,7 @@ function postDataQuality() {
   storeItemsForDataQuality.numItemsMatchFilters = 0;
 
   getFilters();
-  console.log(filters);
+  //console.log(filters);
 
   let numItems = 0;
 
