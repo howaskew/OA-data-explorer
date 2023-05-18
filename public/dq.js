@@ -103,9 +103,9 @@ function runDataQuality() {
   let uniqueListings = null;
 
 
-console.log(link);
-console.log(storeSuperEvent);
-console.log(storeSubEvent);
+//console.log(link);
+//console.log(storeSuperEvent);
+//console.log(storeSubEvent);
 
   // First check for any unpacking of superevents or eventschedules
   if (
@@ -229,8 +229,8 @@ console.log(storeSubEvent);
 
     cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
 
-    console.log(`Combined store contains: ${combinedStoreItems.length} items`);
-    console.log(combinedStoreItems);
+    //console.log(`Combined store contains: ${combinedStoreItems.length} items`);
+    //console.log(combinedStoreItems);
 
     for (const storeSubEventItem of combinedStoreItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
