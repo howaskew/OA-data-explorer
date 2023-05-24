@@ -227,8 +227,6 @@ function setStoreItems(url, store) {
         setStoreItemKind(store);
         setStoreItemDataType(store);
 
-        //console.log(Array.from(store.uniqueActivities));
-
         // console.log(`feedType: ${store.feedType}`);
         // console.log(`itemKind: ${store.itemKind}`);
         // console.log(`itemDataType: ${store.itemDataType}`);
@@ -245,9 +243,6 @@ function setStoreItems(url, store) {
             `  itemDataType: ${store.itemDataType}`
           );
         }
-
-        // TODO: Modify if an item is deleted and was the only instance of that activity
-        updateActivityList(store.uniqueActivities);
 
         console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
 

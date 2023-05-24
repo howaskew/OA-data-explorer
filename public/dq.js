@@ -48,7 +48,7 @@ function sleep(ms) {
 // This is to allow the DQ filters to be applied along with original filters
 
 function postResults(item) {
- 
+
   results = $("#resultsDiv");
   results.append(
     `<div id='row${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
@@ -103,9 +103,9 @@ function runDataQuality() {
   let uniqueListings = null;
 
 
-//console.log(link);
-//console.log(storeSuperEvent);
-//console.log(storeSubEvent);
+  //console.log(link);
+  //console.log(storeSuperEvent);
+  //console.log(storeSubEvent);
 
   // First check for any unpacking of superevents or eventschedules
   if (
@@ -247,7 +247,7 @@ function runDataQuality() {
     storeItemsForDataQuality.items = combinedStoreItems;
   }
   else {
-    cp.empty(); 
+    cp.empty();
     console.log("4");
 
     if (!(storeSuperEvent && storeSubEvent)) {
@@ -277,7 +277,7 @@ function runDataQuality() {
     storeItemsForDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
-  
+
   measureDataQuality();
 }
 
@@ -454,6 +454,9 @@ function postDataQuality() {
 
   storeItemsForDataQuality.numItemsMatchFilters = 0;
 
+  //Reset the unique activities to recreate a relevant list after other filters applied
+  storeItemsForDataQuality.uniqueActivities = new Set();
+
   getFilters();
   //console.log(filters);
 
@@ -599,8 +602,10 @@ function postDataQuality() {
           .filter(activityId => activityId)
 
           .forEach(activityId => {
-            // Add activity to list of unique activities (one of the original filters) - may be superceded
+
+            // Add activity to list of unique activities (one of the original filters, now applied after loading completed)
             storeItemsForDataQuality.uniqueActivities.add(activityId)
+
             // New DQ measures
 
             // See if there is a matching id / label
@@ -691,6 +696,13 @@ function postDataQuality() {
       "</div>"
     );
   }
+
+
+  // -------------------------------------------------------------------------------------------------
+
+  //Update selection dropdown in html
+  updateActivityList(storeItemsForDataQuality.uniqueActivities);
+  console.log(Array.from(storeItemsForDataQuality.uniqueActivities));
 
   // -------------------------------------------------------------------------------------------------
 
