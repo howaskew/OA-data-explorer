@@ -123,7 +123,7 @@ function runDataQuality() {
     console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
     console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
 
-    console.log(storeSuperEvent);
+    //console.log(storeSuperEvent);
 
     //BwD - embedded superevent with series data
     if (
@@ -448,6 +448,8 @@ function postDataQuality() {
   $("#apiPanel").removeClass("active");
   $("#resultPanel").addClass("active");
   $("#resultPanel").hide();
+  
+  
   results = $("#results");
   results.empty();
   results.append("<div id='resultsDiv'</div>");
@@ -702,7 +704,7 @@ function postDataQuality() {
 
   //Update selection dropdown in html
   updateActivityList(storeItemsForDataQuality.uniqueActivities);
-  console.log(Array.from(storeItemsForDataQuality.uniqueActivities));
+  //console.log(Array.from(storeItemsForDataQuality.uniqueActivities));
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1385,6 +1387,7 @@ function postDataQuality() {
 
 
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
+  sleep(1400).then(() => { $("#filterRows").fadeIn("slow"); });
   sleep(1400).then(() => {
     document.getElementById("DQ_filterActivities").disabled = false;
     document.getElementById("DQ_filterGeos").disabled = false;
