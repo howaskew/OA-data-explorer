@@ -746,6 +746,7 @@ function updateParameters(parm, parmVal) {
 function updateProvider() {
   provider = $("#provider option:selected").text();
   $("#tabs").hide();
+  $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
@@ -759,7 +760,8 @@ function updateProvider() {
     });
   })
     .done(function () {
-      updateParameters("endpoint", $("#endpoint").val());
+      endpoint = $("#endpoint").val();
+      updateEndpoint();
     });
 }
 
@@ -772,6 +774,13 @@ function updateEndpoint() {
   $("#progress").empty();
   $("#api").empty();
 
+  
+  // Uncheck filters
+  document.getElementById("DQ_filterDates").checked = false;
+  document.getElementById("DQ_filterActivities").checked = false;  
+  document.getElementById("DQ_filterGeos").checked = false;
+  document.getElementById("DQ_filterUrls").checked = false;
+
   //$("#graphTab").addClass("disabled").removeClass("active");
   //$("#validatePanel").addClass("disabled").removeClass("active");
   //$("#validateTab").addClass("disabled").removeClass("active");
@@ -781,7 +790,7 @@ function updateEndpoint() {
 
   provider = $("#provider option:selected").text();
   endpoint = $("#endpoint").val();
-
+    
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
 
