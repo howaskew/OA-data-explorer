@@ -366,6 +366,15 @@ function measureDataQuality() {
 
     }
 
+    // -------------------------------------------------------------------------------------------------
+
+    // Organizer info
+
+    let organizer = resolveProperty(item, 'organizer');
+
+    if (typeof organizer === 'object' && !Array.isArray(organizer) && organizer !== null && organizer.hasOwnProperty('name')) {
+      item.DQ_validOrganizer = 1;
+    }
 
     // -------------------------------------------------------------------------------------------------
 
@@ -477,13 +486,14 @@ function postDataQuality() {
   let numItemsNowToFuture = 0;
   let numItemsWithGeo = 0;
   let numItemsWithActivity = 0;
+  let numItemsWithOrganizer = 0;
   let numItemsWithName = 0;
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
 
   for (const item of storeItemsForDataQuality.items) {
 
-    // Filters 
+    // Filters
 
     let itemMatchesActivity =
       !filters.relevantActivitySet
@@ -517,6 +527,11 @@ function postDataQuality() {
     let itemMatchesDQActivityFilter =
       filters.DQ_filterActivities === false || (filters.DQ_filterActivities === true && itemPassedDQActivities === 0);
 
+    let itemPassedDQOrganizers =
+      item.DQ_validOrganizer || 0;
+    let itemMatchesDQOrganizerFilter =
+      filters.DQ_filterOrganizers === false || (filters.DQ_filterOrganizers === true && itemPassedDQOrganizers === 0);
+
     let itemPassedDQGeo =
       item.DQ_validGeo || 0;
     let itemMatchesDQGeoFilter =
@@ -534,6 +549,7 @@ function postDataQuality() {
         itemMatchesGender &&
         itemMatchesDQDateFilter &&
         itemMatchesDQActivityFilter &&
+        itemMatchesDQOrganizerFilter &&
         itemMatchesDQGeoFilter &&
         itemMatchesDQUrlFilter)
     ) {
@@ -602,7 +618,6 @@ function postDataQuality() {
         activities
           .map(activity => activity.id || activity['@id'])
           .filter(activityId => activityId)
-
           .forEach(activityId => {
 
             // Add activity to list of unique activities (one of the original filters, now applied after loading completed)
@@ -627,6 +642,17 @@ function postDataQuality() {
           numItemsWithActivity++;
         }
 
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // Organizer info
+
+      let organizer = resolveProperty(item, 'organizer');
+
+      if (typeof organizer === 'object' && !Array.isArray(organizer) && organizer !== null && organizer.hasOwnProperty('name')) {
+        storeItemsForDataQuality.uniqueOrganizers.add(organizer.name);
+        numItemsWithOrganizer++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -663,6 +689,9 @@ function postDataQuality() {
       // -------------------------------------------------------------------------------------------------
 
       // URL info
+
+      // TODO:
+      // Check if this actually needs to use resolveProperty()
 
       if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
         numItemsWithUrl++;
@@ -704,7 +733,11 @@ function postDataQuality() {
 
   //Update selection dropdown in html
   updateActivityList(storeItemsForDataQuality.uniqueActivities);
-  //console.log(Array.from(storeItemsForDataQuality.uniqueActivities));
+  console.log(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
+
+  //TODO: Update selection dropdown in html
+  updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
+  console.log(`uniqueOrganizers: ${Array.from(storeItemsForDataQuality.uniqueOrganizers)}`);
 
   // -------------------------------------------------------------------------------------------------
 

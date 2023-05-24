@@ -105,6 +105,7 @@ function clearStore(store) {
   store.numItemsMatchFilters = 0;
   store.timeHarvestStart = luxon.DateTime.now();
   store.uniqueActivities = new Set();
+  store.uniqueOrganizers = new Set();
 }
 
 clearStore(storeIngressOrder1);
@@ -118,6 +119,7 @@ function getFilters() {
     activity: $('#activity-list-id').val(),
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
+    DQ_filterOrganizers: false, // TODO: Check if actually needed, maybe not if no explicit graphic and toggle
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
     DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
@@ -543,6 +545,15 @@ function updateActivityList(filterSet) {
   let filter = Array.from(filterSet);
   let subsetScheme = scheme_1.generateSubset(filter);
   renderActivityList(subsetScheme);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateOrganizerList(filterSet) {
+  let filter = Array.from(filterSet);
+  let subsetScheme = scheme_1.generateSubset(filter);
+  // TODO:
+  // renderOrganizerList(subsetScheme);
 }
 
 // -------------------------------------------------------------------------------------------------
