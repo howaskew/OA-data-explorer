@@ -368,11 +368,19 @@ function measureDataQuality() {
 
     // -------------------------------------------------------------------------------------------------
 
+    // TODO: Check whether or not this is actually needed
+
     // Organizer info
 
     let organizer = resolveProperty(item, 'organizer');
 
-    if (typeof organizer === 'object' && !Array.isArray(organizer) && organizer !== null && organizer.hasOwnProperty('name')) {
+    let hasValidOrganizer =
+      typeof organizer === 'object' &&
+      !Array.isArray(organizer) &&
+      organizer !== null &&
+      organizer.hasOwnProperty('name');
+
+    if (hasValidOrganizer) {
       item.DQ_validOrganizer = 1;
     }
 
@@ -457,8 +465,8 @@ function postDataQuality() {
   $("#apiPanel").removeClass("active");
   $("#resultPanel").addClass("active");
   $("#resultPanel").hide();
-  
-  
+
+
   results = $("#results");
   results.empty();
   results.append("<div id='resultsDiv'</div>");
@@ -501,6 +509,18 @@ function postDataQuality() {
         : (resolveProperty(item, 'activity') || []).filter(activity =>
           filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
         ).length > 0;
+
+    let organizer = resolveProperty(item, 'organizer');
+    let hasValidOrganizer =
+      typeof organizer === 'object' &&
+      !Array.isArray(organizer) &&
+      organizer !== null &&
+      organizer.hasOwnProperty('name');
+    let itemMatchesOrganizer =
+      !filters.organizer
+        ? true
+        : hasValidOrganizer && organizer.name === filters.organizer;
+
     let itemMatchesDay =
       !filters.day
         ? true
@@ -511,6 +531,7 @@ function postDataQuality() {
           && x.byDay.includes(filters.day)
           || x.byDay.includes(filters.day.replace('https', 'http'))
         ).length > 0;
+
     let itemMatchesGender =
       !filters.gender
         ? true
@@ -527,6 +548,7 @@ function postDataQuality() {
     let itemMatchesDQActivityFilter =
       filters.DQ_filterActivities === false || (filters.DQ_filterActivities === true && itemPassedDQActivities === 0);
 
+    // TODO: Check whether or not this is actually needed
     let itemPassedDQOrganizers =
       item.DQ_validOrganizer || 0;
     let itemMatchesDQOrganizerFilter =
@@ -544,14 +566,15 @@ function postDataQuality() {
 
 
     if (
-      (itemMatchesActivity &&
-        itemMatchesDay &&
-        itemMatchesGender &&
-        itemMatchesDQDateFilter &&
-        itemMatchesDQActivityFilter &&
-        itemMatchesDQOrganizerFilter &&
-        itemMatchesDQGeoFilter &&
-        itemMatchesDQUrlFilter)
+      itemMatchesActivity &&
+      itemMatchesOrganizer &&
+      itemMatchesDay &&
+      itemMatchesGender &&
+      itemMatchesDQDateFilter &&
+      itemMatchesDQActivityFilter &&
+      itemMatchesDQOrganizerFilter &&
+      itemMatchesDQGeoFilter &&
+      itemMatchesDQUrlFilter
     ) {
 
       numItems++;
@@ -648,9 +671,7 @@ function postDataQuality() {
 
       // Organizer info
 
-      let organizer = resolveProperty(item, 'organizer');
-
-      if (typeof organizer === 'object' && !Array.isArray(organizer) && organizer !== null && organizer.hasOwnProperty('name')) {
+      if (hasValidOrganizer) {
         storeItemsForDataQuality.uniqueOrganizers.add(organizer.name);
         numItemsWithOrganizer++;
       }
@@ -733,11 +754,13 @@ function postDataQuality() {
 
   //Update selection dropdown in html
   updateActivityList(storeItemsForDataQuality.uniqueActivities);
-  console.log(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
+  console.log(`Number of unique activities: ${storeItemsForDataQuality.uniqueActivities.size}`);
+  // console.dir(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
 
-  //TODO: Update selection dropdown in html
+  //Update selection dropdown in html
   updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
-  console.log(`uniqueOrganizers: ${Array.from(storeItemsForDataQuality.uniqueOrganizers)}`);
+  console.log(`Number of unique organizers: ${storeItemsForDataQuality.uniqueOrganizers.size}`);
+  // console.dir(`uniqueOrganizers: ${Array.from(storeItemsForDataQuality.uniqueOrganizers)}`);
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1428,4 +1451,3 @@ function postDataQuality() {
     document.getElementById("DQ_filterUrls").disabled = false;
   });
 }
-

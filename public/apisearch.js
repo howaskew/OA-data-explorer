@@ -5,6 +5,7 @@ let scheme_1 = null;
 let scheme_2 = null;
 
 let activityListRefresh = 0;
+let organizerListRefresh = 0;
 
 let loadingTimeout = null;
 let loadingStarted = null;
@@ -117,6 +118,7 @@ clearStore(storeItemsForDataQuality);
 function getFilters() {
   filters = {
     activity: $('#activity-list-id').val(),
+    organizer: $('#organizer-list').val(),
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterOrganizers: false, // TODO: Check if actually needed, maybe not if no explicit graphic and toggle
@@ -491,7 +493,8 @@ function renderActivityList(localScheme) {
   let currentSelectedActivity = $('#activity-list-id').val();
   //console.log("Current selected activity: " + currentSelectedActivity);
   $('#activity-dropdown').empty();
-  $('#activity-dropdown').append(`<div class="dropdown hierarchy-select row" id="activity-list-dropdown-${activityListRefresh}">
+  $('#activity-dropdown').append(
+    `<div class="dropdown hierarchy-select row" id="activity-list-dropdown-${activityListRefresh}">
       <button type="button" class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1" id="activity-list-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
       <div class="dropdown-menu" style="width: 98%;" aria-labelledby="activity-list-button">
         <div class="hs-searchbox">
@@ -508,6 +511,7 @@ function renderActivityList(localScheme) {
 
   // Render the activity list in a format the HierarchySelect will understand
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(localScheme.getTopConcepts(), 1, []));
+
   // Initialise the HierarchySelect using the activity list
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
     width: 'auto',
@@ -521,12 +525,66 @@ function renderActivityList(localScheme) {
       let concept = localScheme.getConceptByID(id);
       initialised++;
       if (initialised>1) {
-        console.log($("#activity-list-id").val());
+        console.log(`Selected activity for filter: ${$("#activity-list-id").val()}`);
         postDataQuality();
       }
     }
   })
 
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function renderOrganizerList(organizers) {
+  organizerListRefresh++;
+  let initialised = 0;
+  let currentSelectedOrganizer = $('#organizer-list').val();
+  $('#organizer-dropdown').empty();
+  $('#organizer-dropdown').append(
+    `<div class="dropdown hierarchy-select row" id="organizer-list-dropdown-${organizerListRefresh}">
+      <button type="button" class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1" id="organizer-list-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
+      <div class="dropdown-menu" style="width: 98%;" aria-labelledby="organizer-list-button">
+        <div class="hs-searchbox">
+          <input type="text" class="form-control" autocomplete="off">
+        </div>
+        <div class="hs-menu-inner">
+          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Organizers</a>
+        </div>
+      </div>
+      <input name="organizer-list" id="organizer-list" readonly="readonly" aria-hidden="true" type="hidden"/>
+    </div>`);
+  $('#organizer-list').val(currentSelectedOrganizer);
+
+  // Render the organizer list in a format the HierarchySelect will understand
+  $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
+    Array.from(organizers).map(organizer =>
+      $("<a/>", {
+          "class": "dropdown-item",
+          "data-value": organizer,
+          "data-level": 1,
+          "href": "#",
+          text: organizer
+      })
+    )
+  );
+
+  // Initialise the HierarchySelect using the organizer list
+  $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
+    width: 'auto',
+
+    // Set initial dropdown state based on the hidden field's initial value
+    initialValueSet: true,
+
+    // Update other elements when a selection is made
+    // (Note the value of the #organizer-list input is set automatically by HierarchySelect upon selection)
+    onChange: function (organizer) {
+      initialised++;
+      if (initialised>1) {
+        console.log(`Selected organizer for filter: ${$("#organizer-list").val()}`);
+        postDataQuality();
+      }
+    }
+  });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -549,11 +607,8 @@ function updateActivityList(filterSet) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateOrganizerList(filterSet) {
-  let filter = Array.from(filterSet);
-  let subsetScheme = scheme_1.generateSubset(filter);
-  // TODO:
-  // renderOrganizerList(subsetScheme);
+function updateOrganizerList(organizers) {
+  renderOrganizerList(organizers);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -618,7 +673,7 @@ function getVisualise(itemId) {
     <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
     </h2>
     <pre>${JSON.stringify(storeIngressOrder1.items[itemId], null, 2)}</pre>
-    </div>   
+    </div>
     <div class="visual">
     <h2>${storeIngressOrder2.itemDataType}
     <button id='validateChild' class='btn btn-secondary btn-sm mb-1'>Validate</button>
