@@ -792,6 +792,11 @@ function updateEndpoint() {
   document.getElementById("DQ_filterGeos").checked = false;
   document.getElementById("DQ_filterUrls").checked = false;
 
+  DQ_filterDates = $("#DQ_filterDates").prop("checked");
+  DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
+  DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
+  DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
+  
   //$("#graphTab").addClass("disabled").removeClass("active");
   //$("#validatePanel").addClass("disabled").removeClass("active");
   //$("#validateTab").addClass("disabled").removeClass("active");
