@@ -121,7 +121,7 @@ function getFilters() {
     organizer: $('#organizer-list').val(),
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
-    DQ_filterOrganizers: false, // TODO: Check if actually needed, maybe not if no explicit graphic and toggle
+    //DQ_filterOrganizers: false, // TODO: Check if actually needed, maybe not if no explicit graphic and toggle
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
     DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
@@ -440,7 +440,7 @@ function loadingComplete() {
   }
   $("#loading-time").hide();
   runDataQuality();
-  //console.log(storeItemsForDataQuality);
+  console.log(storeItemsForDataQuality);
 
 }
 
@@ -834,24 +834,25 @@ function updateProvider() {
 // -------------------------------------------------------------------------------------------------
 
 function updateEndpoint() {
+  console.log('here');
   $("#tabs").hide();
   $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
 
-  
   // Uncheck filters
-  document.getElementById("DQ_filterDates").checked = false;
-  document.getElementById("DQ_filterActivities").checked = false;  
-  document.getElementById("DQ_filterGeos").checked = false;
-  document.getElementById("DQ_filterUrls").checked = false;
+  $("#DQ_filterDates").prop("checked", false);
+  $("#DQ_filterActivities").prop("checked", false);
+  $("#DQ_filterGeos").prop("checked", false);
+  $("#DQ_filterUrls").prop("checked", false);
+  $("#activity-list-id").val("");
+  $("#Gender").val("");
+  $("#Coverage").val("");
 
-  DQ_filterDates = $("#DQ_filterDates").prop("checked");
-  DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
-  DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
-  DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
-  
+  getFilters();
+  console.log(filters);
+
   //$("#graphTab").addClass("disabled").removeClass("active");
   //$("#validatePanel").addClass("disabled").removeClass("active");
   //$("#validateTab").addClass("disabled").removeClass("active");
@@ -865,8 +866,7 @@ function updateEndpoint() {
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
 
-  $("#Gender").val("");
-  $("#Coverage").val("");
+
 }
 
 // -------------------------------------------------------------------------------------------------
