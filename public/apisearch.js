@@ -43,7 +43,7 @@ let storeSuperEvent = null;
 let storeSubEvent = null;
 
 // This is used to store the results of DQ tests for filtering
-let storeItemsForDataQuality = [];
+let storeItemsForDataQuality = {};
 
 // These may be the feedType or the itemDataType, depending on conditions:
 let storeSuperEventContentType = null;
@@ -227,8 +227,6 @@ function setStoreItems(url, store) {
         setStoreItemKind(store);
         setStoreItemDataType(store);
 
-        //console.log(Array.from(store.uniqueActivities));
-
         // console.log(`feedType: ${store.feedType}`);
         // console.log(`itemKind: ${store.itemKind}`);
         // console.log(`itemDataType: ${store.itemDataType}`);
@@ -245,9 +243,6 @@ function setStoreItems(url, store) {
             `  itemDataType: ${store.itemDataType}`
           );
         }
-
-        // TODO: Modify if an item is deleted and was the only instance of that activity
-        updateActivityList(store.uniqueActivities);
 
         console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
 
@@ -488,8 +483,11 @@ function renderTree(concepts, level, output) {
 // -------------------------------------------------------------------------------------------------
 
 function renderActivityList(localScheme) {
+  //console.log("RENDERING");
   activityListRefresh++;
+  let initialised = 0;
   let currentSelectedActivity = $('#activity-list-id').val();
+  //console.log("Current selected activity: " + currentSelectedActivity);
   $('#activity-dropdown').empty();
   $('#activity-dropdown').append(`<div class="dropdown hierarchy-select row" id="activity-list-dropdown-${activityListRefresh}">
       <button type="button" class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1" id="activity-list-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
@@ -498,16 +496,16 @@ function renderActivityList(localScheme) {
           <input type="text" class="form-control" autocomplete="off">
         </div>
         <div class="hs-menu-inner">
-          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">- Select Activity -</a>
+          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Activities</a>
         </div>
       </div>
       <input name="activity-list-id" id="activity-list-id" readonly="readonly" aria-hidden="true" type="hidden"/>
     </div>`);
   $('#activity-list-id').val(currentSelectedActivity);
+  //console.log("#activity-list-id: " + currentSelectedActivity);
 
   // Render the activity list in a format the HierarchySelect will understand
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(localScheme.getTopConcepts(), 1, []));
-
   // Initialise the HierarchySelect using the activity list
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
     width: 'auto',
@@ -519,8 +517,14 @@ function renderActivityList(localScheme) {
     // (Note the value of the #activity-list-id input is set automatically by HierarchySelect upon selection)
     onChange: function (id) {
       let concept = localScheme.getConceptByID(id);
+      initialised++;
+      if (initialised>1) {
+        console.log($("#activity-list-id").val());
+        postDataQuality();
+      }
     }
-  });
+  })
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -763,6 +767,7 @@ function updateProvider() {
 
 function updateEndpoint() {
   $("#tabs").hide();
+  $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
@@ -801,7 +806,7 @@ function updateEndpointUpdate() {
 
 function updateDQ_filterDates() {
   DQ_filterDates = $("#DQ_filterDates").prop("checked");
-  updateParameters("DQ_filterDates", DQ_filterDates);
+  //updateParameters("DQ_filterDates", DQ_filterDates);
   postDataQuality();
 }
 
@@ -809,7 +814,7 @@ function updateDQ_filterDates() {
 
 function updateDQ_filterActivities() {
   DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
-  updateParameters("DQ_filterActivities", DQ_filterActivities);
+  //updateParameters("DQ_filterActivities", DQ_filterActivities);
   postDataQuality();
 }
 
@@ -818,7 +823,7 @@ function updateDQ_filterActivities() {
 
 function updateDQ_filterGeos() {
   DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
-  updateParameters("DQ_filterGeos", DQ_filterGeos);
+  //updateParameters("DQ_filterGeos", DQ_filterGeos);
   postDataQuality();
 }
 
@@ -827,10 +832,9 @@ function updateDQ_filterGeos() {
 
 function updateDQ_filterUrls() {
   DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
-  updateParameters("DQ_filterUrls", DQ_filterUrls);
+  //updateParameters("DQ_filterUrls", DQ_filterUrls);
   postDataQuality();
 }
-
 
 
 // -------------------------------------------------------------------------------------------------
@@ -903,7 +907,6 @@ function clearForm(endpoint) {
 // -------------------------------------------------------------------------------------------------
 
 function runForm(pageNumber) {
-  console.log("runForm");
 
   if (pageNumber === undefined) {
     pageNumber = null;
@@ -1024,6 +1027,7 @@ function setPage() {
   $("#endpoint").on("change", function () {
     updateEndpoint();
   });
+
   $("#DQ_filterDates").on("change", function () {
     updateDQ_filterDates();
   });
@@ -1062,6 +1066,7 @@ function setPage() {
   });
 
   $("#tabs").hide();
+  $("#filterRows").hide();
 
   $("#clear").on("click", function () {
     clearForm($("#endpoint").val());
@@ -1135,7 +1140,7 @@ $(function () {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
     scheme_1 = new skos.ConceptScheme(data);
 
-    renderActivityList(scheme_1);
+    //renderActivityList(scheme_1);
 
     // Note: use the below to set dropdown value elsewhere if necessary
     //$('.activity-list-dropdown').setValue("https://openactive.io/activity-list#72d19892-5f55-4e9c-87b0-a5433baa49c8");

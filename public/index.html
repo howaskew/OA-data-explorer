@@ -39,6 +39,19 @@
                     </div>
                 </div>
 
+                <div class="flex_row" style="padding-top: 1%">
+                    <div class="col-sm-8 ">
+                        <button id="execute" class="btn btn-success form-control" disabled="disabled">
+                            Execute query
+                        </button>
+                    </div>
+                    <div class="col-sm-4 ">
+                        <button id="clear" class="btn btn-secondary form-control">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
                 <div class="flex_row top " style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
@@ -64,8 +77,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex_row" style="display: none;">
-                    <div class="col-sm-4">
+                <div class="flex_row">
+                    <div class="col-sm-4" style="display: none;">
                         <div class="flex_row">
                             <label class="ml-1" for="Gender">Gender</label>
                         </div>
@@ -78,17 +91,17 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-sm-8">
-                        <div class="flex_row">
+
+                    <div class="col-sm-6" id="filterRows" style="display:none;">
+                        <div class="flex_row top">
                             <div class="col">
-                                <div class="flex_row">
-                                    <label class="ml-1" for="TaxonomyTerm">Activity</label>
+                                <div class="flex_row top">
+                                    <label for="TaxonomyTerm">Filter by Activity:</label>
                                 </div>
                                 <div id="activity-dropdown">
                                     <div class="dropdown hierarchy-select activity-list-dropdown row">
                                         <button type="button"
-                                            class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1">- Select
-                                            Activity -</button>
+                                            class="btn btn-secondary dropdown-toggle form-control">Filter by Activity</button>
                                     </div>
                                 </div>
                             </div>
@@ -105,6 +118,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div id="RegularScheduleRow" class="flex_row" style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
@@ -169,19 +183,6 @@
                                 <input id="maxAge" type="number" class="form-control mr-1" disabled="disabled">
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="flex_row" style="padding-top: 3%">
-                    <div class="col-sm-8 ">
-                        <button id="execute" class="btn btn-success form-control" disabled="disabled">
-                            Execute query
-                        </button>
-                    </div>
-                    <div class="col-sm-4 ">
-                        <button id="clear" class="btn btn-secondary form-control">
-                            Clear
-                        </button>
                     </div>
                 </div>
             </div>
