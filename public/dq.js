@@ -571,7 +571,7 @@ function postDataQuality() {
       itemMatchesDay &&
       itemMatchesGender &&
       itemMatchesDQDateFilter &&
-      itemMatchesDQActivityFilter &&
+      // itemMatchesDQActivityFilter && // Commented out to allow items to pass regardless of this check
       itemMatchesDQOrganizerFilter &&
       itemMatchesDQGeoFilter &&
       itemMatchesDQUrlFilter
