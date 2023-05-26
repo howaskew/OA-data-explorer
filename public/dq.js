@@ -34,7 +34,6 @@ function matchToFacilityList(id) {
   return null;
 }
 
-
 // -------------------------------------------------------------------------------------------------
 
 function sleep(ms) {
@@ -548,12 +547,6 @@ function postDataQuality() {
     let itemMatchesDQActivityFilter =
       filters.DQ_filterActivities === false || (filters.DQ_filterActivities === true && itemPassedDQActivities === 0);
 
-    // TODO: Check whether or not this is actually needed
-    let itemPassedDQOrganizers =
-      item.DQ_validOrganizer || 0;
-    let itemMatchesDQOrganizerFilter =
-      filters.DQ_filterOrganizers === false || (filters.DQ_filterOrganizers === true && itemPassedDQOrganizers === 0);
-
     let itemPassedDQGeo =
       item.DQ_validGeo || 0;
     let itemMatchesDQGeoFilter =
@@ -571,8 +564,7 @@ function postDataQuality() {
       itemMatchesDay &&
       itemMatchesGender &&
       itemMatchesDQDateFilter &&
-      // itemMatchesDQActivityFilter && // Commented out to allow items to pass regardless of this check
-      itemMatchesDQOrganizerFilter &&
+      itemMatchesDQActivityFilter && 
       itemMatchesDQGeoFilter &&
       itemMatchesDQUrlFilter
     ) {
