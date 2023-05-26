@@ -102,9 +102,9 @@ function runDataQuality() {
   let uniqueListings = null;
 
 
-  //console.log(link);
-  //console.log(storeSuperEvent);
-  //console.log(storeSubEvent);
+  console.log(link);
+  console.log(storeSuperEvent);
+  console.log(storeSubEvent);
 
   // First check for any unpacking of superevents or eventschedules
   if (
@@ -204,11 +204,13 @@ function runDataQuality() {
 
     let combinedStoreItems = [];
     let items = Object.values(storeSubEvent.items);
+
     for (const storeSubEventItem of items) {
 
       ccounter++;
 
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
+
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
         const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
         // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
@@ -299,6 +301,7 @@ function measureDataQuality() {
 
   let counter = 0;
   for (const item of storeItemsForDataQuality.items) {
+
     counter++;
 
 
@@ -367,24 +370,6 @@ function measureDataQuality() {
 
     // -------------------------------------------------------------------------------------------------
 
-    // TODO: Check whether or not this is actually needed
-
-    // Organizer info
-
-    let organizer = resolveProperty(item, 'organizer');
-
-    let hasValidOrganizer =
-      typeof organizer === 'object' &&
-      !Array.isArray(organizer) &&
-      organizer !== null &&
-      organizer.hasOwnProperty('name');
-
-    if (hasValidOrganizer) {
-      item.DQ_validOrganizer = 1;
-    }
-
-    // -------------------------------------------------------------------------------------------------
-
     // Name info
 
     const name = getProperty(item, 'name');
@@ -425,12 +410,10 @@ function measureDataQuality() {
 
   }
 
-
-
   // After looping through all items and adding all urls to list - now go back and assign flag to those items with unique urls
   urlCounts.forEach((val, key) => {
     if (val === 1) {
-      items.forEach(item => {
+      storeItemsForDataQuality.items.forEach(item => {
         if (item.data && item.data.url && typeof item.data.url === 'string' && item.data.url === key) {
           item.DQ_validUrl = 1;
         }
