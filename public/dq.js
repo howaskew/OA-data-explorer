@@ -102,9 +102,9 @@ function runDataQuality() {
   let uniqueListings = null;
 
 
-  console.log(link);
-  console.log(storeSuperEvent);
-  console.log(storeSubEvent);
+  //console.log(link);
+  //console.log(storeSuperEvent);
+  //console.log(storeSubEvent);
 
   // First check for any unpacking of superevents or eventschedules
   if (
