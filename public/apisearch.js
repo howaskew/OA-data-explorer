@@ -438,7 +438,7 @@ function loadingComplete() {
   }
   $("#loading-time").hide();
   runDataQuality();
-  console.log(storeItemsForDataQuality);
+  //console.log(storeItemsForDataQuality);
 
 }
 
