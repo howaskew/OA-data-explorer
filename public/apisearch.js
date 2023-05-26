@@ -121,7 +121,6 @@ function getFilters() {
     organizer: $('#organizer-list').val(),
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
-    //DQ_filterOrganizers: false, // TODO: Check if actually needed, maybe not if no explicit graphic and toggle
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
     DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
@@ -430,7 +429,6 @@ function clearCharts() {
 
 function loadingComplete() {
 
-
   loadingStarted = null;
   loadingDone = true;
 
@@ -491,7 +489,7 @@ function renderActivityList(localScheme) {
   activityListRefresh++;
   let initialised = 0;
   let currentSelectedActivity = $('#activity-list-id').val();
-  //console.log("Current selected activity: " + currentSelectedActivity);
+  console.log("Current selected activity: " + currentSelectedActivity);
   $('#activity-dropdown').empty();
   $('#activity-dropdown').append(
     `<div class="dropdown hierarchy-select row" id="activity-list-dropdown-${activityListRefresh}">
@@ -507,7 +505,7 @@ function renderActivityList(localScheme) {
       <input name="activity-list-id" id="activity-list-id" readonly="readonly" aria-hidden="true" type="hidden"/>
     </div>`);
   $('#activity-list-id').val(currentSelectedActivity);
-  //console.log("#activity-list-id: " + currentSelectedActivity);
+  console.log("#activity-list-id: " + currentSelectedActivity);
 
   // Render the activity list in a format the HierarchySelect will understand
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(localScheme.getTopConcepts(), 1, []));
@@ -832,39 +830,50 @@ function updateProvider() {
 
 // -------------------------------------------------------------------------------------------------
 
+function clearFilters() {
+  $("#DQ_filterDates").prop("checked", false);
+  $("#DQ_filterActivities").prop("checked", false);
+  $("#DQ_filterGeos").prop("checked", false);
+  $("#DQ_filterUrls").prop("checked", false);
+  $("#activity-list-id").val("");
+  $("#organizer-list").val("");
+  $("#Gender").val("");
+  $("#Coverage").val("");
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function disableFilters() {
+  document.getElementById("DQ_filterActivities").disabled = true;
+  document.getElementById("DQ_filterGeos").disabled = true;
+  document.getElementById("DQ_filterDates").disabled = true;
+  document.getElementById("DQ_filterUrls").disabled = true;
+}
+
+function enableFilters() {
+  document.getElementById("DQ_filterActivities").disabled = false;
+  document.getElementById("DQ_filterGeos").disabled = false;
+  document.getElementById("DQ_filterDates").disabled = false;
+  document.getElementById("DQ_filterUrls").disabled = false;
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function updateEndpoint() {
-  console.log('here');
+
   $("#tabs").hide();
   $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
 
-  // Uncheck filters
-  $("#DQ_filterDates").prop("checked", false);
-  $("#DQ_filterActivities").prop("checked", false);
-  $("#DQ_filterGeos").prop("checked", false);
-  $("#DQ_filterUrls").prop("checked", false);
-  $("#activity-list-id").val("");
-  $("#Gender").val("");
-  $("#Coverage").val("");
-
-  getFilters();
-  console.log(filters);
-
-  //$("#graphTab").addClass("disabled").removeClass("active");
-  //$("#validatePanel").addClass("disabled").removeClass("active");
-  //$("#validateTab").addClass("disabled").removeClass("active");
-  //$("#graphPanel").removeClass("active");
-  //$("#resultTab").addClass("active");
-  //$("#resultPanel").addClass("active");
+  clearFilters();
 
   provider = $("#provider option:selected").text();
   endpoint = $("#endpoint").val();
     
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
-
 
 }
 
@@ -885,7 +894,6 @@ function updateEndpointUpdate() {
 
 function updateDQ_filterDates() {
   DQ_filterDates = $("#DQ_filterDates").prop("checked");
-  //updateParameters("DQ_filterDates", DQ_filterDates);
   postDataQuality();
 }
 
@@ -893,7 +901,6 @@ function updateDQ_filterDates() {
 
 function updateDQ_filterActivities() {
   DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
-  //updateParameters("DQ_filterActivities", DQ_filterActivities);
   postDataQuality();
 }
 
@@ -902,7 +909,6 @@ function updateDQ_filterActivities() {
 
 function updateDQ_filterGeos() {
   DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
-  //updateParameters("DQ_filterGeos", DQ_filterGeos);
   postDataQuality();
 }
 
@@ -911,7 +917,6 @@ function updateDQ_filterGeos() {
 
 function updateDQ_filterUrls() {
   DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
-  //updateParameters("DQ_filterUrls", DQ_filterUrls);
   postDataQuality();
 }
 
@@ -981,6 +986,11 @@ function clearForm(endpoint) {
   else {
     window.location.search = "";
   }
+  $("#tabs").hide();
+  $("#filterRows").hide();
+  $("#results").empty();
+  $("#progress").empty();
+  $("#api").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1119,6 +1129,7 @@ function setPage() {
   $("#DQ_filterUrls").on("change", function () {
     updateDQ_filterUrls();
   });
+
   $("#Coverage").on("change", function () {
     updateCoverage();
   });
@@ -1148,6 +1159,7 @@ function setPage() {
   $("#filterRows").hide();
 
   $("#clear").on("click", function () {
+    clearFilters();
     clearForm($("#endpoint").val());
   });
 
