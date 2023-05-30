@@ -730,6 +730,23 @@ function addApiPanel(text, storeIngressOrder) {
 
 // -------------------------------------------------------------------------------------------------
 
+function clearOrganizerPanel() {
+  $("#organizer").empty();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function addOrganizerPanel(organizers) {
+  let panel = $("#organizer");
+  for (const organizer of organizers) {
+    panel
+      .add("<div><p class='text-wrap' style='word-wrap: break-word'>" + organizer + "</p></div>")
+      .appendTo(panel);
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function updateScroll() {
   const element = document.getElementById("api");
   element.scrollTop = element.scrollHeight;
@@ -813,6 +830,7 @@ function updateProvider() {
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
+  $("#organizer").empty();
   //Replicating setEndpoints, without the page reset
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
@@ -866,12 +884,13 @@ function updateEndpoint() {
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
+  $("#organizer").empty();
 
   clearFilters();
 
   provider = $("#provider option:selected").text();
   endpoint = $("#endpoint").val();
-    
+
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
 
@@ -991,6 +1010,7 @@ function clearForm(endpoint) {
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
+  $("#organizer").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1027,11 +1047,14 @@ function runForm(pageNumber) {
   $("#results").empty();
   $("#progress").empty();
   $("#api").empty();
+  $("#organizer").empty();
 
   updateScroll();
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
+  // TODO: Are these functions actually needed if we have run .empty() just above here?
   clearApiPanel();
+  clearOrganizerPanel();
 
   loadingStart();
 
