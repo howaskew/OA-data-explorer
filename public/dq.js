@@ -445,6 +445,8 @@ function postDataQuality() {
   $("#graphPanel").removeClass("active");
   $("#apiTab").removeClass("active");
   $("#apiPanel").removeClass("active");
+  $("#organizerTab").removeClass("active");
+  $("#organizerPanel").removeClass("active");
   $("#resultPanel").addClass("active");
   $("#resultPanel").hide();
 
@@ -734,6 +736,8 @@ function postDataQuality() {
 
   //Update selection dropdown in html
   updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
+  clearOrganizerPanel();
+  addOrganizerPanel(storeItemsForDataQuality.uniqueOrganizers);
   console.log(`Number of unique organizers: ${storeItemsForDataQuality.uniqueOrganizers.size}`);
   // console.dir(`uniqueOrganizers: ${Array.from(storeItemsForDataQuality.uniqueOrganizers)}`);
 
