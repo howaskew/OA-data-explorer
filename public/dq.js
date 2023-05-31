@@ -1,15 +1,13 @@
-function getProperty(obj, propertyName) {
+// TODO: This needs a depth-of-search cap
+function getProperty(obj, keyToGet) {
   for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      const value = obj[key];
-      if (typeof value === 'object') {
-        const prop = getProperty(value, propertyName);
-        if (prop) {
-          return prop;
-        }
-      }
-      else if (key === propertyName) {
-        return value;
+    if (key === keyToGet) {
+      return obj[key];
+    }
+    else if (typeof obj[key] === 'object') {
+      const val = getProperty(obj[key], keyToGet);
+      if (val) {
+        return val;
       }
     }
   }
@@ -447,6 +445,8 @@ function postDataQuality() {
   $("#apiPanel").removeClass("active");
   $("#organizerTab").removeClass("active");
   $("#organizerPanel").removeClass("active");
+  $("#locationTab").removeClass("active");
+  $("#locationPanel").removeClass("active");
   $("#resultPanel").addClass("active");
   $("#resultPanel").hide();
 
@@ -476,9 +476,10 @@ function postDataQuality() {
 
 
   let numItemsNowToFuture = 0;
-  let numItemsWithGeo = 0;
+  let numItemsWithGeo = 0; // TODO: Sort out duplication of effort with "numItemsWithOrganizer"
   let numItemsWithActivity = 0;
   let numItemsWithOrganizer = 0;
+  let numItemsWithLocation = 0;
   let numItemsWithName = 0;
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
@@ -505,6 +506,19 @@ function postDataQuality() {
       !filters.organizer
         ? true
         : hasValidOrganizer && organizer.name === filters.organizer;
+
+    let location = resolveProperty(item, 'location');
+    let hasValidLocation =
+      typeof location === 'object' &&
+      !Array.isArray(location) &&
+      location !== null &&
+      typeof location.name === 'string' &&
+      location.name.trim().length > 0;
+    // TODO: No location drop-down menu at present, but could be ...
+    // let itemMatchesLocation =
+    //   !filters.location
+    //     ? true
+    //     : hasValidLocation && location.name === filters.location;
 
     let itemMatchesDay =
       !filters.day
@@ -547,10 +561,11 @@ function postDataQuality() {
     if (
       itemMatchesActivity &&
       itemMatchesOrganizer &&
+      // itemMatchesLocation && // TODO: No location drop-down menu at present, but could be ...
       itemMatchesDay &&
       itemMatchesGender &&
       itemMatchesDQDateFilter &&
-      itemMatchesDQActivityFilter && 
+      itemMatchesDQActivityFilter &&
       itemMatchesDQGeoFilter &&
       itemMatchesDQUrlFilter
     ) {
@@ -584,6 +599,7 @@ function postDataQuality() {
       // -------------------------------------------------------------------------------------------------
 
       // Geo info
+      // TODO: Sort out duplication of effort with "Location info"
 
       const postalCode = getProperty(item, 'postalCode');
       const latitude = getProperty(item, 'latitude');
@@ -660,11 +676,52 @@ function postDataQuality() {
           };
         }
         for (const key in storeItemsForDataQuality.uniqueOrganizers[organizerName]) {
-          if (typeof organizer[key] === 'string' && organizer[key].trim().length > 0) {
-            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(organizer[key].trim());
+          const val = getProperty(organizer, key);
+          if (typeof val === 'string' && val.trim().length > 0) {
+            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
+          }
+          else if (typeof val === 'number') {
+            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(val);
           }
         }
         numItemsWithOrganizer++;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      // Location info
+
+      if (hasValidLocation) {
+        let locationName = location.name.trim();
+        if (!storeItemsForDataQuality.uniqueLocations.hasOwnProperty(locationName))
+        {
+          storeItemsForDataQuality.uniqueLocations[locationName] = {
+            'url': new Set(),
+            'email': new Set(),
+            'telephone': new Set(),
+            'streetAddress': new Set(),
+            'postalCode': new Set(),
+            'coordinates': new Set(),
+          };
+        }
+        // Note that this is 'const key of' rather than 'const key in':
+        for (const key of ['url', 'email', 'telephone', 'streetAddress', 'postalCode']) {
+          const val = getProperty(location, key);
+          if (typeof val === 'string' && val.trim().length > 0) {
+            storeItemsForDataQuality.uniqueLocations[locationName][key].add(val.trim());
+          }
+          else if (typeof val === 'number') {
+            storeItemsForDataQuality.uniqueLocations[locationName][key].add(val);
+          }
+        }
+        // The coordinates are stored as a single lat,lon combined string in order to be a single element
+        // in the set, which is then relevant for comparing to further coordinates to only adding unique:
+        const latitude = getProperty(location, 'latitude');
+        const longitude = getProperty(location, 'longitude');
+        if (typeof latitude === 'number' && typeof longitude === 'number') {
+          storeItemsForDataQuality.uniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
+        }
+        numItemsWithLocation++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -740,20 +797,28 @@ function postDataQuality() {
     );
   }
 
+  // -------------------------------------------------------------------------------------------------
+
+  storeItemsForDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueOrganizers).sort());
+  storeItemsForDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueLocations).sort());
 
   // -------------------------------------------------------------------------------------------------
 
-  //Update selection dropdown in html
   updateActivityList(storeItemsForDataQuality.uniqueActivities);
   console.log(`Number of unique activities: ${storeItemsForDataQuality.uniqueActivities.size}`);
   // console.dir(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
 
-  //Update selection dropdown in html
   updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
   clearOrganizerPanel();
   addOrganizerPanel(storeItemsForDataQuality.uniqueOrganizers);
   console.log(`Number of unique organizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers).length}`);
   // console.dir(`uniqueOrganizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers)}`);
+
+  // updateLocationList(storeItemsForDataQuality.uniqueLocations); // TODO: No location drop-down menu at present, but could be ...
+  clearLocationPanel();
+  addLocationPanel(storeItemsForDataQuality.uniqueLocations);
+  console.log(`Number of unique locations: ${Object.keys(storeItemsForDataQuality.uniqueLocations).length}`);
+  // console.dir(`uniqueLocations: ${Object.keys(storeItemsForDataQuality.uniqueLocations)}`);
 
   // -------------------------------------------------------------------------------------------------
 
