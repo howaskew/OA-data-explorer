@@ -499,7 +499,8 @@ function postDataQuality() {
       typeof organizer === 'object' &&
       !Array.isArray(organizer) &&
       organizer !== null &&
-      organizer.hasOwnProperty('name');
+      typeof organizer.name === 'string' &&
+      organizer.name.trim().length > 0;
     let itemMatchesOrganizer =
       !filters.organizer
         ? true
@@ -649,7 +650,20 @@ function postDataQuality() {
       // Organizer info
 
       if (hasValidOrganizer) {
-        storeItemsForDataQuality.uniqueOrganizers.add(organizer.name);
+        let organizerName = organizer.name.trim();
+        if (!storeItemsForDataQuality.uniqueOrganizers.hasOwnProperty(organizerName))
+        {
+          storeItemsForDataQuality.uniqueOrganizers[organizerName] = {
+            'url': new Set(),
+            'email': new Set(),
+            'telephone': new Set(),
+          };
+        }
+        for (const key in storeItemsForDataQuality.uniqueOrganizers[organizerName]) {
+          if (typeof organizer[key] === 'string' && organizer[key].trim().length > 0) {
+            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(organizer[key].trim());
+          }
+        }
         numItemsWithOrganizer++;
       }
 
@@ -738,8 +752,8 @@ function postDataQuality() {
   updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
   clearOrganizerPanel();
   addOrganizerPanel(storeItemsForDataQuality.uniqueOrganizers);
-  console.log(`Number of unique organizers: ${storeItemsForDataQuality.uniqueOrganizers.size}`);
-  // console.dir(`uniqueOrganizers: ${Array.from(storeItemsForDataQuality.uniqueOrganizers)}`);
+  console.log(`Number of unique organizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers).length}`);
+  // console.dir(`uniqueOrganizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers)}`);
 
   // -------------------------------------------------------------------------------------------------
 

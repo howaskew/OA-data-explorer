@@ -106,7 +106,7 @@ function clearStore(store) {
   store.numItemsMatchFilters = 0;
   store.timeHarvestStart = luxon.DateTime.now();
   store.uniqueActivities = new Set();
-  store.uniqueOrganizers = new Set();
+  store.uniqueOrganizers = new Object();
 }
 
 clearStore(storeIngressOrder1);
@@ -554,7 +554,7 @@ function renderOrganizerList(organizers) {
 
   // Render the organizer list in a format the HierarchySelect will understand
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
-    Array.from(organizers).map(organizer =>
+    Object.keys(organizers).map(organizer =>
       $("<a/>", {
           "class": "dropdown-item",
           "data-value": organizer,
@@ -735,13 +735,28 @@ function clearOrganizerPanel() {
 }
 
 // -------------------------------------------------------------------------------------------------
-
+ // style='word-wrap: break-word'
 function addOrganizerPanel(organizers) {
   let panel = $("#organizer");
-  for (const organizer of organizers) {
+  panel
+    .append(
+      '<div class="row">' +
+      '   <div class="col">Name</div>' +
+      '   <div class="col">URL</div>' +
+      '   <div class="col">Email</div>' +
+      '   <div class="col">Telephone</div>' +
+      '</div>'
+    );
+  for (const organizer in organizers) {
     panel
-      .add("<div><p class='text-wrap' style='word-wrap: break-word'>" + organizer + "</p></div>")
-      .appendTo(panel);
+      .append(
+        `<div class='row rowhover'>` +
+        `   <div class='col'>${organizer}</div>` +
+        `   <div class='col'>[${Array.from(organizers[organizer].url).filter(x=>x).map(x=>'<a href="' + x + '" target="_blank">' + x + '</a>').join(', ')}]</div>` +
+        `   <div class='col'>[${Array.from(organizers[organizer].email).filter(x=>x).map(x=>'<a href="mailto:' + x + '" target="_blank">' + x + '</a>').join(', ')}]</div>` +
+        `   <div class='col'>[${Array.from(organizers[organizer].telephone).filter(x=>x).join(', ')}]</div>` +
+        `</div>`
+      );
   }
 }
 
