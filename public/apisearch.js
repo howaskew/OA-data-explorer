@@ -6,6 +6,7 @@ let scheme_2 = null;
 
 let activityListRefresh = 0;
 let organizerListRefresh = 0;
+// let locationListRefresh = 0; // TODO: No location drop-down menu at present, but could be ...
 
 let loadingTimeout = null;
 let loadingStarted = null;
@@ -107,6 +108,7 @@ function clearStore(store) {
   store.timeHarvestStart = luxon.DateTime.now();
   store.uniqueActivities = new Set();
   store.uniqueOrganizers = new Object();
+  store.uniqueLocations = new Object();
 }
 
 clearStore(storeIngressOrder1);
@@ -119,6 +121,7 @@ function getFilters() {
   filters = {
     activity: $('#activity-list-id').val(),
     organizer: $('#organizer-list').val(),
+    // location: $('#location-list').val(), // TODO: No location drop-down menu at present, but could be ...
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
@@ -735,26 +738,64 @@ function clearOrganizerPanel() {
 }
 
 // -------------------------------------------------------------------------------------------------
- // style='word-wrap: break-word'
+
 function addOrganizerPanel(organizers) {
   let panel = $("#organizer");
   panel
     .append(
       '<div class="row">' +
-      '   <div class="col">Name</div>' +
-      '   <div class="col">URL</div>' +
-      '   <div class="col">Email</div>' +
-      '   <div class="col">Telephone</div>' +
+      '   <div class="col text-truncate">Name</div>' +
+      '   <div class="col text-truncate">URL</div>' +
+      '   <div class="col text-truncate">Email</div>' +
+      '   <div class="col text-truncate">Telephone</div>' +
       '</div>'
     );
   for (const organizer in organizers) {
     panel
       .append(
         `<div class='row rowhover'>` +
-        `   <div class='col'>${organizer}</div>` +
-        `   <div class='col'>[${Array.from(organizers[organizer].url).filter(x=>x).map(x=>'<a href="' + x + '" target="_blank">' + x + '</a>').join(', ')}]</div>` +
-        `   <div class='col'>[${Array.from(organizers[organizer].email).filter(x=>x).map(x=>'<a href="mailto:' + x + '" target="_blank">' + x + '</a>').join(', ')}]</div>` +
-        `   <div class='col'>[${Array.from(organizers[organizer].telephone).filter(x=>x).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>${organizer}</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].telephone).join(', ')}]</div>` +
+        `</div>`
+      );
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearLocationPanel() {
+  $("#location").empty();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function addLocationPanel(locations) {
+  let panel = $("#location");
+  panel
+    .append(
+      '<div class="row">' +
+      '   <div class="col text-truncate">Name</div>' +
+      '   <div class="col text-truncate">URL</div>' +
+      '   <div class="col text-truncate">Email</div>' +
+      '   <div class="col text-truncate">Telephone</div>' +
+      '   <div class="col text-truncate">Street Address</div>' +
+      '   <div class="col text-truncate">Post Code</div>' +
+      '   <div class="col text-truncate">Coordinates [lat, lon]</div>' +
+      '</div>'
+    );
+  for (const location in locations) {
+    panel
+      .append(
+        `<div class='row rowhover'>` +
+        `   <div class='col text-truncate'>${location}</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].telephone).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].streetAddress).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].postalCode).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locations[location].coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
         `</div>`
       );
   }
@@ -844,8 +885,10 @@ function updateProvider() {
   $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
+  $("#graph").empty();
   $("#api").empty();
   $("#organizer").empty();
+  $("#location").empty();
   //Replicating setEndpoints, without the page reset
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
@@ -898,8 +941,10 @@ function updateEndpoint() {
   $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
+  $("#graph").empty();
   $("#api").empty();
   $("#organizer").empty();
+  $("#location").empty();
 
   clearFilters();
 
@@ -1024,8 +1069,10 @@ function clearForm(endpoint) {
   $("#filterRows").hide();
   $("#results").empty();
   $("#progress").empty();
+  $("#graph").empty();
   $("#api").empty();
   $("#organizer").empty();
+  $("#location").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1061,8 +1108,10 @@ function runForm(pageNumber) {
   $("#tabs").hide();
   $("#results").empty();
   $("#progress").empty();
+  $("#graph").empty();
   $("#api").empty();
   $("#organizer").empty();
+  $("#location").empty();
 
   updateScroll();
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
@@ -1070,6 +1119,7 @@ function runForm(pageNumber) {
   // TODO: Are these functions actually needed if we have run .empty() just above here?
   clearApiPanel();
   clearOrganizerPanel();
+  clearLocationPanel();
 
   loadingStart();
 
