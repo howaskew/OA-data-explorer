@@ -90,11 +90,12 @@ function postResults(item) {
 
 // This feeds the right data store into the DQ metrics
 
+
 function runDataQuality() {
 
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
-  numListings = 0;
+  numListings = 0; // We should really be calculating the numbers Opps/Listings later on.
   numOpps = 0;
   let listings = [];
   let uniqueListings = null;
@@ -296,12 +297,12 @@ function measureDataQuality() {
   dateNow.setHours(0, 0, 0, 0);
 
   let urlCounts = new Map();
+  let parentUrlCounts = new Map();
 
   let counter = 0;
   for (const item of storeItemsForDataQuality.items) {
 
     counter++;
-
 
     // Date info
 
@@ -399,21 +400,44 @@ function measureDataQuality() {
 
     // URL info
 
+    // Stash all series URL values for later test for uniqueness
+
+    if (link && item.data && item.data[link] && item.data[link].url && typeof item.data[link].url === 'string') {
+      parentUrlCounts.set(item.data[link].url, (urlCounts.get(item.data[link].url) || 0) + 1);
+    }
+
     if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
-      item.DQ_validUrl = 1;
+      item.DQ_validSessionUrl = 1;
+      item.DQ_validSeriesUrl = 1;
     }
     else if (item.data && item.data.url && typeof item.data.url === 'string') {
       urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
     }
 
+
+
   }
 
   // After looping through all items and adding all urls to list - now go back and assign flag to those items with unique urls
+  // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
+  // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
+  // be the metric we're after, but this may not truly be the case and needs to be investigated.
   urlCounts.forEach((val, key) => {
     if (val === 1) {
       storeItemsForDataQuality.items.forEach(item => {
         if (item.data && item.data.url && typeof item.data.url === 'string' && item.data.url === key) {
-          item.DQ_validUrl = 1;
+          item.DQ_validSessionUrl = 1;
+        }
+      });
+    }
+  });
+
+  // Go back and assign flag to those items with unique series urls
+  parentUrlCounts.forEach((val, key) => {
+    if (val === 1) {
+      storeItemsForDataQuality.items.forEach(item => {
+        if (link && item.data && item.data[link] && item.data[link].url && typeof item.data[link].url === 'string' && item.data[link].url === key) {
+          item.DQ_validSeriesUrl = 1;
         }
       });
     }
@@ -464,6 +488,11 @@ function postDataQuality() {
   //console.log(filters);
 
   let numItems = 0;
+  let numParents = 0;
+  let numChild = 0;
+
+  let parents = [];
+  let uniqueParents = null;
 
   // -------------------------------------------------------------------------------------------------
 
@@ -475,6 +504,7 @@ function postDataQuality() {
   let urlCounts = new Map();
 
 
+
   let numItemsNowToFuture = 0;
   let numItemsWithGeo = 0; // TODO: Sort out duplication of effort with "numItemsWithOrganizer"
   let numItemsWithActivity = 0;
@@ -483,6 +513,10 @@ function postDataQuality() {
   let numItemsWithName = 0;
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
+  let numParentsWithUniqueUrl = 0;
+
+
+  // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
   for (const item of storeItemsForDataQuality.items) {
 
@@ -553,7 +587,7 @@ function postDataQuality() {
       filters.DQ_filterGeos === false || (filters.DQ_filterGeos === true && itemPassedDQGeo === 0);
 
     let itemPassedDQUrl =
-      item.DQ_validUrl || 0;
+      item.DQ_validSeriesUrl || 0;
     let itemMatchesDQUrlFilter =
       filters.DQ_filterUrls === false || (filters.DQ_filterUrls === true && itemPassedDQUrl === 0);
 
@@ -571,8 +605,36 @@ function postDataQuality() {
     ) {
 
       numItems++;
+      numChild++;
 
       storeItemsForDataQuality.numItemsMatchFilters++;
+
+      // Find parents, emulating opps / listings counts for earlier scenarios
+
+      // 1 and 3
+      if (item.data && item.data[link]) {
+
+        if (item.data[link].identifier) {
+          parents.push(item.data[link].identifier);
+        }
+        else if (item.data[link]['@id']) {
+          parents.push(item.data[link]['@id']);
+        }
+
+      }
+
+      // 2
+      else if (item.data && item.data.superEvent) {
+        const superEventId =
+          item.data.superEvent.id ||
+          item.data.superEvent['@id'] ||
+          item.data.superEvent.identifier;
+        if (superEventId) {
+          parents.push(superEventId);
+        }
+
+      }
+
 
       // Date info
 
@@ -667,8 +729,7 @@ function postDataQuality() {
 
       if (hasValidOrganizer) {
         let organizerName = organizer.name.trim();
-        if (!storeItemsForDataQuality.uniqueOrganizers.hasOwnProperty(organizerName))
-        {
+        if (!storeItemsForDataQuality.uniqueOrganizers.hasOwnProperty(organizerName)) {
           storeItemsForDataQuality.uniqueOrganizers[organizerName] = {
             'url': new Set(),
             'email': new Set(),
@@ -693,8 +754,7 @@ function postDataQuality() {
 
       if (hasValidLocation) {
         let locationName = location.name.trim();
-        if (!storeItemsForDataQuality.uniqueLocations.hasOwnProperty(locationName))
-        {
+        if (!storeItemsForDataQuality.uniqueLocations.hasOwnProperty(locationName)) {
           storeItemsForDataQuality.uniqueLocations[locationName] = {
             'url': new Set(),
             'email': new Set(),
@@ -759,15 +819,11 @@ function postDataQuality() {
 
       // URL info
 
-      // TODO:
-      // Check if this actually needs to use resolveProperty()
-
-      if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
+      if (item.DQ_validSessionUrl && item.DQ_validSessionUrl === 1) {
         numItemsWithUrl++;
-        item.DQ_validUrl = 1;
       }
-      else if (item.data && item.data.url && typeof item.data.url === 'string') {
-        urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
+      if (item.DQ_validSeriesUrl && item.DQ_validSeriesUrl === 1) {
+        numParentsWithUniqueUrl++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -785,8 +841,11 @@ function postDataQuality() {
         );
       }
     }
-
   }
+
+console.log(storeItemsForDataQuality.items);
+
+  // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
   if (storeItemsForDataQuality.numItemsMatchFilters === 0) {
     results.empty();
@@ -798,6 +857,19 @@ function postDataQuality() {
   }
 
   // -------------------------------------------------------------------------------------------------
+
+  // Calculate opps and listings counts, post filters
+
+  numChild = numItems;
+
+  uniqueParents = [...new Set(parents)];
+  numParents = uniqueParents.length;
+
+  //console.log(`Number of Parents: ${numParents}`);
+  //console.log(`Number of Children: ${numChild}`);
+
+  // -------------------------------------------------------------------------------------------------
+
 
   storeItemsForDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueOrganizers).sort());
   storeItemsForDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueLocations).sort());
@@ -879,20 +951,14 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
-  // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
-  // be the metric we're after, but this may not truly be the case and needs to be investigated.
-  urlCounts.forEach((val, key) => {
-    if (val === 1) {
-      numItemsWithUrl++
-    }
-  });
-
 
   console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
 
-  const percent4 = (numItemsWithUrl / numItems) * 100 || 0;
-  const rounded4 = percent4.toFixed(1);
+  const percent4_a = (numItemsWithUrl / numChild) * 100 || 0;
+  const rounded4_a = percent4_a.toFixed(1);
+
+  const percent4_b = (numParentsWithUniqueUrl / numChild) * 100 || 0;
+  const rounded4_b = percent4_b.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
@@ -949,7 +1015,7 @@ function postDataQuality() {
     }
     else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEventContentType)) {
       spark1SeriesName = 'Facility Use';
-      if (numListings !== 1) {
+      if (numParents !== 1) {
         spark1SeriesName += 's';
       }
     }
@@ -995,7 +1061,7 @@ function postDataQuality() {
     labels: Array.from(top10activities.keys()),
     colors: ['#71CBF2'],
     title: {
-      text: numListings.toLocaleString(),
+      text: numParents.toLocaleString(),
       align: 'left',
       offsetX: 0,
       style: {
@@ -1319,8 +1385,8 @@ function postDataQuality() {
       fill: {
         colors: ['#C76DAC'],
       },
-      series: [rounded4],
-      labels: [['Unique', 'URLs']],
+      series: [rounded4_a, rounded4_b],
+      labels: ['Unique Urls (Sessions)', 'Unique Urls (Series)'],
       plotOptions: {
         radialBar: {
           hollow: {
@@ -1340,7 +1406,17 @@ function postDataQuality() {
               color: "#111",
               fontSize: "30px",
               show: true
-            }
+            },
+            total: {
+              show: true,
+              label: "Unique Urls (Series)",
+              color: "#888",
+              fontSize: "18px",
+              formatter: function (w) {
+                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+                return Math.max(rounded4_b).toFixed(1) + "%";
+              }
+            },
           }
         }
       }
@@ -1388,7 +1464,7 @@ function postDataQuality() {
     else if (['Event', 'OnDemandEvent'].includes(storeSubEventContentType)) {
       spark6SeriesName = 'Event';
     }
-    if (spark6SeriesName.length > 0 && numOpps !== 1) {
+    if (spark6SeriesName.length > 0 && numChild !== 1) {
       spark6SeriesName += 's';
     }
   }
@@ -1480,7 +1556,7 @@ function postDataQuality() {
     },
     colors: ['#E21483'],
     title: {
-      text: numOpps.toLocaleString(),
+      text: numChild.toLocaleString(),
       align: 'right',
       offsetX: 0,
       style: {
