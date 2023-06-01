@@ -953,6 +953,9 @@ function updateEndpoint() {
 
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
+  progress = $("#progress");
+  progress.append("Selected data feed: <a href='" + endpoint + "' target='_blank'>" + endpoint + "</a></br>");
+
 
 }
 
