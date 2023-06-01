@@ -747,7 +747,7 @@ function addOrganizerPanel(organizers) {
       '   <div class="col text-truncate">Name</div>' +
       '   <div class="col text-truncate">URL</div>' +
       '   <div class="col text-truncate">Email</div>' +
-      '   <div class="col text-truncate">Telephone</div>' +
+      '   <div class="col text-truncate">Phone</div>' +
       '</div>'
     );
   for (const organizer in organizers) {
@@ -811,11 +811,6 @@ function clearMapPanel() {
 
 let map;
 
-$('body').on('shown', '#mapPanel', function() {
-  // L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
-  map.invalidateSize(false);
-});
-
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
   // if you’re going to use the tiles in production
@@ -858,8 +853,11 @@ function addMapPanel(locations) {
         `</table>`);
     }
   }
-  map.invalidateSize();
 }
+
+$('#mapTab').on('click', function () {
+  L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+});
 
 // -------------------------------------------------------------------------------------------------
 
