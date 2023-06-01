@@ -779,26 +779,86 @@ function addLocationPanel(locations) {
       '   <div class="col text-truncate">Name</div>' +
       '   <div class="col text-truncate">URL</div>' +
       '   <div class="col text-truncate">Email</div>' +
-      '   <div class="col text-truncate">Telephone</div>' +
-      '   <div class="col text-truncate">Street Address</div>' +
-      '   <div class="col text-truncate">Post Code</div>' +
-      '   <div class="col text-truncate">Coordinates [lat, lon]</div>' +
+      '   <div class="col text-truncate">Phone</div>' +
+      '   <div class="col text-truncate">Address</div>' +
+      '   <div class="col text-truncate">PostCode</div>' +
+      '   <div class="col text-truncate">Coords</div>' +
       '</div>'
     );
-  for (const location in locations) {
+  for (const [locationName,locationInfo] of Object.entries(locations)) {
     panel
       .append(
         `<div class='row rowhover'>` +
-        `   <div class='col text-truncate'>${location}</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].telephone).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].streetAddress).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].postalCode).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locations[location].coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>${locationName}</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.telephone).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.streetAddress).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.postalCode).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
         `</div>`
       );
   }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearMapPanel() {
+  $("#map").empty();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+let map;
+
+$('body').on('shown', '#mapPanel', function() {
+  // L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+  map.invalidateSize(false);
+});
+
+function addMapPanel(locations) {
+  // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
+  // if you’re going to use the tiles in production
+  map = L.map('map').setView([53, -2], 6.5);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(map);
+
+  for (const [locationName,locationInfo] of Object.entries(locations)) {
+    for (const coordinates of locationInfo.coordinates) {
+      const marker = L.marker(coordinates.split(',').map(x=>Number(x))).addTo(map);
+      marker.bindPopup(
+        `<b>${locationName}</b><br>` +
+        `<table>` +
+        `  <tr>` +
+        `    <td>URL:</td>` +
+        `    <td>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</td>` +
+        `  </tr>` +
+        `  <tr>` +
+        `    <td>Email:</td>` +
+        `    <td>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</td>` +
+        `  </tr>` +
+        `  <tr>` +
+        `    <td>Phone:</td>` +
+        `    <td>[${Array.from(locationInfo.telephone).join(', ')}]</td>` +
+        `  </tr>` +
+        `  <tr>` +
+        `    <td>Address:</td>` +
+        `    <td>[${Array.from(locationInfo.streetAddress).join(', ')}]</td>` +
+        `  </tr>` +
+        `  <tr>` +
+        `    <td>PostCode:</td>` +
+        `    <td>[${Array.from(locationInfo.postalCode).join(', ')}]</td>` +
+        `  </tr>` +
+        `  <tr>` +
+        `    <td>Coords:</td>` +
+        `    <td>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</td>` +
+        `  </tr>` +
+        `</table>`);
+    }
+  }
+  map.invalidateSize();
 }
 
 // -------------------------------------------------------------------------------------------------

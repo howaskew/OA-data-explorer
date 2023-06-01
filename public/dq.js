@@ -715,7 +715,7 @@ function postDataQuality() {
           }
         }
         // The coordinates are stored as a single lat,lon combined string in order to be a single element
-        // in the set, which is then relevant for comparing to further coordinates to only adding unique:
+        // in the set, which is then relevant for comparing to further coordinates for only adding unique:
         const latitude = getProperty(location, 'latitude');
         const longitude = getProperty(location, 'longitude');
         if (typeof latitude === 'number' && typeof longitude === 'number') {
@@ -819,6 +819,9 @@ function postDataQuality() {
   addLocationPanel(storeItemsForDataQuality.uniqueLocations);
   console.log(`Number of unique locations: ${Object.keys(storeItemsForDataQuality.uniqueLocations).length}`);
   // console.dir(`uniqueLocations: ${Object.keys(storeItemsForDataQuality.uniqueLocations)}`);
+
+  clearMapPanel();
+  addMapPanel(storeItemsForDataQuality.uniqueLocations);
 
   // -------------------------------------------------------------------------------------------------
 
