@@ -31,6 +31,10 @@ let chart5;
 let chart6;
 let map;
 
+let activeJSONButton;
+const activeJSONButtonColor = 'DeepSkyBlue';
+const inactiveJSONButtonColor = 'DarkGray';
+
 let feeds = {};
 let providers = {};
 
@@ -645,14 +649,15 @@ function getRelevantActivitySet(id) {
 
 // -------------------------------------------------------------------------------------------------
 
-function getVisualise(itemId) {
+function setJSONTab(itemId, switchTab) {
 
-  $("#resultTab").removeClass("active");
-  $("#resultPanel").removeClass("active");
-  $("#jsonTab").removeClass("disabled");
-  $("#jsonTab").addClass("active");
-  $("#jsonPanel").addClass("active");
-  $("#tabs")[0].scrollIntoView();
+  if (switchTab) {
+    $("#resultTab").removeClass("active");
+    $("#resultPanel").removeClass("active");
+    $("#jsonTab").addClass("active");
+    $("#jsonPanel").addClass("active");
+    $("#tabs")[0].scrollIntoView();
+  }
 
   // Output both relevant feeds if combined
   if (
@@ -733,6 +738,23 @@ function openValidator2(item) {
 
 // -------------------------------------------------------------------------------------------------
 
+function addResultsPanel() {
+  let panel = $("#resultsDiv");
+  panel.append(
+    '<div class="row">' +
+    '   <div class="col text-truncate">ID</div>' +
+    '   <div class="col text-truncate">Name</div>' +
+    '   <div class="col text-truncate">Activity</div>' +
+    '   <div class="col text-truncate">Start</div>' +
+    '   <div class="col text-truncate">End</div>' +
+    '   <div class="col text-truncate">Location</div>' +
+    '   <div class="col text-truncate">Active JSON</div>' +
+    '</div>'
+  );
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function addApiPanel(text, storeIngressOrder) {
   let panel = $("#api");
   let colour = "";
@@ -751,25 +773,23 @@ function addApiPanel(text, storeIngressOrder) {
 
 function addOrganizerPanel(organizers) {
   let panel = $("#organizer");
-  panel
-    .append(
-      '<div class="row">' +
-      '   <div class="col text-truncate">Name</div>' +
-      '   <div class="col text-truncate">URL</div>' +
-      '   <div class="col text-truncate">Email</div>' +
-      '   <div class="col text-truncate">Phone</div>' +
-      '</div>'
-    );
+  panel.append(
+    '<div class="row">' +
+    '   <div class="col text-truncate">Name</div>' +
+    '   <div class="col text-truncate">URL</div>' +
+    '   <div class="col text-truncate">Email</div>' +
+    '   <div class="col text-truncate">Phone</div>' +
+    '</div>'
+  );
   for (const [organizerName,organizerInfo] of Object.entries(organizers)) {
-    panel
-      .append(
-        `<div class='row rowhover'>` +
-        `   <div class='col text-truncate'>${organizerName}</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizerInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizerInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizerInfo.telephone).join(', ')}]</div>` +
-        `</div>`
-      );
+    panel.append(
+      `<div class='row rowhover'>` +
+      `   <div class='col text-truncate'>${organizerName}</div>` +
+      `   <div class='col text-truncate'>[${Array.from(organizerInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(organizerInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(organizerInfo.telephone).join(', ')}]</div>` +
+      `</div>`
+    );
   }
 }
 
@@ -777,31 +797,29 @@ function addOrganizerPanel(organizers) {
 
 function addLocationPanel(locations) {
   let panel = $("#location");
-  panel
-    .append(
-      '<div class="row">' +
-      '   <div class="col text-truncate">Name</div>' +
-      '   <div class="col text-truncate">URL</div>' +
-      '   <div class="col text-truncate">Email</div>' +
-      '   <div class="col text-truncate">Phone</div>' +
-      '   <div class="col text-truncate">Address</div>' +
-      '   <div class="col text-truncate">PostCode</div>' +
-      '   <div class="col text-truncate">Coords</div>' +
-      '</div>'
-    );
+  panel.append(
+    '<div class="row">' +
+    '   <div class="col text-truncate">Name</div>' +
+    '   <div class="col text-truncate">URL</div>' +
+    '   <div class="col text-truncate">Email</div>' +
+    '   <div class="col text-truncate">Phone</div>' +
+    '   <div class="col text-truncate">Address</div>' +
+    '   <div class="col text-truncate">PostCode</div>' +
+    '   <div class="col text-truncate">Coords</div>' +
+    '</div>'
+  );
   for (const [locationName,locationInfo] of Object.entries(locations)) {
-    panel
-      .append(
-        `<div class='row rowhover'>` +
-        `   <div class='col text-truncate'>${locationName}</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.telephone).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.streetAddress).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.postalCode).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
-        `</div>`
-      );
+    panel.append(
+      `<div class='row rowhover'>` +
+      `   <div class='col text-truncate'>${locationName}</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.telephone).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.streetAddress).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.postalCode).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
+      `</div>`
+    );
   }
 }
 
