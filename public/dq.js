@@ -40,12 +40,20 @@ function sleep(ms) {
 
 // -------------------------------------------------------------------------------------------------
 
+function setJSONButton(newActiveJSONButton) {
+    if (activeJSONButton) {
+      activeJSONButton.style.backgroundColor = inactiveJSONButtonColor;
+    }
+    activeJSONButton = newActiveJSONButton;
+    activeJSONButton.style.backgroundColor = activeJSONButtonColor;
+}
+
+// -------------------------------------------------------------------------------------------------
 
 // Pulling the display of results out of the API paging loop
 // This is to allow the DQ filters to be applied along with original filters
 
 function postResults(item) {
-
   results = $("#resultsDiv");
   results.append(
     `<div id='row${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
@@ -54,12 +62,12 @@ function postResults(item) {
     `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
     `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
     `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
-    `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || '')}</div>` +
+    `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || (item.data && item.data.superEvent && item.data.superEvent.location && item.data.superEvent.location.name) || '')}</div>` +
     `    <div class='col'>` +
     `        <div class='visualise'>` +
     `            <div class='row'>` +
     `                <div class='col' style='text-align: right'>` +
-    `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1'>JSON</button>` +
+    `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>JSON</button>` +
     `                </div>` +
     `            </div>` +
     `        </div>` +
@@ -67,8 +75,14 @@ function postResults(item) {
     `</div>`
   );
 
-  $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on("click", function () {
-    getVisualise(item.id || item.data['@id']);
+  if (storeItemsForDataQuality.numItemsMatchFilters === 1) {
+    setJSONButton(document.getElementById('json1'));
+    setJSONTab(item.id || item.data['@id'], false);
+  }
+
+  $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on('click', function () {
+    setJSONButton(this);
+    setJSONTab(item.id || item.data['@id'], true);
   });
 
   if ((item.id && item.id.length > 8) || (item.data['@id'] && item.data['@id'].length > 8)) {
@@ -218,7 +232,8 @@ function runDataQuality() {
         const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
         // If the match isn't found then the super-event has been deleted, so lose the sub-event info:
         if (storeSuperEventItem && storeSuperEventItem.data) {
-          // TODO: Double check if this deepcopy attempt correcty preserves type:
+          // Note that JSON.parse(JSON.stringify()) does not work for sets. Not an issue here as the items
+          // don't contain sets:
           let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
           let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
           storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
@@ -479,6 +494,7 @@ function postDataQuality() {
   results = $("#results");
   results.empty();
   results.append("<div id='resultsDiv'</div>");
+  addResultsPanel();
 
   storeItemsForDataQuality.numItemsMatchFilters = 0;
 
@@ -515,7 +531,6 @@ function postDataQuality() {
   let numItemsWithDescription = 0;
   let numItemsWithUrl = 0;
   let numParentsWithUniqueUrl = 0;
-
 
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
