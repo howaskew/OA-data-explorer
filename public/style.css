@@ -42,7 +42,7 @@ div.col-md-2, div.col-md-6 {
   white-space: nowrap
 }
 
-.graph {
+.json {
   display: flex;
   flex-wrap: wrap;
   text-align: left;
