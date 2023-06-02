@@ -22,13 +22,14 @@ let minAge;
 let maxAge;
 let keywords;
 
+let progress;
 let chart1;
 let chart2;
 let chart3;
 let chart4;
 let chart5;
 let chart6;
-let progress;
+let map;
 
 let feeds = {};
 let providers = {};
@@ -44,7 +45,7 @@ let storeIngressOrder2 = {
 let storeSuperEvent = null;
 let storeSubEvent = null;
 
-// This is used to store the results of DQ tests for filtering
+// This is used to store the results of DQ tests for filtering:
 let storeItemsForDataQuality = {};
 
 // These may be the feedType or the itemDataType, depending on conditions:
@@ -419,6 +420,16 @@ function clearCache(store) {
 
 // -------------------------------------------------------------------------------------------------
 
+function clearDisplay() {
+  $("#progress").empty();
+  $("#filterRows").hide();
+  $("#tabs").hide();
+  clearCharts();
+  clearTabPanels();
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function clearCharts() {
   if (chart1) { chart1.destroy(); }
   if (chart2) { chart2.destroy(); }
@@ -426,6 +437,17 @@ function clearCharts() {
   if (chart4) { chart4.destroy(); }
   if (chart5) { chart5.destroy(); }
   if (chart6) { chart6.destroy(); }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearTabPanels() {
+  $("#results").empty();
+  $("#json").empty();
+  $("#api").empty();
+  $("#organizer").empty();
+  $("#location").empty();
+  $("#map").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -626,10 +648,10 @@ function getRelevantActivitySet(id) {
 function getVisualise(itemId) {
 
   $("#resultTab").removeClass("active");
-  $("#graphTab").removeClass("disabled");
-  $("#graphTab").addClass("active");
   $("#resultPanel").removeClass("active");
-  $("#graphPanel").addClass("active");
+  $("#jsonTab").removeClass("disabled");
+  $("#jsonTab").addClass("active");
+  $("#jsonPanel").addClass("active");
   $("#tabs")[0].scrollIntoView();
 
   // Output both relevant feeds if combined
@@ -647,7 +669,7 @@ function getVisualise(itemId) {
 
     const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
 
-    $("#graph").html(`<div class="visual">
+    $("#json").html(`<div class="visual">
     <h2>${storeSuperEvent.itemDataType}
     <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
     </h2>
@@ -668,7 +690,7 @@ function getVisualise(itemId) {
     });
   } else {
     console.log("Displaying storeIngressOrder1 and 2");
-    $("#graph").html(`<div class="visual">
+    $("#json").html(`<div class="visual">
     <h2>${storeIngressOrder1.feedType}
     <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
     </h2>
@@ -711,12 +733,6 @@ function openValidator2(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function clearApiPanel() {
-  $("#api").empty();
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function addApiPanel(text, storeIngressOrder) {
   let panel = $("#api");
   let colour = "";
@@ -729,12 +745,6 @@ function addApiPanel(text, storeIngressOrder) {
   panel
     .add("<div style='background-color: " + colour + "'><p class='text-wrap' style='word-wrap: break-word'>" + text + "</p></div>")
     .appendTo(panel);
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearOrganizerPanel() {
-  $("#organizer").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -761,12 +771,6 @@ function addOrganizerPanel(organizers) {
         `</div>`
       );
   }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearLocationPanel() {
-  $("#location").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -803,17 +807,13 @@ function addLocationPanel(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
-function clearMapPanel() {
-  $("#map").empty();
-}
-
-// -------------------------------------------------------------------------------------------------
-
-let map;
-
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
   // if you’re going to use the tiles in production
+  if (map) {
+    map.off();
+    map.remove();
+  }
   map = L.map('map').setView([53, -2], 6.5);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -855,7 +855,14 @@ function addMapPanel(locations) {
   }
 }
 
-$('#mapTab').on('click', function () {
+// As well as the live code below, these variants also work:
+//   $('body').on('click', '#mapTab', function() {
+//   $('body').on('show.bs.tab', '#mapTab', function() {
+//   $('#mapTab').on('click', function () {
+// See bottom of this page for more details:
+//   https://getbootstrap.com/docs/5.0/components/navs-tabs/
+
+$('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
 });
 
@@ -939,14 +946,7 @@ function updateParameters(parm, parmVal) {
 
 function updateProvider() {
   provider = $("#provider option:selected").text();
-  $("#tabs").hide();
-  $("#filterRows").hide();
-  $("#results").empty();
-  $("#progress").empty();
-  $("#graph").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
+  clearDisplay();
   //Replicating setEndpoints, without the page reset
   $.getJSON("/feeds", function (data) {
     $("#endpoint").empty();
@@ -995,15 +995,7 @@ function enableFilters() {
 
 function updateEndpoint() {
 
-  $("#tabs").hide();
-  $("#filterRows").hide();
-  $("#results").empty();
-  $("#progress").empty();
-  $("#graph").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
-
+  clearDisplay();
   clearFilters();
 
   provider = $("#provider option:selected").text();
@@ -1126,14 +1118,7 @@ function clearForm(endpoint) {
   else {
     window.location.search = "";
   }
-  $("#tabs").hide();
-  $("#filterRows").hide();
-  $("#results").empty();
-  $("#progress").empty();
-  $("#graph").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
+  clearDisplay();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1166,21 +1151,10 @@ function runForm(pageNumber) {
     updateParameters("page", pageNumber);
   }
 
-  $("#tabs").hide();
-  $("#results").empty();
-  $("#progress").empty();
-  $("#graph").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
+  clearDisplay();
 
   updateScroll();
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
-
-  // TODO: Are these functions actually needed if we have run .empty() just above here?
-  clearApiPanel();
-  clearOrganizerPanel();
-  clearLocationPanel();
 
   loadingStart();
 
@@ -1304,8 +1278,7 @@ function setPage() {
     updateKeywords();
   });
 
-  $("#tabs").hide();
-  $("#filterRows").hide();
+  clearDisplay();
 
   $("#clear").on("click", function () {
     clearFilters();

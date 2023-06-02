@@ -436,20 +436,21 @@ function postDataQuality() {
   document.getElementById("DQ_filterDates").disabled = true;
   document.getElementById("DQ_filterUrls").disabled = true;
 
-
   clearCharts();
+  $("#resultPanel").hide();
+
   $("#resultTab").addClass("active");
-  $("#graphTab").removeClass("active");
-  $("#graphPanel").removeClass("active");
+  $("#resultPanel").addClass("active");
+  $("#jsonTab").removeClass("active");
+  $("#jsonPanel").removeClass("active");
   $("#apiTab").removeClass("active");
   $("#apiPanel").removeClass("active");
   $("#organizerTab").removeClass("active");
   $("#organizerPanel").removeClass("active");
   $("#locationTab").removeClass("active");
   $("#locationPanel").removeClass("active");
-  $("#resultPanel").addClass("active");
-  $("#resultPanel").hide();
-
+  $("#mapTab").removeClass("active");
+  $("#mapPanel").removeClass("active");
 
   results = $("#results");
   results.empty();
@@ -809,18 +810,18 @@ function postDataQuality() {
   // console.dir(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
 
   updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
-  clearOrganizerPanel();
+  $("#organizer").empty()
   addOrganizerPanel(storeItemsForDataQuality.uniqueOrganizers);
   console.log(`Number of unique organizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers).length}`);
   // console.dir(`uniqueOrganizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers)}`);
 
   // updateLocationList(storeItemsForDataQuality.uniqueLocations); // TODO: No location drop-down menu at present, but could be ...
-  clearLocationPanel();
+  $("#location").empty()
   addLocationPanel(storeItemsForDataQuality.uniqueLocations);
   console.log(`Number of unique locations: ${Object.keys(storeItemsForDataQuality.uniqueLocations).length}`);
   // console.dir(`uniqueLocations: ${Object.keys(storeItemsForDataQuality.uniqueLocations)}`);
 
-  clearMapPanel();
+  $("#map").empty()
   addMapPanel(storeItemsForDataQuality.uniqueLocations);
 
   // -------------------------------------------------------------------------------------------------
