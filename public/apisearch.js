@@ -425,7 +425,7 @@ function clearDisplay() {
   $("#filterRows").hide();
   $("#tabs").hide();
   clearCharts();
-  clearTabPanels();
+  clearTabs();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -441,7 +441,7 @@ function clearCharts() {
 
 // -------------------------------------------------------------------------------------------------
 
-function clearTabPanels() {
+function clearTabs() {
   $("#results").empty();
   $("#json").empty();
   $("#api").empty();
@@ -570,7 +570,7 @@ function renderOrganizerList(organizers) {
           <input type="text" class="form-control" autocomplete="off">
         </div>
         <div class="hs-menu-inner">
-          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Organizers</a>
+          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Organisers</a>
         </div>
       </div>
       <input name="organizer-list" id="organizer-list" readonly="readonly" aria-hidden="true" type="hidden"/>
@@ -760,14 +760,14 @@ function addOrganizerPanel(organizers) {
       '   <div class="col text-truncate">Phone</div>' +
       '</div>'
     );
-  for (const organizer in organizers) {
+  for (const [organizerName,organizerInfo] of Object.entries(organizers)) {
     panel
       .append(
         `<div class='row rowhover'>` +
-        `   <div class='col text-truncate'>${organizer}</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-        `   <div class='col text-truncate'>[${Array.from(organizers[organizer].telephone).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>${organizerName}</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizerInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizerInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
+        `   <div class='col text-truncate'>[${Array.from(organizerInfo.telephone).join(', ')}]</div>` +
         `</div>`
       );
   }
