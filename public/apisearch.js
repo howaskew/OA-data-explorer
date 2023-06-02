@@ -832,7 +832,11 @@ function addMapPanel(locations) {
     map.off();
     map.remove();
   }
-  map = L.map('map').setView([53, -2], 6.5);
+  map = L.map('map', {
+    center: [53.0, -2.0],
+    zoom: 6.5,
+    scrollWheelZoom: false,
+  });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
