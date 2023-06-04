@@ -746,6 +746,7 @@ function postDataQuality() {
       if (hasValidOrganizer) {
         let organizerName = organizer.name.trim();
         if (!storeItemsForDataQuality.uniqueOrganizers.hasOwnProperty(organizerName)) {
+          // Note that these sets are converted to arrays after looping through all items:
           storeItemsForDataQuality.uniqueOrganizers[organizerName] = {
             'url': new Set(),
             'email': new Set(),
@@ -771,6 +772,7 @@ function postDataQuality() {
       if (hasValidLocation) {
         let locationName = location.name.trim();
         if (!storeItemsForDataQuality.uniqueLocations.hasOwnProperty(locationName)) {
+          // Note that these sets are converted to arrays after looping through all items:
           storeItemsForDataQuality.uniqueLocations[locationName] = {
             'url': new Set(),
             'email': new Set(),
@@ -886,9 +888,26 @@ console.log(storeItemsForDataQuality.items);
 
   // -------------------------------------------------------------------------------------------------
 
-
+  // Sort objects by keys in alphabetical order:
   storeItemsForDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueOrganizers).sort());
   storeItemsForDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueLocations).sort());
+
+  // Convert sets to arrays:
+  for (const [organizerName,organizerInfo] of Object.entries(storeItemsForDataQuality.uniqueOrganizers)) {
+    for (const [key,val] of Object.entries(organizerInfo)) {
+      organizerInfo[key] = Array.from(val);
+    }
+  }
+  for (const [locationName,locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+    for (const [key,val] of Object.entries(locationInfo)) {
+      locationInfo[key] = Array.from(val);
+    }
+  }
+
+  // Convert 'lat,lon' strings to [lat,lon] numeric arrays:
+  for (const [locationName,locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+    locationInfo.coordinates = locationInfo.coordinates.map(x => x.split(',').map(x => Number(x)));
+  }
 
   // -------------------------------------------------------------------------------------------------
 
