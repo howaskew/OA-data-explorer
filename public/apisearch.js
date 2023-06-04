@@ -583,13 +583,13 @@ function renderOrganizerList(organizers) {
 
   // Render the organizer list in a format the HierarchySelect will understand
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
-    Object.keys(organizers).map(organizer =>
+    Object.keys(organizers).map(organizerName =>
       $("<a/>", {
           "class": "dropdown-item",
-          "data-value": organizer,
+          "data-value": organizerName,
           "data-level": 1,
           "href": "#",
-          text: organizer
+          text: organizerName
       })
     )
   );
@@ -603,7 +603,7 @@ function renderOrganizerList(organizers) {
 
     // Update other elements when a selection is made
     // (Note the value of the #organizer-list input is set automatically by HierarchySelect upon selection)
-    onChange: function (organizer) {
+    onChange: function (organizerName) {
       initialised++;
       if (initialised>1) {
         console.log(`Selected organizer for filter: ${$("#organizer-list").val()}`);
@@ -785,9 +785,9 @@ function addOrganizerPanel(organizers) {
     panel.append(
       `<div class='row rowhover'>` +
       `   <div class='col text-truncate'>${organizerName}</div>` +
-      `   <div class='col text-truncate'>[${Array.from(organizerInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(organizerInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(organizerInfo.telephone).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>${organizerInfo.url.length > 1 ? '[' : ''}${organizerInfo.url.map(x => `<a href='${x}' target='_blank'>${x}</a>`).join(', ')}${organizerInfo.url.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${organizerInfo.email.length > 1 ? '[' : ''}${organizerInfo.email.map(x => `<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}${organizerInfo.email.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${organizerInfo.telephone.length > 1 ? '[' : ''}${organizerInfo.telephone.join(', ')}${organizerInfo.telephone.length > 1 ? ']' : ''}</div>` +
       `</div>`
     );
   }
@@ -812,12 +812,12 @@ function addLocationPanel(locations) {
     panel.append(
       `<div class='row rowhover'>` +
       `   <div class='col text-truncate'>${locationName}</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.telephone).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.streetAddress).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.postalCode).join(', ')}]</div>` +
-      `   <div class='col text-truncate'>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</div>` +
+      `   <div class='col text-truncate'>${locationInfo.url.length > 1 ? '[' : ''}${locationInfo.url.map(x => `<a href='${x}' target='_blank'>${x}</a>`).join(', ')}${locationInfo.url.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${locationInfo.email.length > 1 ? '[' : ''}${locationInfo.email.map(x => `<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}${locationInfo.email.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${locationInfo.telephone.length > 1 ? '[' : ''}${locationInfo.telephone.join(', ')}${locationInfo.telephone.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${locationInfo.streetAddress.length > 1 ? '[' : ''}${locationInfo.streetAddress.join(', ')}${locationInfo.streetAddress.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${locationInfo.postalCode.length > 1 ? '[' : ''}${locationInfo.postalCode.join(', ')}${locationInfo.postalCode.length > 1 ? ']' : ''}</div>` +
+      `   <div class='col text-truncate'>${locationInfo.coordinates.length > 1 ? '[' : ''}${locationInfo.coordinates.map(x => `[${x.map(y => y.toFixed(6)).join(', ')}]`).join(', ')}${locationInfo.coordinates.length > 1 ? ']' : ''}</div>` +
       `</div>`
     );
   }
@@ -844,33 +844,33 @@ function addMapPanel(locations) {
 
   for (const [locationName,locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
-      const marker = L.marker(coordinates.split(',').map(x=>Number(x))).addTo(map);
+      const marker = L.marker(coordinates).addTo(map);
       marker.bindPopup(
         `<b>${locationName}</b><br>` +
         `<table>` +
         `  <tr>` +
         `    <td>URL:</td>` +
-        `    <td>[${Array.from(locationInfo.url).map(x=>`<a href='${x}' target='_blank'>${x}</a>`).join(', ')}]</td>` +
+        `    <td>${locationInfo.url.length > 1 ? '[' : ''}${locationInfo.url.map(x => `<a href='${x}' target='_blank'>${x}</a>`).join(', ')}${locationInfo.url.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `  <tr>` +
         `    <td>Email:</td>` +
-        `    <td>[${Array.from(locationInfo.email).map(x=>`<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}]</td>` +
+        `    <td>${locationInfo.email.length > 1 ? '[' : ''}${locationInfo.email.map(x => `<a href='mailto:${x}' target='_blank'>${x}</a>`).join(', ')}${locationInfo.email.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `  <tr>` +
         `    <td>Phone:</td>` +
-        `    <td>[${Array.from(locationInfo.telephone).join(', ')}]</td>` +
+        `    <td>${locationInfo.telephone.length > 1 ? '[' : ''}${locationInfo.telephone.join(', ')}${locationInfo.telephone.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `  <tr>` +
         `    <td>Address:</td>` +
-        `    <td>[${Array.from(locationInfo.streetAddress).join(', ')}]</td>` +
+        `    <td>${locationInfo.streetAddress.length > 1 ? '[' : ''}${locationInfo.streetAddress.join(', ')}${locationInfo.streetAddress.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `  <tr>` +
         `    <td>PostCode:</td>` +
-        `    <td>[${Array.from(locationInfo.postalCode).join(', ')}]</td>` +
+        `    <td>${locationInfo.postalCode.length > 1 ? '[' : ''}${locationInfo.postalCode.join(', ')}${locationInfo.postalCode.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `  <tr>` +
         `    <td>Coords:</td>` +
-        `    <td>[${Array.from(locationInfo.coordinates).map(x=>`[${x}]`).join(', ')}]</td>` +
+        `    <td>${locationInfo.coordinates.length > 1 ? '[' : ''}${locationInfo.coordinates.map(x => `[${x.map(y => y.toFixed(6)).join(', ')}]`).join(', ')}${locationInfo.coordinates.length > 1 ? ']' : ''}</td>` +
         `  </tr>` +
         `</table>`);
     }
