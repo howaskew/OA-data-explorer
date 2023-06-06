@@ -20,43 +20,83 @@
 </head>
 
 <body>
-    <div class="flex_row mainheading">
-        <div class="col-md-6 col-sm-8">
-            <h3 style="text-align:center;">Data Visualiser / Data Quality Explorer</h3>
+    <!-- Header image and text -->
+    <div class="flex_row mainheading" style="padding-left: 2%; padding-right: 2%; padding-top: 10px">
+        <div class="col-md-6 col-sm-8" style="padding-left: 1%; padding-right: 1%;">
+            <img src="images/OpenActive-Landscape-Logo-2.png" style="max-width: 100%; max-height: 100%;"></img>
         </div>
-        <div class="col-md-6 col-sm-8">
-            <img src="images/OpenActive-Landscape-Logo-2.png"></img>
+        <div class="col-md-6 col-sm-8" style="padding-left: 1%; padding-right: 1%;">
+            <h3 style="text-align:left;">Data Visualiser /</br>Data Quality Explorer</h3>
         </div>
     </div>
 
-    <div class="container-fluid" style="padding-left: 2%; padding-right: 2%; height: 250px; overflow-y: scroll;">
+    <!-- Controls and logs -->
+    <div class="container-fluid" style="padding-left: 2%; padding-right: 2%; height: 300px; overflow-y: scroll;">
         <div class="flex_row">
+
+            <!-- Left column: Controls -->
             <div class="col-md-6 col-sm-8">
                 <div class="flex_row top">
-                    <div style="width:48%; margin-left: 1%;margin-right:1%;">
-                        <h5>Choose a data feed provider:</h5>
-                        <select id="provider" class="form-control"></select>
+                    <div class="col-sm-4">
+                        <div class="flex_row">
+                            <label class="ml-1">Data feed provider:</label>
+                        </div>
+                        <div class="flex_row">
+                            <select id="provider" class="form-control"></select>
+                        </div>
                     </div>
-                    <div style="width:48%; margin-left: 1%;margin-right:1%;">
-                        <h5>Choose a data feed type:</h5>
-                        <select id="endpoint" class="form-control"></select>
+                    <div class="col-sm-4">
+                        <div class="flex_row">
+                            <label class="ml-1">Data feed type:</label>
+                        </div>
+                        <div class="flex_row">
+                            <select id="endpoint" class="form-control"></select>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="flex_row">
+                            <label class="ml-1" style="color:white">-</label>
+                        </div>
+                        <div class="flex_row">
+                            <button id="execute" class="btn btn-success form-control" disabled="disabled">
+                                Go
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="flex_row">
+                            <label class="ml-1" style="color:white">-</label>
+                        </div>
+                        <div class="flex_row">
+                            <button id="clear" class="btn btn-secondary form-control">
+                                Clear
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex_row" style="padding-top: 1%">
-                    <div class="col-sm-8 ">
-                        <button id="execute" class="btn btn-success form-control" disabled="disabled">
-                            Execute query
-                        </button>
+                <div class="flex_row top" id="filterRows" style="display:none;">
+                    <div class="col-sm-4">
+                        <div class="flex_row">
+                            <label class="ml-1" for="TaxonomyTerm">Organiser:</label>
+                        </div>
+<!-- Could try:
+disabled="disabled" -->
+                        <div id="organizer-list-dropdown" class="flex_row">
+                        </div>
                     </div>
-                    <div class="col-sm-4 ">
-                        <button id="clear" class="btn btn-secondary form-control">
-                            Clear
-                        </button>
+                    <div class="col-sm-4">
+                        <div class="flex_row">
+                            <label class="ml-1" for="TaxonomyTerm">Activity:</label>
+                        </div>
+<!-- Could try:
+disabled="disabled" -->
+                        <div id="activity-list-dropdown" class="flex_row">
+                        </div>
                     </div>
                 </div>
-
-                <div class="flex_row top " style="display: none;">
+<!-- DISABLED DISPLAY START -->
+                <div class="flex_row top" style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
                             <label class="ml-1" for="TaxonomyType">Organization</label>
@@ -81,50 +121,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex_row">
-                    <div class="col-sm-4" style="display: none;">
-                        <div class="flex_row">
-                            <label class="ml-1" for="Gender">Gender</label>
-                        </div>
-                        <div class="flex_row">
-                            <select id="Gender" class="form-control mr-1">
-                                <option value=""></option>
-                                <option value="https://openactive.io/NoRestriction">No Restriction</option>
-                                <option value="https://openactive.io/MaleOnly">Male Only</option>
-                                <option value="https://openactive.io/FemaleOnly">Female Only</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="col" id="filterRows" style="display:none;">
-                        <div class="flex_row top">
-                            <div class="col">
-                                <div class="flex_row top">
-                                    <label for="TaxonomyTerm">Filter by Activity:</label>
-                                </div>
-                                <div id="activity-dropdown">
-                                    <div class="dropdown hierarchy-select activity-list-dropdown row">
-                                        <button type="button"
-                                            class="btn btn-secondary dropdown-toggle form-control">Filter by Activity</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="flex_row top">
-                                    <label for="TaxonomyTerm">Filter by Organiser:</label>
-                                </div>
-                                <div id="organizer-dropdown">
-                                    <div class="dropdown hierarchy-select organizer-list-dropdown row">
-                                        <button type="button"
-                                            class="btn btn-secondary dropdown-toggle form-control">Filter by Organiser</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="RegularScheduleRow" class="flex_row" style="display: none;">
+                <div id="RegularScheduleRow" class="flex_row top" style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
                             <label class="ml-1" for="Day">Day</label>
@@ -159,7 +157,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="flex_row" id="CoverageRow" style="display: none;">
+
+                <div id="CoverageRow" class="flex_row top" style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
                             <label class="ml-1" for="Coverage">Coverage (postcode)</label>
@@ -176,9 +175,25 @@
                             <input id="Proximity" type="number" class="form-control ml-1 mr-1" disabled="disabled">
                         </div>
                     </div>
+                </div>
+
+                <div class="flex_row top" style="display: none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
-                            <label class="ml-1">Min/Max age</label>
+                            <label class="ml-1" for="Gender">Gender:</label>
+                        </div>
+                        <div class="flex_row">
+                            <select id="Gender" class="form-control mr-1">
+                                <option value=""></option>
+                                <option value="https://openactive.io/NoRestriction">No Restriction</option>
+                                <option value="https://openactive.io/MaleOnly">Male Only</option>
+                                <option value="https://openactive.io/FemaleOnly">Female Only</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="flex_row">
+                            <label class="ml-1">Min/Max age:</label>
                             <label class="sr-only" for="minAge">Min age</label>
                             <label class="sr-only" for="maxAge">Max age</label>
                         </div>
@@ -190,20 +205,25 @@
                         </div>
                     </div>
                 </div>
+<!-- DISABLED DISPLAY END -->
             </div>
 
-            <div class="col-md-6 col-sm-8 ">
+            <!-- Right column: Logs -->
+            <div class="col-md-6 col-sm-8 " style="padding-left: 1%; padding-right: 1%;">
                 <div class="flex_row top">
                     <h5>Progress:</h5>
                 </div>
                 <div id="loading-time" style="display: none;">
                     <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest feeds.</h5>
                 </div>
-                <div id="progress"></div>
+                <div id="progress">
+                </div>
             </div>
+
         </div>
     </div>
 
+    <!-- Data quality metrics -->
     <div id='tabs' style="padding-left: 2%; padding-right: 2%; display: none;">
 
         <div class="tab-content">

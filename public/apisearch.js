@@ -4,8 +4,8 @@ let provider;
 let scheme_1 = null;
 let scheme_2 = null;
 
-let activityListRefresh = 0;
 let organizerListRefresh = 0;
+let activityListRefresh = 0;
 // let locationListRefresh = 0; // TODO: No location drop-down menu at present, but could be ...
 
 let loadingTimeout = null;
@@ -101,6 +101,7 @@ let cp = $("#combineProgress");
 // -------------------------------------------------------------------------------------------------
 
 function clearStore(store) {
+  store.timeHarvestStart = luxon.DateTime.now();
   store.items = {};
   store.feedType = null; // From the dataset page, not the RPDE feed
   store.itemKind = null; // From the RPDE feed
@@ -110,7 +111,6 @@ function clearStore(store) {
   store.numPages = 0;
   store.numItems = 0;
   store.numItemsMatchFilters = 0;
-  store.timeHarvestStart = luxon.DateTime.now();
   store.uniqueActivities = new Set();
   store.uniqueOrganizers = new Object();
   store.uniqueLocations = new Object();
@@ -124,9 +124,9 @@ clearStore(storeItemsForDataQuality);
 
 function getFilters() {
   filters = {
-    activity: $('#activity-list-id').val(),
-    organizer: $('#organizer-list').val(),
-    // location: $('#location-list').val(), // TODO: No location drop-down menu at present, but could be ...
+    organizer: $('#organizer-list-selected').val(),
+    activity: $('#activity-list-selected').val(),
+    // location: $('#location-list-selected').val(), // TODO: No location drop-down menu at present, but could be ...
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
@@ -140,7 +140,7 @@ function getFilters() {
     maxAge: $("#maxAge").val(),
     gender: $("#Gender").val(),
     keywords: $("#Keywords").val(),
-    relevantActivitySet: getRelevantActivitySet($('#activity-list-id').val()),
+    relevantActivitySet: getRelevantActivitySet($('#activity-list-selected').val()),
   }
   return filters;
 }
@@ -494,13 +494,13 @@ function renderTree(concepts, level, output) {
     }
 
     // Use jQuery to escape all values when outputting HTML
-    output.push($("<a/>", {
-      "class": "dropdown-item",
-      "data-value": concept.id,
-      "data-hidden": hidden,
-      "data-level": level,
-      "href": "#",
-      text: label
+    output.push($('<a/>', {
+      'class': 'dropdown-item',
+      'data-value': concept.id,
+      'data-level': level,
+      'data-hidden': hidden,
+      'href': "#",
+      'text': label
     }));
 
     let narrower = concept.getNarrower();
@@ -513,46 +513,42 @@ function renderTree(concepts, level, output) {
 
 // -------------------------------------------------------------------------------------------------
 
-function renderActivityList(localScheme) {
-  //console.log("RENDERING");
+function renderActivityList(activities) {
   activityListRefresh++;
-  let initialised = 0;
-  let currentSelectedActivity = $('#activity-list-id').val();
-  console.log("Current selected activity: " + currentSelectedActivity);
-  $('#activity-dropdown').empty();
-  $('#activity-dropdown').append(
-    `<div class="dropdown hierarchy-select row" id="activity-list-dropdown-${activityListRefresh}">
-      <button type="button" class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1" id="activity-list-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
-      <div class="dropdown-menu" style="width: 98%;" aria-labelledby="activity-list-button">
-        <div class="hs-searchbox">
-          <input type="text" class="form-control" autocomplete="off">
+  let activityListSelected = $('#activity-list-selected').val() || '';
+
+  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  $('#activity-list-dropdown').empty();
+  $('#activity-list-dropdown').append(
+    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
+        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        </button>
+        <div class="dropdown-menu" aria-labelledby="activity-list-button">
+            <div class="hs-searchbox">
+                <input type="text" class="form-control" autocomplete="off">
+            </div>
+            <div class="hs-menu-inner">
+                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All</a>
+            </div>
         </div>
-        <div class="hs-menu-inner">
-          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Activities</a>
-        </div>
-      </div>
-      <input name="activity-list-id" id="activity-list-id" readonly="readonly" aria-hidden="true" type="hidden"/>
+        <input id="activity-list-selected" name="activity-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
     </div>`);
-  $('#activity-list-id').val(currentSelectedActivity);
-  console.log("#activity-list-id: " + currentSelectedActivity);
+  $('#activity-list-selected').val(activityListSelected);
 
   // Render the activity list in a format the HierarchySelect will understand
-  $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(localScheme.getTopConcepts(), 1, []));
+  $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
 
-  // Initialise the HierarchySelect using the activity list
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
     width: 'auto',
-
     // Set initial dropdown state based on the hidden field's initial value
     initialValueSet: true,
-
     // Update other elements when a selection is made
-    // (Note the value of the #activity-list-id input is set automatically by HierarchySelect upon selection)
-    onChange: function (id) {
-      let concept = localScheme.getConceptByID(id);
-      initialised++;
-      if (initialised>1) {
-        console.log(`Selected activity for filter: ${$("#activity-list-id").val()}`);
+    // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
+    onChange: function (htmlDataValue) {
+      let concept = activities.getConceptByID(htmlDataValue);
+      // Note that htmlDataValue is the same as $('#activity-list-selected').val()
+      if (htmlDataValue !== activityListSelected) {
+        console.warn(`Selected activity for filter: ${htmlDataValue}`);
         postDataQuality();
       }
     }
@@ -563,50 +559,49 @@ function renderActivityList(localScheme) {
 
 function renderOrganizerList(organizers) {
   organizerListRefresh++;
-  let initialised = 0;
-  let currentSelectedOrganizer = $('#organizer-list').val();
-  $('#organizer-dropdown').empty();
-  $('#organizer-dropdown').append(
-    `<div class="dropdown hierarchy-select row" id="organizer-list-dropdown-${organizerListRefresh}">
-      <button type="button" class="btn btn-secondary dropdown-toggle form-control ml-1 mr-1" id="organizer-list-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"></button>
-      <div class="dropdown-menu" style="width: 98%;" aria-labelledby="organizer-list-button">
-        <div class="hs-searchbox">
-          <input type="text" class="form-control" autocomplete="off">
+  let organizerListSelected = $('#organizer-list-selected').val() || '';
+
+  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  $('#organizer-list-dropdown').empty();
+  $('#organizer-list-dropdown').append(
+    `<div id="organizer-list-dropdown-${organizerListRefresh}" class="dropdown hierarchy-select">
+        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        </button>
+        <div class="dropdown-menu" aria-labelledby="organizer-list-button">
+            <div class="hs-searchbox">
+                <input type="text" class="form-control" autocomplete="off">
+            </div>
+            <div class="hs-menu-inner">
+                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All</a>
+            </div>
         </div>
-        <div class="hs-menu-inner">
-          <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All Organisers</a>
-        </div>
-      </div>
-      <input name="organizer-list" id="organizer-list" readonly="readonly" aria-hidden="true" type="hidden"/>
+        <input id="organizer-list-selected" name="organizer-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
     </div>`);
-  $('#organizer-list').val(currentSelectedOrganizer);
+  $('#organizer-list-selected').val(organizerListSelected);
 
   // Render the organizer list in a format the HierarchySelect will understand
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
     Object.keys(organizers).map(organizerName =>
-      $("<a/>", {
-          "class": "dropdown-item",
-          "data-value": organizerName,
-          "data-level": 1,
-          "href": "#",
-          text: organizerName
+      $('<a/>', {
+          'class': 'dropdown-item',
+          'data-value': organizerName,
+          'data-level': 1,
+          'href': '#',
+          'text': organizerName
       })
     )
   );
 
-  // Initialise the HierarchySelect using the organizer list
   $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
     width: 'auto',
-
     // Set initial dropdown state based on the hidden field's initial value
     initialValueSet: true,
-
     // Update other elements when a selection is made
-    // (Note the value of the #organizer-list input is set automatically by HierarchySelect upon selection)
-    onChange: function (organizerName) {
-      initialised++;
-      if (initialised>1) {
-        console.log(`Selected organizer for filter: ${$("#organizer-list").val()}`);
+    // Note that $('#organizer-list-selected').val() is set automatically by HierarchySelect upon selection
+    onChange: function (htmlDataValue) {
+      // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
+      if (htmlDataValue !== organizerListSelected) {
+        console.warn(`Selected organizer for filter: ${htmlDataValue}`);
         postDataQuality();
       }
     }
@@ -625,10 +620,9 @@ function renderSchedule(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateActivityList(filterSet) {
-  let filter = Array.from(filterSet);
-  let subsetScheme = scheme_1.generateSubset(filter);
-  renderActivityList(subsetScheme);
+function updateActivityList(activitiesSet) {
+  let activities = scheme_1.generateSubset(Array.from(activitiesSet));
+  renderActivityList(activities);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -991,8 +985,8 @@ function clearFilters() {
   $("#DQ_filterActivities").prop("checked", false);
   $("#DQ_filterGeos").prop("checked", false);
   $("#DQ_filterUrls").prop("checked", false);
-  $("#activity-list-id").val("");
-  $("#organizer-list").val("");
+  $("#organizer-list-selected").val("");
+  $("#activity-list-selected").val("");
   $("#Gender").val("");
   $("#Coverage").val("");
 }
