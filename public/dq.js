@@ -496,10 +496,11 @@ function postDataQuality() {
   results.append("<div id='resultsDiv'</div>");
   addResultsPanel();
 
+  // Reset store contents for after filters applied:
   storeItemsForDataQuality.numItemsMatchFilters = 0;
-
-  //Reset the unique activities to recreate a relevant list after other filters applied
   storeItemsForDataQuality.uniqueActivities = new Set();
+  storeItemsForDataQuality.uniqueOrganizers = new Object();
+  storeItemsForDataQuality.uniqueLocations = new Object();
 
   getFilters();
   //console.log(filters);
