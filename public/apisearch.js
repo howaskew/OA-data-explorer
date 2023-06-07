@@ -142,6 +142,91 @@ function clearStore(store) {
 
 // -------------------------------------------------------------------------------------------------
 
+function clearFilters() {
+  $("#DQ_filterDates").prop("checked", false);
+  $("#DQ_filterActivities").prop("checked", false);
+  $("#DQ_filterGeos").prop("checked", false);
+  $("#DQ_filterUrls").prop("checked", false);
+  $("#organizer-list-selected").val("");
+  $("#activity-list-selected").val("");
+  $("#Gender").val("");
+  $("#Coverage").val("");
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearURLParameters(endpoint) {
+  let tempArray = window.location.href.split("?");
+  let baseURL = tempArray[0];
+  return baseURL + "?endpoint=" + endpoint;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearForm(endpoint) {
+  if (endpoint) {
+    window.history.replaceState('', '', window.location.href.split("?")[0] + "?endpoint=" + endpoint);
+  }
+  else {
+    window.location.search = "";
+  }
+  clearDisplay();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearDisplay() {
+  $("#progress").empty();
+  $("#filterRows").hide();
+  $("#tabs").hide();
+  clearCharts();
+  clearTabs();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearCharts() {
+  if (chart1) { chart1.destroy(); }
+  if (chart2) { chart2.destroy(); }
+  if (chart3) { chart3.destroy(); }
+  if (chart4) { chart4.destroy(); }
+  if (chart5) { chart5.destroy(); }
+  if (chart6) { chart6.destroy(); }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearTabs() {
+  $("#results").empty();
+  $("#json").empty();
+  $("#api").empty();
+  $("#organizer").empty();
+  $("#location").empty();
+  $("#map").empty();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearCache(store) {
+  // Call the clear cache endpoint with URL parameter
+  fetch('/api/clear-cache', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: store.lastPage })
+  })
+    .then(response => {
+      return response.text();
+    })
+    .then(data => {
+      console.log(data);
+    })
+    .catch(error => {
+      console.log(error);
+    });
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function getFilters() {
   filters = {
     organizer: $('#organizer-list-selected').val(),
@@ -505,60 +590,6 @@ function loadingTakingTime() {
   if (!loadingDone) {
     $("#loading-time").fadeIn();
   }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearCache(store) {
-
-  // Call the clear cache endpoint with URL parameter
-  fetch('/api/clear-cache', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: store.lastPage })
-  })
-    .then(response => {
-      return response.text();
-    })
-    .then(data => {
-      console.log(data);
-    })
-    .catch(error => {
-      console.log(error);
-    });
-
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearDisplay() {
-  $("#progress").empty();
-  $("#filterRows").hide();
-  $("#tabs").hide();
-  clearCharts();
-  clearTabs();
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearCharts() {
-  if (chart1) { chart1.destroy(); }
-  if (chart2) { chart2.destroy(); }
-  if (chart3) { chart3.destroy(); }
-  if (chart4) { chart4.destroy(); }
-  if (chart5) { chart5.destroy(); }
-  if (chart6) { chart6.destroy(); }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearTabs() {
-  $("#results").empty();
-  $("#json").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
-  $("#map").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1050,14 +1081,6 @@ function updateURLParameter(url, param, paramVal) {
   return baseURL + "?" + newAdditionalURL + rows_txt;
 }
 
-
-// -------------------------------------------------------------------------------------------------
-function clearURLParameters(endpoint) {
-  let tempArray = window.location.href.split("?");
-  let baseURL = tempArray[0];
-  return baseURL + "?endpoint=" + endpoint;
-}
-
 // -------------------------------------------------------------------------------------------------
 
 // noinspection SpellCheckingInspection
@@ -1083,19 +1106,6 @@ function updateProvider() {
       endpoint = $("#endpoint").val();
       updateEndpoint();
     });
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearFilters() {
-  $("#DQ_filterDates").prop("checked", false);
-  $("#DQ_filterActivities").prop("checked", false);
-  $("#DQ_filterGeos").prop("checked", false);
-  $("#DQ_filterUrls").prop("checked", false);
-  $("#organizer-list-selected").val("");
-  $("#activity-list-selected").val("");
-  $("#Gender").val("");
-  $("#Coverage").val("");
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1230,18 +1240,6 @@ function updateMaxAge() {
 function updateKeywords() {
   keywords = $("#Keywords").val();
   updateParameters("keywords", keywords);
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearForm(endpoint) {
-  if (endpoint) {
-    window.history.replaceState('', '', window.location.href.split("?")[0] + "?endpoint=" + endpoint);
-  }
-  else {
-    window.location.search = "";
-  }
-  clearDisplay();
 }
 
 // -------------------------------------------------------------------------------------------------
