@@ -4,13 +4,13 @@ let provider;
 let scheme_1 = null;
 let scheme_2 = null;
 
-let organizerListRefresh = 0;
-let activityListRefresh = 0;
-// let locationListRefresh = 0; // TODO: No location drop-down menu at present, but could be ...
+let organizerListRefresh;
+let activityListRefresh;
+// let locationListRefresh; // TODO: No location drop-down menu at present, but could be ...
 
-let loadingTimeout = null;
-let loadingStarted = null;
-let loadingDone = false;
+let loadingTimeout;
+let loadingStarted;
+let loadingDone;
 
 let filters;
 let coverage;
@@ -44,25 +44,19 @@ let storeIngressOrder1 = {
 let storeIngressOrder2 = {
   ingressOrder: 2,
 };
+let storeItemsForDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
+let combinedStoreItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
 
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
-let storeSuperEvent = null;
-let storeSubEvent = null;
-
-// This is used to store the results of DQ tests for filtering:
-let storeItemsForDataQuality = {};
+let storeSuperEvent;
+let storeSubEvent;
 
 // These may be the feedType or the itemDataType, depending on conditions:
-let storeSuperEventContentType = null;
-let storeSubEventContentType = null;
+let storeSuperEventContentType;
+let storeSubEventContentType;
 
 let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
 let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
-
-let link = null; // Linking variable between super-event and sub-event feeds
-let combinedStoreItems = [];
-let numListings = 0;
-let numOpps = 0;
 
 let sessionSeriesUrlParts = [
   'session-series',
@@ -95,8 +89,38 @@ let slotUrlParts = [
   'slot',
 ];
 
+let storeIngressOrder1FirstPageFromUser;
+let link; // Linking variable between super-event and sub-event feeds
+
+let numListings;
+let numOpps;
 
 let cp = $("#combineProgress");
+
+// -------------------------------------------------------------------------------------------------
+
+function clearGlobals() {
+  organizerListRefresh = 0;
+  activityListRefresh = 0;
+  // locationListRefresh = 0;
+  loadingTimeout = null;
+  loadingStarted = null;
+  loadingDone = false;
+  clearStore(storeIngressOrder1);
+  clearStore(storeIngressOrder2);
+  clearStore(storeItemsForDataQuality);
+  combinedStoreItems = [];
+  storeSuperEvent = null;
+  storeSubEvent = null;
+  storeSuperEventContentType = null;
+  storeSubEventContentType = null;
+  storeIngressOrder1FirstPageFromUser = null;
+  link = null;
+  numListings = 0;
+  numOpps = 0;
+}
+
+clearGlobals();
 
 // -------------------------------------------------------------------------------------------------
 
@@ -115,10 +139,6 @@ function clearStore(store) {
   store.uniqueOrganizers = new Object();
   store.uniqueLocations = new Object();
 }
-
-clearStore(storeIngressOrder1);
-clearStore(storeIngressOrder2);
-clearStore(storeItemsForDataQuality);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -305,7 +325,49 @@ function resolveDate(item, prop) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder2FirstPage(feedType1UrlParts, feedType2UrlParts) {
+function setStoreIngressOrder1FirstPage() {
+  if (storeIngressOrder1FirstPageFromUser) {
+    let page = $.ajax({
+      async: false,
+      type: 'GET',
+      url: '/fetch?url=' + encodeURIComponent(storeIngressOrder1FirstPageFromUser),
+      timeout: 30000
+    });
+    storeIngressOrder1.firstPage = (page.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
+  }
+  else {
+    storeIngressOrder1.firstPage = $("#endpoint").val();
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setStoreIngressOrder2FirstPage() {
+  switch (storeIngressOrder1.feedType) {
+    case 'SessionSeries':
+      setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
+      break;
+    case 'ScheduledSession':
+      setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
+      break;
+    case 'FacilityUse':
+      setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
+      break;
+    case 'IndividualFacilityUse':
+      setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
+      break;
+    case 'Slot':
+      setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
+      break;
+    default:
+      storeIngressOrder2.firstPage = null;
+      break;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2UrlParts) {
   for (const feedType1UrlPart of feedType1UrlParts) {
     if (storeIngressOrder1.firstPage.includes(feedType1UrlPart)) {
       for (const feedType2UrlPart of feedType2UrlParts) {
@@ -314,13 +376,59 @@ function setStoreIngressOrder2FirstPage(feedType1UrlParts, feedType2UrlParts) {
         // which would be problematic:
         if (feedType1UrlPart !== feedType2UrlPart) {
           let storeIngressOrder2FirstPage = storeIngressOrder1.firstPage.replace(feedType1UrlPart, feedType2UrlPart);
-          if (storeIngressOrder2FirstPage in feeds) {
-            storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
-            return;
+          if (storeIngressOrder1FirstPageFromUser) {
+            let page = $.ajax({
+              async: false,
+              type: 'GET',
+              url: '/fetch?url=' + encodeURIComponent(storeIngressOrder2FirstPage),
+              timeout: 30000
+            });
+            if (page.status === 200) {
+              storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
+              return;
+            }
+          }
+          else {
+            if (storeIngressOrder2FirstPage in feeds) {
+              storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
+              return;
+            }
           }
         }
       }
     }
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setStoreFeedType(store) {
+  if (!store.firstPage) {
+    store.feedType = null;
+    return;
+  }
+  if (storeIngressOrder1FirstPageFromUser) {
+    if (sessionSeriesUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+      store.feedType = 'SessionSeries';
+    }
+    else if (scheduledSessionUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+      store.feedType = 'ScheduledSession';
+    }
+    else if (facilityUseUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+      store.feedType = 'FacilityUse';
+    }
+    else if (individualFacilityUseUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+      store.feedType = 'IndividualFacilityUse';
+    }
+    else if (slotUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+      store.feedType = 'Slot';
+    }
+    else {
+      store.feedType = null;
+    }
+  }
+  else {
+    store.feedType = feeds[store.firstPage].hasOwnProperty('type') ? feeds[store.firstPage].type : null;
   }
 }
 
@@ -382,7 +490,6 @@ function setStoreItemDataType(store) {
 // -------------------------------------------------------------------------------------------------
 
 function loadingStart() {
-  clearCharts();
   $("#tabs").hide();
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
@@ -1167,23 +1274,18 @@ function runForm(pageNumber) {
     updateParameters("page", pageNumber);
   }
 
-  clearDisplay();
-
   updateScroll();
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
+  clearGlobals();
+  clearDisplay();
+
   loadingStart();
 
-  clearStore(storeIngressOrder1);
-  clearStore(storeIngressOrder2);
-  clearStore(storeItemsForDataQuality);
+  storeIngressOrder1FirstPageFromUser = $("#user-url").val().trim();
 
-  storeSuperEvent = null;
-  storeSubEvent = null;
-  link = null;
-
-  storeIngressOrder1.firstPage = $("#endpoint").val();
-  storeIngressOrder1.feedType = feeds[storeIngressOrder1.firstPage].hasOwnProperty('type') ? feeds[storeIngressOrder1.firstPage].type : null;
+  setStoreIngressOrder1FirstPage();
+  setStoreFeedType(storeIngressOrder1);
 
   if (superEventFeedTypes.includes(storeIngressOrder1.feedType)) {
     storeSuperEvent = storeIngressOrder1;
@@ -1198,34 +1300,11 @@ function runForm(pageNumber) {
   }
 
   if (storeSuperEvent && storeSubEvent) {
-    switch (storeIngressOrder1.feedType) {
-      case 'SessionSeries':
-        setStoreIngressOrder2FirstPage(sessionSeriesUrlParts, scheduledSessionUrlParts);
-        break;
-      case 'ScheduledSession':
-        setStoreIngressOrder2FirstPage(scheduledSessionUrlParts, sessionSeriesUrlParts);
-        break;
-      case 'FacilityUse':
-        setStoreIngressOrder2FirstPage(facilityUseUrlParts, slotUrlParts);
-        break;
-      case 'IndividualFacilityUse':
-        setStoreIngressOrder2FirstPage(individualFacilityUseUrlParts, slotUrlParts);
-        break;
-      case 'Slot':
-        setStoreIngressOrder2FirstPage(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
-        break;
-      default:
-        break;
-    }
+    setStoreIngressOrder2FirstPage();
+    setStoreFeedType(storeIngressOrder2);
 
-    if (storeIngressOrder2.firstPage) {
-      storeIngressOrder2.feedType = feeds[storeIngressOrder2.firstPage].hasOwnProperty('type') ? feeds[storeIngressOrder2.firstPage].type : null;
-      if (storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
-        console.warn(`Matching feedType for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1.feedType}'`);
-      }
-    }
-    else {
-      console.warn('No storeIngressOrder2 endpoint, can\'t create combined store');
+    if (storeIngressOrder1.feedType && storeIngressOrder2.feedType && storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
+      console.warn(`Matching feedType for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1.feedType}'`);
     }
 
     switch (storeSubEvent.feedType) {
@@ -1241,8 +1320,13 @@ function runForm(pageNumber) {
     }
   }
 
-  console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
-  setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, getFilters());
+  if (storeIngressOrder1.firstPage) {
+    console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
+    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, getFilters());
+  }
+  else {
+    console.error('No valid first page for storeIngressOrder1, can\'t begin');
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
