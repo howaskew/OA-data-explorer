@@ -27,7 +27,8 @@ let chart1;
 let chart2;
 let chart3;
 let chart4;
-let chart5;
+let chart5a;
+let chart5b;
 let chart6;
 let map;
 
@@ -190,7 +191,8 @@ function clearCharts() {
   if (chart2) { chart2.destroy(); }
   if (chart3) { chart3.destroy(); }
   if (chart4) { chart4.destroy(); }
-  if (chart5) { chart5.destroy(); }
+  if (chart5a) { chart5a.destroy(); }
+  if (chart5b) { chart5b.destroy(); }
   if (chart6) { chart6.destroy(); }
 }
 
@@ -957,6 +959,7 @@ function addLocationPanel(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
+
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
   // if you’re going to use the tiles in production
@@ -974,9 +977,12 @@ function addMapPanel(locations) {
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
+ 
   for (const [locationName,locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
       const marker = L.marker(coordinates).addTo(map);
+
+
       marker.bindPopup(
         `<b>${locationName}</b><br>` +
         `<table>` +
