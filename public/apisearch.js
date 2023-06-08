@@ -658,8 +658,8 @@ function renderActivityList(activities) {
   // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
   $('#activity-list-dropdown').empty();
   $('#activity-list-dropdown').append(
-    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
-        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select" style="width:95%;">
+        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="activity-list-button">
             <div class="hs-searchbox">
@@ -702,8 +702,8 @@ function renderOrganizerList(organizers) {
   // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
   $('#organizer-list-dropdown').empty();
   $('#organizer-list-dropdown').append(
-    `<div id="organizer-list-dropdown-${organizerListRefresh}" class="dropdown hierarchy-select">
-        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    `<div id="organizer-list-dropdown-${organizerListRefresh}" class="dropdown hierarchy-select" >
+        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="max-width:95%;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="organizer-list-button">
             <div class="hs-searchbox">
