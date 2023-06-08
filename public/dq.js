@@ -41,11 +41,11 @@ function sleep(ms) {
 // -------------------------------------------------------------------------------------------------
 
 function setJSONButton(newActiveJSONButton) {
-    if (activeJSONButton) {
-      activeJSONButton.style.backgroundColor = inactiveJSONButtonColor;
-    }
-    activeJSONButton = newActiveJSONButton;
-    activeJSONButton.style.backgroundColor = activeJSONButtonColor;
+  if (activeJSONButton) {
+    activeJSONButton.style.backgroundColor = inactiveJSONButtonColor;
+  }
+  activeJSONButton = newActiveJSONButton;
+  activeJSONButton.style.backgroundColor = activeJSONButtonColor;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -862,7 +862,7 @@ function postDataQuality() {
     }
   }
 
-console.log(storeItemsForDataQuality.items);
+  //console.log(storeItemsForDataQuality.items);
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
@@ -894,19 +894,19 @@ console.log(storeItemsForDataQuality.items);
   storeItemsForDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueLocations).sort());
 
   // Convert sets to arrays:
-  for (const [organizerName,organizerInfo] of Object.entries(storeItemsForDataQuality.uniqueOrganizers)) {
-    for (const [key,val] of Object.entries(organizerInfo)) {
+  for (const [organizerName, organizerInfo] of Object.entries(storeItemsForDataQuality.uniqueOrganizers)) {
+    for (const [key, val] of Object.entries(organizerInfo)) {
       organizerInfo[key] = Array.from(val);
     }
   }
-  for (const [locationName,locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
-    for (const [key,val] of Object.entries(locationInfo)) {
+  for (const [locationName, locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+    for (const [key, val] of Object.entries(locationInfo)) {
       locationInfo[key] = Array.from(val);
     }
   }
 
   // Convert 'lat,lon' strings to [lat,lon] numeric arrays:
-  for (const [locationName,locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+  for (const [locationName, locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
     locationInfo.coordinates = locationInfo.coordinates.map(x => x.split(',').map(x => Number(x)));
   }
 
@@ -1203,7 +1203,6 @@ console.log(storeItemsForDataQuality.items);
 
   let filter_chart = {
     chart: {
-      height: 300,
       type: 'radialBar',
     },
     title: {
@@ -1211,7 +1210,7 @@ console.log(storeItemsForDataQuality.items);
       align: 'center',
       margin: 0,
       offsetX: 0,
-      offsetY: 120,
+      offsetY: 70,
       style: {
         fontSize: '30px',
         fontWeight: 'bold',
@@ -1409,28 +1408,75 @@ console.log(storeItemsForDataQuality.items);
   sleep(600).then(() => { chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
-  let options_percentItemsWithUrl = {};
+
+
+  var optionsSessionUrl = {
+    chart: {
+      offsetY: 30,
+      type: 'radialBar',
+    },
+    grid: {
+      show: false,
+      padding: {
+        left: -30,
+        right: -30,
+        top: -35,
+        bottom: 0,
+      }
+    },
+    fill: {
+      colors: ['#C76DAC'],
+    },
+    series: [rounded4_a],
+    labels: ['Session Urls'],
+    plotOptions: {
+      radialBar: {
+        startAngle: -90,
+        endAngle: 90,
+        dataLabels: {
+          name: {
+            offsetY: 25,
+            show: true,
+            color: "#888",
+            fontSize: "18px"
+          },
+          value: {
+            offsetY: -20,
+            color: "#111",
+            fontSize: "30px",
+            show: true
+          }
+        }
+      }
+    },
+  }
+
+    let options_percentItemsWithUrl = {};
 
   if (filters.DQ_filterUrls !== true) {
     options_percentItemsWithUrl = {
       chart: {
-        width: "100%",
-        height: 300,
         type: 'radialBar',
+      },
+      grid: {
+        show: false,
+        padding: {
+          left: -30,
+          right: -30,
+          top: -35,
+          bottom: 0,
+        }
       },
       fill: {
         colors: ['#C76DAC'],
       },
-      series: [rounded4_a, rounded4_b],
-      labels: ['Unique Urls (Sessions)', 'Unique Urls (Series)'],
+      series: [rounded4_b],
+      labels: ['Series Urls'],
       plotOptions: {
         radialBar: {
-          hollow: {
-            margin: 15,
-            size: "65%"
-          },
+          startAngle: -90,
+          endAngle: 90,
           dataLabels: {
-            showOn: "always",
             name: {
               offsetY: 25,
               show: true,
@@ -1438,33 +1484,24 @@ console.log(storeItemsForDataQuality.items);
               fontSize: "18px"
             },
             value: {
-              offsetY: -30,
+              offsetY: -20,
               color: "#111",
               fontSize: "30px",
               show: true
-            },
-            total: {
-              show: true,
-              label: "Unique Urls (Series)",
-              color: "#888",
-              fontSize: "18px",
-              formatter: function (w) {
-                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-                return Math.max(rounded4_b).toFixed(1) + "%";
-              }
-            },
+            }
           }
         }
-      }
+      },
     }
   }
   else {
     options_percentItemsWithUrl = filter_chart;
   }
 
-  chart5 = new ApexCharts(document.querySelector("#apexchart5"), options_percentItemsWithUrl);
-  sleep(800).then(() => { chart5.render(); });
-
+  chart5a = new ApexCharts(document.querySelector("#apexchart5a"), optionsSessionUrl);
+  chart5b = new ApexCharts(document.querySelector("#apexchart5b"), options_percentItemsWithUrl);
+  sleep(800).then(() => { chart5a.render(); 
+    chart5b.render();});
 
   // -------------------------------------------------------------------------------------------------
 

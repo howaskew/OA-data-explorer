@@ -27,7 +27,8 @@ let chart1;
 let chart2;
 let chart3;
 let chart4;
-let chart5;
+let chart5a;
+let chart5b;
 let chart6;
 let map;
 
@@ -190,7 +191,8 @@ function clearCharts() {
   if (chart2) { chart2.destroy(); }
   if (chart3) { chart3.destroy(); }
   if (chart4) { chart4.destroy(); }
-  if (chart5) { chart5.destroy(); }
+  if (chart5a) { chart5a.destroy(); }
+  if (chart5b) { chart5b.destroy(); }
   if (chart6) { chart6.destroy(); }
 }
 
@@ -651,50 +653,6 @@ function renderTree(concepts, level, output) {
 
 // -------------------------------------------------------------------------------------------------
 
-function renderActivityList(activities) {
-  activityListRefresh++;
-  let activityListSelected = $('#activity-list-selected').val() || '';
-
-  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
-  $('#activity-list-dropdown').empty();
-  $('#activity-list-dropdown').append(
-    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
-        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        </button>
-        <div class="dropdown-menu" aria-labelledby="activity-list-button">
-            <div class="hs-searchbox">
-                <input type="text" class="form-control" autocomplete="off">
-            </div>
-            <div class="hs-menu-inner">
-                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All</a>
-            </div>
-        </div>
-        <input id="activity-list-selected" name="activity-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
-    </div>`);
-  $('#activity-list-selected').val(activityListSelected);
-
-  // Render the activity list in a format the HierarchySelect will understand
-  $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
-
-  $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
-    width: 'auto',
-    // Set initial dropdown state based on the hidden field's initial value
-    initialValueSet: true,
-    // Update other elements when a selection is made
-    // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
-    onChange: function (htmlDataValue) {
-      let concept = activities.getConceptByID(htmlDataValue);
-      // Note that htmlDataValue is the same as $('#activity-list-selected').val()
-      if (htmlDataValue !== activityListSelected) {
-        console.warn(`Selected activity for filter: ${htmlDataValue}`);
-        postDataQuality();
-      }
-    }
-  });
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function renderOrganizerList(organizers) {
   organizerListRefresh++;
   let organizerListSelected = $('#organizer-list-selected').val() || '';
@@ -703,14 +661,14 @@ function renderOrganizerList(organizers) {
   $('#organizer-list-dropdown').empty();
   $('#organizer-list-dropdown').append(
     `<div id="organizer-list-dropdown-${organizerListRefresh}" class="dropdown hierarchy-select">
-        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" style="width:150px" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="organizer-list-button">
             <div class="hs-searchbox">
                 <input type="text" class="form-control" autocomplete="off">
             </div>
             <div class="hs-menu-inner">
-                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">All</a>
+                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">Show All</a>
             </div>
         </div>
         <input id="organizer-list-selected" name="organizer-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
@@ -731,7 +689,7 @@ function renderOrganizerList(organizers) {
   );
 
   $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
-    width: 'auto',
+    width: '98%',
     // Set initial dropdown state based on the hidden field's initial value
     initialValueSet: true,
     // Update other elements when a selection is made
@@ -740,6 +698,50 @@ function renderOrganizerList(organizers) {
       // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
       if (htmlDataValue !== organizerListSelected) {
         console.warn(`Selected organizer for filter: ${htmlDataValue}`);
+        postDataQuality();
+      }
+    }
+  });
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function renderActivityList(activities) {
+  activityListRefresh++;
+  let activityListSelected = $('#activity-list-selected').val() || '';
+
+  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  $('#activity-list-dropdown').empty();
+  $('#activity-list-dropdown').append(
+    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown">
+        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        </button>
+        <div class="dropdown-menu" aria-labelledby="activity-list-button">
+            <div class="hs-searchbox">
+                <input type="text" class="form-control" autocomplete="off">
+            </div>
+            <div class="hs-menu-inner">
+                <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">Show All</a>
+            </div>
+        </div>
+        <input id="activity-list-selected" name="activity-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
+    </div>`);
+  $('#activity-list-selected').val(activityListSelected);
+
+  // Render the activity list in a format the HierarchySelect will understand
+  $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
+
+  $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
+    width: '98%',
+    // Set initial dropdown state based on the hidden field's initial value
+    initialValueSet: true,
+    // Update other elements when a selection is made
+    // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
+    onChange: function (htmlDataValue) {
+      let concept = activities.getConceptByID(htmlDataValue);
+      // Note that htmlDataValue is the same as $('#activity-list-selected').val()
+      if (htmlDataValue !== activityListSelected) {
+        console.warn(`Selected activity for filter: ${htmlDataValue}`);
         postDataQuality();
       }
     }
@@ -957,6 +959,7 @@ function addLocationPanel(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
+
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
   // if you’re going to use the tiles in production
@@ -974,9 +977,12 @@ function addMapPanel(locations) {
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
+ 
   for (const [locationName,locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
       const marker = L.marker(coordinates).addTo(map);
+
+
       marker.bindPopup(
         `<b>${locationName}</b><br>` +
         `<table>` +
