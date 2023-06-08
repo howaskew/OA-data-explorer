@@ -11,11 +11,9 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://neofusion.github.io/hierarchy-select/v2/dist/hierarchy-select.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
-        crossorigin="anonymous">
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin=""/>
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <title>OpenActive Data Explorer</title>
 </head>
 
@@ -26,20 +24,20 @@
             <img src="images/OpenActive-Landscape-Logo-2.png" style="max-width: 100%; max-height: 100%;"></img>
         </div>
         <div class="col-md-6 col-sm-8" style="padding-left: 1%; padding-right: 1%;">
-            <h3 style="text-align:left;">Data Visualiser /</br>Data Quality Explorer</h3>
+            <h3 style="text-align:left;">Data Visualiser / Data Quality Explorer</h3>
         </div>
     </div>
 
     <!-- Controls and logs -->
-    <div class="container-fluid" style="padding-left: 2%; padding-right: 2%; height: 300px; overflow-y: scroll;">
+    <div class="container-fluid" style="padding-left: 2%; padding-right: 2%; height: 300px; overflow-y: auto;">
         <div class="flex_row">
 
             <!-- Left column: Controls -->
             <div class="col-md-6 col-sm-8">
-                <div class="flex_row top">
+                <div class="flex_row top" style="display:none;">
                     <div class="col-sm-4">
                         <div class="flex_row">
-                            <label class="ml-1">URL:</label>
+                            <label>URL:</label>
                         </div>
                         <div class="flex_row">
                             <input id="user-url" type="text" style="width:100%;">
@@ -48,81 +46,55 @@
                 </div>
 
                 <div class="flex_row top">
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label class="ml-1">Data feed provider:</label>
-                        </div>
-                        <div class="flex_row">
-                            <select id="provider" class="form-control"></select>
-                        </div>
+                    <div class="col-sm-5">
+                        <label>Data feed provider:</label>
                     </div>
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label class="ml-1">Data feed type:</label>
-                        </div>
-                        <div class="flex_row">
-                            <select id="endpoint" class="form-control"></select>
-                        </div>
+                    <div class="col-sm-3">
+                        <label>Data feed type:</label>
                     </div>
                     <div class="col-sm-2">
-                        <div class="flex_row">
-                            <label class="ml-1" style="color:white">-</label>
-                        </div>
-                        <div class="flex_row">
-                            <button id="execute" class="btn btn-success form-control" disabled="disabled">
-                                Go
-                            </button>
-                        </div>
                     </div>
                     <div class="col-sm-2">
-                        <div class="flex_row">
-                            <label class="ml-1" style="color:white">-</label>
-                        </div>
-                        <div class="flex_row">
-                            <button id="clear" class="btn btn-secondary form-control">
-                                Clear
-                            </button>
-                        </div>
+                    </div>
+                </div>
+                <div class="flex_row">
+                    <div class="col-sm-5">
+                        <select id="provider" class="form-control"></select>
+                    </div>
+                    <div class="col-sm-3">
+                        <select id="endpoint" class="form-control"></select>
+                    </div>
+                    <div class="col-sm-2">
+                        <button id="execute" class="btn btn-success form-control" disabled="disabled">
+                            Go
+                        </button>
+                    </div>
+                    <div class="col-sm-2">
+                        <button id="clear" class="btn btn-secondary form-control">
+                            Clear
+                        </button>
                     </div>
                 </div>
 
                 <div class="flex_row top" id="filterRows" style="display:none;">
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label class="ml-1" for="TaxonomyTerm">Organiser:</label>
-                        </div>
-<!-- Could try:
-disabled="disabled" -->
-                        <div id="organizer-list-dropdown" class="flex_row">
+                    <div class="col-md-6">
+                        <label class="ml-1" for="TaxonomyTerm">Organiser:</label>
+                        <!-- Could try: disabled="disabled" -->
+                        <div id="organizer-list-dropdown" style="width:100%;">
                         </div>
                     </div>
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label class="ml-1" for="TaxonomyTerm">Activity:</label>
-                        </div>
-<!-- Could try:
+                    <div class="col-md-6">
+
+                        <label class="ml-1" for="TaxonomyTerm">Activity:</label>
+
+                        <!-- Could try:
 disabled="disabled" -->
                         <div id="activity-list-dropdown" class="flex_row">
                         </div>
                     </div>
                 </div>
-<!-- DISABLED DISPLAY START -->
+                <!-- DISABLED DISPLAY START -->
                 <div class="flex_row top" style="display: none;">
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label class="ml-1" for="TaxonomyType">Organization</label>
-                        </div>
-                        <div class="flex_row">
-                            <select id="TaxonomyType" class="form-control mr-1" disabled="disabled">
-                                <option>Any</option>
-                                <option value="area">Area</option>
-                                <option value="cost">Cost</option>
-                                <option value="eligibility">Eligibility</option>
-                                <option value="organization">Organization</option>
-                                <option value="service">Service</option>
-                            </select>
-                        </div>
-                    </div>
                     <div class="col-sm-8">
                         <div class="flex_row">
                             <label class="ml-1" for="Keywords">Keywords</label>
@@ -216,13 +188,13 @@ disabled="disabled" -->
                         </div>
                     </div>
                 </div>
-<!-- DISABLED DISPLAY END -->
+                <!-- DISABLED DISPLAY END -->
             </div>
 
             <!-- Right column: Logs -->
-            <div class="col-md-6 col-sm-8 " style="padding-left: 1%; padding-right: 1%;">
+            <div class="col-md-6 col-sm-8 " style="">
                 <div class="flex_row top">
-                    <h5>Progress:</h5>
+                    <label>Progress:</label>
                 </div>
                 <div id="loading-time" style="display: none;">
                     <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest feeds.</h5>
@@ -399,15 +371,13 @@ disabled="disabled" -->
         integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@1.26.0/build/global/luxon.min.js"
-        integrity="sha256-4sbTzmCCW9LGrIh5OsN8V5Pfdad1F1MwhLAOyXKnsE0="
-        crossorigin="anonymous"></script>
+        integrity="sha256-4sbTzmCCW9LGrIh5OsN8V5Pfdad1F1MwhLAOyXKnsE0=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-base64@3.6.0/base64.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@openactive/skos@1.4.3/dist/skos.min.js"></script>
     <script src="https://neofusion.github.io/hierarchy-select/v2/dist/hierarchy-select.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="apisearch.js"></script>
     <script src="dq.js"></script>
 
