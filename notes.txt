@@ -13,10 +13,3 @@ validation-errors.html
 Also, of interest these apps from 360 giving:
 https://qualitydashboard.threesixtygiving.org/alldata
 https://insights.threesixtygiving.org/
-
-HA Notes:
-store.itemCount increments for each data.content / data.items
-store.matchingItemCount increments after the test for state===updated 
-It shows how many items match the activity, day and gender filters
-
-Now retaining the ID, Modified and State info for each item loaded
