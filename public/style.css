@@ -65,7 +65,7 @@ div.col-md-2, div.col-md-6 {
   width: 95% !important;
 }
 
-#loading-time {
+#loading-time, #record-limit {
   background-color: yellow;
   margin: 5px;
   border-radius: 5px;

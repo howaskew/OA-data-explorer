@@ -324,14 +324,18 @@ function setStoreItems(url, store) {
 
       //postResults(store, filters);
 
+
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
-      if (url !== page.next) {
+      if (url !== page.next && store.numItems < 25000) {
         progress.empty();
         progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
         setStoreItems(page.next, store);
       }
       else {
+        if (store.numItems >= 25000) {
+          $("#record-limit").fadeIn();
+        }
         progress.empty();
         progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
@@ -1142,10 +1146,9 @@ function updateEndpoint() {
 
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
-  progress = $("#progress");
-  progress.append("Selected data feed: <a href='" + endpoint + "' target='_blank'>" + endpoint + "</a></br>");
 
-
+  $("#user-url").val(endpoint);
+ 
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1446,6 +1449,7 @@ function setEndpoints() {
     .done(function () {
       updateParameters("endpoint", $("#endpoint").val());
       setPage();
+      $("#user-url").val($("#endpoint").val());
     });
 }
 

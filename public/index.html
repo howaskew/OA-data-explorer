@@ -34,16 +34,6 @@
 
             <!-- Left column: Controls -->
             <div class="col-md-6 col-sm-8">
-                <div class="flex_row top" style="display:none;">
-                    <div class="col-sm-4">
-                        <div class="flex_row">
-                            <label>URL:</label>
-                        </div>
-                        <div class="flex_row">
-                            <input id="user-url" type="text" style="width:100%;">
-                        </div>
-                    </div>
-                </div>
 
                 <div class="flex_row top">
                     <div class="col-sm-5">
@@ -73,6 +63,17 @@
                         <button id="clear" class="btn btn-secondary form-control">
                             Clear
                         </button>
+                    </div>
+                </div>
+
+                <div class="flex_row top">
+                    <div class="col-sm-12">
+                        <label>URL:</label>
+                    </div>
+                </div>
+                <div class="flex_row">
+                    <div class="col-sm-12">
+                        <input id="user-url" type="text" class="form-control" style="width:100%;">
                     </div>
                 </div>
 
@@ -190,13 +191,16 @@
             </div>
 
             <!-- Right column: Logs -->
-            <div class="col-md-6 col-sm-8 " style="">
+            <div class="col-md-6 col-sm-8 ">
                 <div class="flex_row top">
                     <label>Progress:</label>
                 </div>
                 <div id="loading-time" style="display: none;">
                     <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest
                         feeds.</h5>
+                </div>
+                <div id="record-limit" style="display: none;">
+                    <h5>Note: only the first 25,000 items (approx.) from the API are being processed.</h5>
                 </div>
                 <div id="progress">
                 </div>

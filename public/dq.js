@@ -142,7 +142,7 @@ function runDataQuality() {
       storeSuperEvent.feedType === 'SessionSeries' &&
       storeSuperEvent.itemDataType === 'ScheduledSession'
     ) {
-
+      console.log("1");
       cp.text("Unpacking data feed - embedded SuperEvent with Series data");
 
       link = 'superEvent';
@@ -239,7 +239,11 @@ function runDataQuality() {
           storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
           combinedStoreItems.push(storeSubEventItemCopy);
         }
+        // If the match isn't found then the super-event has been deleted, so can lose the sub-event info...
+        // If it is matched, we have the data in combined items so can delete 
       }
+      // Remove the storeSubEventItem from the original storeSubEvent.items object
+      delete storeSubEvent.items[storeSubEventItem];
     }
 
     cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
@@ -1451,7 +1455,7 @@ function postDataQuality() {
     },
   }
 
-    let options_percentItemsWithUrl = {};
+  let options_percentItemsWithUrl = {};
 
   if (filters.DQ_filterUrls !== true) {
     options_percentItemsWithUrl = {
@@ -1500,8 +1504,10 @@ function postDataQuality() {
 
   chart5a = new ApexCharts(document.querySelector("#apexchart5a"), optionsSessionUrl);
   chart5b = new ApexCharts(document.querySelector("#apexchart5b"), options_percentItemsWithUrl);
-  sleep(800).then(() => { chart5a.render(); 
-    chart5b.render();});
+  sleep(800).then(() => {
+    chart5a.render();
+    chart5b.render();
+  });
 
   // -------------------------------------------------------------------------------------------------
 
