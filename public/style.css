@@ -98,6 +98,7 @@ div.col-md-2, div.col-md-6 {
 }
 
 #apexchart5a, #apexchart5b {
+  position: relative;
   height: 150px !important;
 }
 
