@@ -565,11 +565,10 @@ function postDataQuality() {
       location !== null &&
       typeof location.name === 'string' &&
       location.name.trim().length > 0;
-    // TODO: No location drop-down menu at present, but could be ...
-    // let itemMatchesLocation =
-    //   !filters.location
-    //     ? true
-    //     : hasValidLocation && location.name === filters.location;
+    let itemMatchesLocation =
+       !filters.location
+         ? true
+         : hasValidLocation && location.name === filters.location;
 
     let itemMatchesDay =
       !filters.day
@@ -612,7 +611,7 @@ function postDataQuality() {
     if (
       itemMatchesActivity &&
       itemMatchesOrganizer &&
-      // itemMatchesLocation && // TODO: No location drop-down menu at present, but could be ...
+      itemMatchesLocation && 
       itemMatchesDay &&
       itemMatchesGender &&
       itemMatchesDQDateFilter &&
@@ -638,7 +637,7 @@ function postDataQuality() {
         }
       }
 
-      // 2
+      // 2 could be rolled into the above
       else if (item.data && item.data.superEvent) {
         const superEventId =
           item.data.superEvent.id ||
@@ -919,7 +918,7 @@ function postDataQuality() {
   console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.uniqueOrganizers).length}`);
   // console.dir(`uniqueOrganizers: ${Object.keys(storeDataQuality.uniqueOrganizers)}`);
 
-  // updateLocationList(storeDataQuality.uniqueLocations); // TODO: No location drop-down menu at present, but could be ...
+  updateLocationList(storeDataQuality.uniqueLocations); 
   $("#location").empty()
   addLocationPanel(storeDataQuality.uniqueLocations);
   console.log(`Number of unique locations: ${Object.keys(storeDataQuality.uniqueLocations).length}`);
