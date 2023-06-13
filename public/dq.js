@@ -56,8 +56,8 @@ function setJSONButton(newActiveJSONButton) {
 function postResults(item) {
   results = $("#resultsDiv");
   results.append(
-    `<div id='row${storeItemsForDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
-    `    <div id='text${storeItemsForDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
+    `<div id='row${storeDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
+    `    <div id='text${storeDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
     `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
@@ -67,7 +67,7 @@ function postResults(item) {
     `        <div class='visualise'>` +
     `            <div class='row'>` +
     `                <div class='col' style='text-align: right'>` +
-    `                    <button id='json${storeItemsForDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>JSON</button>` +
+    `                    <button id='json${storeDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>JSON</button>` +
     `                </div>` +
     `            </div>` +
     `        </div>` +
@@ -75,25 +75,25 @@ function postResults(item) {
     `</div>`
   );
 
-  if (storeItemsForDataQuality.numItemsMatchFilters === 1) {
+  if (storeDataQuality.numItemsMatchFilters === 1) {
     setJSONButton(document.getElementById('json1'));
     setJSONTab(item.id || item.data['@id'], false);
   }
 
-  $(`#json${storeItemsForDataQuality.numItemsMatchFilters}`).on('click', function () {
+  $(`#json${storeDataQuality.numItemsMatchFilters}`).on('click', function () {
     setJSONButton(this);
     setJSONTab(item.id || item.data['@id'], true);
   });
 
   if ((item.id && item.id.length > 8) || (item.data['@id'] && item.data['@id'].length > 8)) {
-    $(`#row${storeItemsForDataQuality.numItemsMatchFilters}`).hover(
+    $(`#row${storeDataQuality.numItemsMatchFilters}`).hover(
       function () {
-        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
-        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+        $(`#text${storeDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
+        $(`#text${storeDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
       },
       function () {
-        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).addClass("text-truncate");
-        $(`#text${storeItemsForDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+        $(`#text${storeDataQuality.numItemsMatchFilters}`).addClass("text-truncate");
+        $(`#text${storeDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 100%");
       }
     );
   }
@@ -157,7 +157,7 @@ function runDataQuality() {
 
       numListings = uniqueListings.length;
       numOpps = Object.values(storeSuperEvent.items).length;
-      storeItemsForDataQuality.items = Object.values(storeSuperEvent.items);
+      storeDataQuality.items = Object.values(storeSuperEvent.items);
     }
 
     //SportSuite - embedded subevent with session data
@@ -202,7 +202,7 @@ function runDataQuality() {
 
       numListings = uniqueListings.length;
       numOpps = Object.values(storeSubEvent.items).length;
-      storeItemsForDataQuality.items = Object.values(storeSubEvent.items);
+      storeDataQuality.items = Object.values(storeSubEvent.items);
     }
   }
   else if (
@@ -215,7 +215,7 @@ function runDataQuality() {
 
     let ccounter = 0;
 
-    let combinedStoreItems = [];
+    storeCombinedItems = [];
     let items = Object.values(storeSubEvent.items);
 
     for (const storeSubEventItem of items) {
@@ -237,10 +237,10 @@ function runDataQuality() {
           let storeSubEventItemCopy = JSON.parse(JSON.stringify(storeSubEventItem));
           let storeSuperEventItemCopy = JSON.parse(JSON.stringify(storeSuperEventItem));
           storeSubEventItemCopy.data[link] = storeSuperEventItemCopy.data;
-          combinedStoreItems.push(storeSubEventItemCopy);
+          storeCombinedItems.push(storeSubEventItemCopy);
         }
         // If the match isn't found then the super-event has been deleted, so can lose the sub-event info...
-        // If it is matched, we have the data in combined items so can delete 
+        // If it is matched, we have the data in combined items so can delete
       }
       // Remove the storeSubEventItem from the original storeSubEvent.items object
       delete storeSubEvent.items[storeSubEventItem];
@@ -248,10 +248,10 @@ function runDataQuality() {
 
     cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
 
-    //console.log(`Combined store contains: ${combinedStoreItems.length} items`);
-    //console.log(combinedStoreItems);
+    //console.log(`Combined store contains: ${storeCombinedItems.length} items`);
+    //console.log(storeCombinedItems);
 
-    for (const storeSubEventItem of combinedStoreItems) {
+    for (const storeSubEventItem of storeCombinedItems) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
         listings.push(storeSubEventItem.data[link].identifier);
       }
@@ -262,8 +262,8 @@ function runDataQuality() {
     uniqueListings = [...new Set(listings)];
 
     numListings = uniqueListings.length;
-    numOpps = combinedStoreItems.length;
-    storeItemsForDataQuality.items = combinedStoreItems;
+    numOpps = storeCombinedItems.length;
+    storeDataQuality.items = storeCombinedItems;
   }
   else {
     cp.empty();
@@ -293,7 +293,7 @@ function runDataQuality() {
 
     numListings = storeSuperEvent ? Object.values(storeSuperEvent.items).length : 0;
     numOpps = storeSubEvent ? Object.values(storeSubEvent.items).length : 0;
-    storeItemsForDataQuality.items = Object.values(storeIngressOrder1.items);
+    storeDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
 
@@ -319,7 +319,7 @@ function measureDataQuality() {
   let parentUrlCounts = new Map();
 
   let counter = 0;
-  for (const item of storeItemsForDataQuality.items) {
+  for (const item of storeDataQuality.items) {
 
     counter++;
 
@@ -329,12 +329,10 @@ function measureDataQuality() {
     const date = new Date(item.data.startDate);
 
     if (!isNaN(date)) {
-
       // Check if the date is greater than or equal to today's date
       if (date >= dateNow) {
         item.DQ_futureDate = 1;
       }
-
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -443,7 +441,7 @@ function measureDataQuality() {
   // be the metric we're after, but this may not truly be the case and needs to be investigated.
   urlCounts.forEach((val, key) => {
     if (val === 1) {
-      storeItemsForDataQuality.items.forEach(item => {
+      storeDataQuality.items.forEach(item => {
         if (item.data && item.data.url && typeof item.data.url === 'string' && item.data.url === key) {
           item.DQ_validSessionUrl = 1;
         }
@@ -454,7 +452,7 @@ function measureDataQuality() {
   // Go back and assign flag to those items with unique series urls
   parentUrlCounts.forEach((val, key) => {
     if (val === 1) {
-      storeItemsForDataQuality.items.forEach(item => {
+      storeDataQuality.items.forEach(item => {
         if (link && item.data && item.data[link] && item.data[link].url && typeof item.data[link].url === 'string' && item.data[link].url === key) {
           item.DQ_validSeriesUrl = 1;
         }
@@ -462,7 +460,7 @@ function measureDataQuality() {
     }
   });
 
-  dqp.text("Measuring Data Quality: " + counter + " of " + storeItemsForDataQuality.items.length + " items");
+  dqp.text("Measuring Data Quality: " + counter + " of " + storeDataQuality.items.length + " items");
 
   $("#tabs").fadeIn("slow");
   postDataQuality();
@@ -501,10 +499,10 @@ function postDataQuality() {
   addResultsPanel();
 
   // Reset store contents for after filters applied:
-  storeItemsForDataQuality.numItemsMatchFilters = 0;
-  storeItemsForDataQuality.uniqueActivities = new Set();
-  storeItemsForDataQuality.uniqueOrganizers = new Object();
-  storeItemsForDataQuality.uniqueLocations = new Object();
+  storeDataQuality.numItemsMatchFilters = 0;
+  storeDataQuality.uniqueActivities = new Set();
+  storeDataQuality.uniqueOrganizers = new Object();
+  storeDataQuality.uniqueLocations = new Object();
 
   getFilters();
   //console.log(filters);
@@ -525,8 +523,6 @@ function postDataQuality() {
   let activityCounts = new Map();
   let urlCounts = new Map();
 
-
-
   let numItemsNowToFuture = 0;
   let numItemsWithGeo = 0; // TODO: Sort out duplication of effort with "numItemsWithOrganizer"
   let numItemsWithActivity = 0;
@@ -539,7 +535,7 @@ function postDataQuality() {
 
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
-  for (const item of storeItemsForDataQuality.items) {
+  for (const item of storeDataQuality.items) {
 
     // Filters
 
@@ -628,20 +624,18 @@ function postDataQuality() {
       numItems++;
       numChild++;
 
-      storeItemsForDataQuality.numItemsMatchFilters++;
+      storeDataQuality.numItemsMatchFilters++;
 
       // Find parents, emulating opps / listings counts for earlier scenarios
 
       // 1 and 3
       if (item.data && item.data[link]) {
-
         if (item.data[link].identifier) {
           parents.push(item.data[link].identifier);
         }
         else if (item.data[link]['@id']) {
           parents.push(item.data[link]['@id']);
         }
-
       }
 
       // 2
@@ -653,7 +647,6 @@ function postDataQuality() {
         if (superEventId) {
           parents.push(superEventId);
         }
-
       }
 
 
@@ -721,7 +714,7 @@ function postDataQuality() {
           .forEach(activityId => {
 
             // Add activity to list of unique activities (one of the original filters, now applied after loading completed)
-            storeItemsForDataQuality.uniqueActivities.add(activityId)
+            storeDataQuality.uniqueActivities.add(activityId)
 
             // New DQ measures
 
@@ -750,21 +743,21 @@ function postDataQuality() {
 
       if (hasValidOrganizer) {
         let organizerName = organizer.name.trim();
-        if (!storeItemsForDataQuality.uniqueOrganizers.hasOwnProperty(organizerName)) {
+        if (!storeDataQuality.uniqueOrganizers.hasOwnProperty(organizerName)) {
           // Note that these sets are converted to arrays after looping through all items:
-          storeItemsForDataQuality.uniqueOrganizers[organizerName] = {
+          storeDataQuality.uniqueOrganizers[organizerName] = {
             'url': new Set(),
             'email': new Set(),
             'telephone': new Set(),
           };
         }
-        for (const key in storeItemsForDataQuality.uniqueOrganizers[organizerName]) {
+        for (const key in storeDataQuality.uniqueOrganizers[organizerName]) {
           const val = getProperty(organizer, key);
           if (typeof val === 'string' && val.trim().length > 0) {
-            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
+            storeDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
           }
           else if (typeof val === 'number') {
-            storeItemsForDataQuality.uniqueOrganizers[organizerName][key].add(val);
+            storeDataQuality.uniqueOrganizers[organizerName][key].add(val);
           }
         }
         numItemsWithOrganizer++;
@@ -776,9 +769,9 @@ function postDataQuality() {
 
       if (hasValidLocation) {
         let locationName = location.name.trim();
-        if (!storeItemsForDataQuality.uniqueLocations.hasOwnProperty(locationName)) {
+        if (!storeDataQuality.uniqueLocations.hasOwnProperty(locationName)) {
           // Note that these sets are converted to arrays after looping through all items:
-          storeItemsForDataQuality.uniqueLocations[locationName] = {
+          storeDataQuality.uniqueLocations[locationName] = {
             'url': new Set(),
             'email': new Set(),
             'telephone': new Set(),
@@ -791,10 +784,10 @@ function postDataQuality() {
         for (const key of ['url', 'email', 'telephone', 'streetAddress', 'postalCode']) {
           const val = getProperty(location, key);
           if (typeof val === 'string' && val.trim().length > 0) {
-            storeItemsForDataQuality.uniqueLocations[locationName][key].add(val.trim());
+            storeDataQuality.uniqueLocations[locationName][key].add(val.trim());
           }
           else if (typeof val === 'number') {
-            storeItemsForDataQuality.uniqueLocations[locationName][key].add(val);
+            storeDataQuality.uniqueLocations[locationName][key].add(val);
           }
         }
         // The coordinates are stored as a single lat,lon combined string in order to be a single element
@@ -802,7 +795,7 @@ function postDataQuality() {
         const latitude = getProperty(location, 'latitude');
         const longitude = getProperty(location, 'longitude');
         if (typeof latitude === 'number' && typeof longitude === 'number') {
-          storeItemsForDataQuality.uniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
+          storeDataQuality.uniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
         }
         numItemsWithLocation++;
       }
@@ -853,10 +846,10 @@ function postDataQuality() {
 
       //Post results for matching items...
 
-      if (storeItemsForDataQuality.numItemsMatchFilters < 100) {
+      if (storeDataQuality.numItemsMatchFilters < 100) {
         postResults(item);
       }
-      else if (storeItemsForDataQuality.numItemsMatchFilters === 100) {
+      else if (storeDataQuality.numItemsMatchFilters === 100) {
         results.append(
           "<div class='row rowhover'>" +
           "    <div>Only the first 100 items are shown</div>" +
@@ -866,11 +859,11 @@ function postDataQuality() {
     }
   }
 
-  //console.log(storeItemsForDataQuality.items);
+  //console.log(storeDataQuality.items);
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
-  if (storeItemsForDataQuality.numItemsMatchFilters === 0) {
+  if (storeDataQuality.numItemsMatchFilters === 0) {
     results.empty();
     results.append(
       "<div class='row rowhover'>" +
@@ -894,46 +887,46 @@ function postDataQuality() {
   // -------------------------------------------------------------------------------------------------
 
   // Sort objects by keys in alphabetical order:
-  storeItemsForDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueOrganizers).sort());
-  storeItemsForDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeItemsForDataQuality.uniqueLocations).sort());
+  storeDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeDataQuality.uniqueOrganizers).sort());
+  storeDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeDataQuality.uniqueLocations).sort());
 
   // Convert sets to arrays:
-  for (const [organizerName, organizerInfo] of Object.entries(storeItemsForDataQuality.uniqueOrganizers)) {
+  for (const [organizerName, organizerInfo] of Object.entries(storeDataQuality.uniqueOrganizers)) {
     for (const [key, val] of Object.entries(organizerInfo)) {
       organizerInfo[key] = Array.from(val);
     }
   }
-  for (const [locationName, locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
     for (const [key, val] of Object.entries(locationInfo)) {
       locationInfo[key] = Array.from(val);
     }
   }
 
   // Convert 'lat,lon' strings to [lat,lon] numeric arrays:
-  for (const [locationName, locationInfo] of Object.entries(storeItemsForDataQuality.uniqueLocations)) {
+  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
     locationInfo.coordinates = locationInfo.coordinates.map(x => x.split(',').map(x => Number(x)));
   }
 
   // -------------------------------------------------------------------------------------------------
 
-  updateActivityList(storeItemsForDataQuality.uniqueActivities);
-  console.log(`Number of unique activities: ${storeItemsForDataQuality.uniqueActivities.size}`);
-  // console.dir(`uniqueActivities: ${Array.from(storeItemsForDataQuality.uniqueActivities)}`);
+  updateActivityList(storeDataQuality.uniqueActivities);
+  console.log(`Number of unique activities: ${storeDataQuality.uniqueActivities.size}`);
+  // console.dir(`uniqueActivities: ${Array.from(storeDataQuality.uniqueActivities)}`);
 
-  updateOrganizerList(storeItemsForDataQuality.uniqueOrganizers);
+  updateOrganizerList(storeDataQuality.uniqueOrganizers);
   $("#organizer").empty()
-  addOrganizerPanel(storeItemsForDataQuality.uniqueOrganizers);
-  console.log(`Number of unique organizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers).length}`);
-  // console.dir(`uniqueOrganizers: ${Object.keys(storeItemsForDataQuality.uniqueOrganizers)}`);
+  addOrganizerPanel(storeDataQuality.uniqueOrganizers);
+  console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.uniqueOrganizers).length}`);
+  // console.dir(`uniqueOrganizers: ${Object.keys(storeDataQuality.uniqueOrganizers)}`);
 
-  // updateLocationList(storeItemsForDataQuality.uniqueLocations); // TODO: No location drop-down menu at present, but could be ...
+  // updateLocationList(storeDataQuality.uniqueLocations); // TODO: No location drop-down menu at present, but could be ...
   $("#location").empty()
-  addLocationPanel(storeItemsForDataQuality.uniqueLocations);
-  console.log(`Number of unique locations: ${Object.keys(storeItemsForDataQuality.uniqueLocations).length}`);
-  // console.dir(`uniqueLocations: ${Object.keys(storeItemsForDataQuality.uniqueLocations)}`);
+  addLocationPanel(storeDataQuality.uniqueLocations);
+  console.log(`Number of unique locations: ${Object.keys(storeDataQuality.uniqueLocations).length}`);
+  // console.dir(`uniqueLocations: ${Object.keys(storeDataQuality.uniqueLocations)}`);
 
   $("#map").empty()
-  addMapPanel(storeItemsForDataQuality.uniqueLocations);
+  addMapPanel(storeDataQuality.uniqueLocations);
 
   // -------------------------------------------------------------------------------------------------
 

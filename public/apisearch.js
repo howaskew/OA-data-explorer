@@ -45,8 +45,8 @@ let storeIngressOrder1 = {
 let storeIngressOrder2 = {
   ingressOrder: 2,
 };
-let storeItemsForDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
-let combinedStoreItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
+let storeDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
+let storeCombinedItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
 
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
 let storeSuperEvent;
@@ -109,8 +109,8 @@ function clearGlobals() {
   loadingDone = false;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
-  clearStore(storeItemsForDataQuality);
-  combinedStoreItems = [];
+  clearStore(storeDataQuality);
+  storeCombinedItems = [];
   storeSuperEvent = null;
   storeSubEvent = null;
   storeSuperEventContentType = null;
@@ -611,7 +611,7 @@ function loadingComplete() {
   }
   $("#loading-time").hide();
   runDataQuality();
-  //console.log(storeItemsForDataQuality);
+  //console.log(storeDataQuality);
 
 }
 
