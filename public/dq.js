@@ -566,9 +566,9 @@ function postDataQuality() {
       typeof location.name === 'string' &&
       location.name.trim().length > 0;
     let itemMatchesLocation =
-       !filters.location
-         ? true
-         : hasValidLocation && location.name === filters.location;
+      !filters.location
+        ? true
+        : hasValidLocation && location.name === filters.location;
 
     let itemMatchesDay =
       !filters.day
@@ -611,7 +611,7 @@ function postDataQuality() {
     if (
       itemMatchesActivity &&
       itemMatchesOrganizer &&
-      itemMatchesLocation && 
+      itemMatchesLocation &&
       itemMatchesDay &&
       itemMatchesGender &&
       itemMatchesDQDateFilter &&
@@ -750,13 +750,22 @@ function postDataQuality() {
             'telephone': new Set(),
           };
         }
+
+        // Don't pull urls for images, just top level organisation urls...
+        const topUrl1 = organizer.url || null;
+        if (typeof topUrl1 === 'string' && topUrl1.trim().length > 0) {
+          storeDataQuality.uniqueOrganizers[organizerName]['url'].add(topUrl1.trim());
+        }
+
         for (const key in storeDataQuality.uniqueOrganizers[organizerName]) {
-          const val = getProperty(organizer, key);
-          if (typeof val === 'string' && val.trim().length > 0) {
-            storeDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
-          }
-          else if (typeof val === 'number') {
-            storeDataQuality.uniqueOrganizers[organizerName][key].add(val);
+          if (key !== 'url') {
+            const val = getProperty(organizer, key);
+            if (typeof val === 'string' && val.trim().length > 0) {
+              storeDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
+            }
+            else if (typeof val === 'number') {
+              storeDataQuality.uniqueOrganizers[organizerName][key].add(val);
+            }
           }
         }
         numItemsWithOrganizer++;
@@ -779,8 +788,15 @@ function postDataQuality() {
             'coordinates': new Set(),
           };
         }
+
+        // Don't pull urls for images, just top level location urls...
+        const topUrl = location.url || null;
+        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
+          storeDataQuality.uniqueLocations[locationName]['url'].add(topUrl.trim());
+        }
+
         // Note that this is 'const key of' rather than 'const key in':
-        for (const key of ['url', 'email', 'telephone', 'streetAddress', 'postalCode']) {
+        for (const key of ['email', 'telephone', 'streetAddress', 'postalCode']) {
           const val = getProperty(location, key);
           if (typeof val === 'string' && val.trim().length > 0) {
             storeDataQuality.uniqueLocations[locationName][key].add(val.trim());
@@ -918,7 +934,7 @@ function postDataQuality() {
   console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.uniqueOrganizers).length}`);
   // console.dir(`uniqueOrganizers: ${Object.keys(storeDataQuality.uniqueOrganizers)}`);
 
-  updateLocationList(storeDataQuality.uniqueLocations); 
+  updateLocationList(storeDataQuality.uniqueLocations);
   $("#location").empty()
   addLocationPanel(storeDataQuality.uniqueLocations);
   console.log(`Number of unique locations: ${Object.keys(storeDataQuality.uniqueLocations).length}`);
