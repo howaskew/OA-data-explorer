@@ -1032,20 +1032,17 @@ function addMapPanel(locations) {
     map.remove();
   }
   map = L.map('map', {
-    center: [53.0, -2.0],
-    zoom: 6.5,
+    maxZoom: 17,
     scrollWheelZoom: false,
   });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
+
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
-
 
   for (const [locationName, locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
       const marker = L.marker(coordinates).addTo(map);
-
 
       marker.bindPopup(
         `<b>${locationName}</b><br>` +
@@ -1077,7 +1074,9 @@ function addMapPanel(locations) {
         `</table>`);
     }
   }
+
 }
+
 
 // As well as the live code below, these variants also work:
 //   $('body').on('click', '#mapTab', function() {
@@ -1086,9 +1085,22 @@ function addMapPanel(locations) {
 // See bottom of this page for more details:
 //   https://getbootstrap.com/docs/5.0/components/navs-tabs/
 
+
 $('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+  // Calculate the bounds for the marker layer
+  var markerBounds = L.latLngBounds();
+  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
+    for (const coordinates of locationInfo.coordinates) {
+      markerBounds.extend(coordinates);
+    }
+  }
+  // Zoom and pan the map to fit the marker bounds
+  setTimeout(function () {
+    map.fitBounds(markerBounds);
+  }, 100); // Delay the fitBounds to ensure markers plotted
 });
+
 
 // -------------------------------------------------------------------------------------------------
 
