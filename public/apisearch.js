@@ -862,7 +862,7 @@ function setJSONTab(itemId, switchTab) {
     $("#resultPanel").removeClass("active");
     $("#jsonTab").addClass("active");
     $("#jsonPanel").addClass("active");
-    $("#tabs")[0].scrollIntoView();
+    updateScrollResults();
   }
 
   // Output both relevant feeds if combined
@@ -1031,7 +1031,6 @@ function addLocationPanel(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/) if you’re going to use the tiles in production
   // HA - We are following guidance but should keep an eye on usage / demand on server
@@ -1091,15 +1090,39 @@ function addMapPanel(locations) {
 
 }
 
+// -------------------------------------------------------------------------------------------------
+
+// Handle nav tabs smooth to fill page
+
+$('#resultsTab').on('click', function () {
+  updateScrollResults();
+});
+
+$('#jsonTab').on('click', function () {
+  updateScrollResults();
+});
+
+$('#apiTab').on('click', function () {
+  updateScrollResults();
+});
+
+$('#organizerTab').on('click', function () {
+  updateScrollResults();
+});
+
+$('#locationTab').on('click', function () {
+  updateScrollResults();
+});
+
 // As well as the live code below, these variants also work:
 //   $('body').on('click', '#mapTab', function() {
 //   $('body').on('show.bs.tab', '#mapTab', function() {
 //   $('#mapTab').on('click', function () {
 // See bottom of this page for more details:
 //   https://getbootstrap.com/docs/5.0/components/navs-tabs/
-
 $('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+
   // Calculate the bounds for the marker layer
   var markerBounds = L.latLngBounds();
   for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
@@ -1107,17 +1130,29 @@ $('#mapTab').on('show.bs.tab', function () {
       markerBounds.extend(coordinates);
     }
   }
+
   // Zoom and pan the map to fit the marker bounds
   setTimeout(function () {
     map.fitBounds(markerBounds);
   }, 100); // Delay the fitBounds to ensure markers plotted
+
+  updateScrollResults();
 });
 
 // -------------------------------------------------------------------------------------------------
 
 function updateScroll() {
-  const element = document.getElementById("api");
+  const element = document.getElementById("progress");
   element.scrollTop = element.scrollHeight;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateScrollResults() {
+  window.scrollTo({
+    top: 480,
+    behavior: 'smooth' // You can change this to 'auto' for instant scrolling
+  });
 }
 
 // -------------------------------------------------------------------------------------------------
