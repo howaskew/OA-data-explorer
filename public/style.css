@@ -39,7 +39,7 @@ div.col-md-2, div.col-md-6 {
 .text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap
+  white-space: nowrap;
 }
 
 .json {
@@ -81,14 +81,14 @@ div.col-md-2, div.col-md-6 {
   width: 100%;
   color: #fff;
   padding: 5px;
-  border-radius: 8px 8px 0px 0px; 
+  border-radius: 8px 8px 0px 0px;
 }
 
 #summaryPanel {
   min-height: 480px !important;
   position: relative;
   bottom: 0;
-  overflow-y: none;
+  overflow-y: auto;
 }
 
 .sparkboxes .box {
