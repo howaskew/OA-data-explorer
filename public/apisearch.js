@@ -232,11 +232,11 @@ function clearCache(store) {
 function getFilters() {
   filters = {
     organizer: $('#organizer-list-selected').val(),
-    activity: $('#activity-list-selected').val(),
     // location: $('#location-list-selected').val(), // TODO: No location drop-down menu at present, but could be ...
-    DQ_filterDates: $('#DQ_filterDates').prop("checked"),
+    activity: $('#activity-list-selected').val(),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
+    DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
     proximity: $("#Proximity").val(),
@@ -323,7 +323,6 @@ function setStoreItems(url, store) {
       }
 
       //postResults(store, filters);
-
 
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next && store.numItems < 25000) {
@@ -1166,34 +1165,31 @@ function updateEndpointUpdate() {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateDQ_filterDates() {
-  DQ_filterDates = $("#DQ_filterDates").prop("checked");
-  postDataQuality();
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function updateDQ_filterActivities() {
-  DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
+  filters.DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
   postDataQuality();
 }
-
 
 // -------------------------------------------------------------------------------------------------
 
 function updateDQ_filterGeos() {
-  DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
+  filters.DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
   postDataQuality();
 }
 
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterDates() {
+  filters.DQ_filterDates = $("#DQ_filterDates").prop("checked");
+  postDataQuality();
+}
 
 // -------------------------------------------------------------------------------------------------
 
 function updateDQ_filterUrls() {
-  DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
+  filters.DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
   postDataQuality();
 }
-
 
 // -------------------------------------------------------------------------------------------------
 
@@ -1347,14 +1343,14 @@ function setPage() {
     updateEndpoint();
   });
 
-  $("#DQ_filterDates").on("change", function () {
-    updateDQ_filterDates();
-  });
   $("#DQ_filterActivities").on("change", function () {
     updateDQ_filterActivities();
   });
   $("#DQ_filterGeos").on("change", function () {
     updateDQ_filterGeos();
+  });
+  $("#DQ_filterDates").on("change", function () {
+    updateDQ_filterDates();
   });
   $("#DQ_filterUrls").on("change", function () {
     updateDQ_filterUrls();
