@@ -549,7 +549,8 @@ function postDataQuality() {
           };
         }
 
-        for (const key in filteredItemsUniqueOrganizers[organizerName]) {
+        // Note that this is 'const key of' rather than 'const key in':
+        for (const key of ['email', 'telephone']) {
           const val = getProperty(organizer, key);
           if (typeof val === 'string' && val.trim().length > 0) {
             filteredItemsUniqueOrganizers[organizerName][key].add(val.trim());
@@ -557,6 +558,12 @@ function postDataQuality() {
           else if (typeof val === 'number') {
             filteredItemsUniqueOrganizers[organizerName][key].add(val);
           }
+        }
+
+        // Don't pull urls for images, just top level organisation urls:
+        const topUrl = organizer.url || null;
+        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
+          filteredItemsUniqueOrganizers[organizerName]['url'].add(topUrl.trim());
         }
       }
 
@@ -578,7 +585,7 @@ function postDataQuality() {
         }
 
         // Note that this is 'const key of' rather than 'const key in':
-        for (const key of ['url', 'email', 'telephone', 'streetAddress', 'postalCode']) {
+        for (const key of ['email', 'telephone', 'streetAddress', 'postalCode']) {
           const val = getProperty(location, key);
           if (typeof val === 'string' && val.trim().length > 0) {
             filteredItemsUniqueLocations[locationName][key].add(val.trim());
@@ -586,6 +593,12 @@ function postDataQuality() {
           else if (typeof val === 'number') {
             filteredItemsUniqueLocations[locationName][key].add(val);
           }
+        }
+
+        // Don't pull urls for images, just top level location urls:
+        const topUrl = location.url || null;
+        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
+          filteredItemsUniqueLocations[locationName]['url'].add(topUrl.trim());
         }
 
         // The coordinates are stored as a single 'lat,lon' combined string in order to be a single element
