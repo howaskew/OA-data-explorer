@@ -67,7 +67,7 @@ function postResults(item) {
     `        <div class='visualise'>` +
     `            <div class='row'>` +
     `                <div class='col' style='text-align: right'>` +
-    `                    <button id='json${storeDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>JSON</button>` +
+    `                    <button id='json${storeDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>Show JSON</button>` +
     `                </div>` +
     `            </div>` +
     `        </div>` +
@@ -482,16 +482,16 @@ function postDataQuality() {
 
   $("#resultTab").addClass("active");
   $("#resultPanel").addClass("active");
-  $("#jsonTab").removeClass("active");
-  $("#jsonPanel").removeClass("active");
-  $("#apiTab").removeClass("active");
-  $("#apiPanel").removeClass("active");
-  $("#organizerTab").removeClass("active");
-  $("#organizerPanel").removeClass("active");
-  $("#locationTab").removeClass("active");
-  $("#locationPanel").removeClass("active");
-  $("#mapTab").removeClass("active");
-  $("#mapPanel").removeClass("active");
+  $("#jsonTab").removeClass("active disabled");
+  $("#jsonPanel").removeClass("active disabled");
+  $("#apiTab").removeClass("active disabled");
+  $("#apiPanel").removeClass("active disabled");
+  $("#organizerTab").removeClass("active disabled");
+  $("#organizerPanel").removeClass("active disabled");
+  $("#locationTab").removeClass("active disabled");
+  $("#locationPanel").removeClass("active disabled");
+  $("#mapTab").removeClass("active disabled");
+  $("#mapPanel").removeClass("active disabled");
 
   results = $("#results");
   results.empty();
@@ -503,6 +503,7 @@ function postDataQuality() {
   storeDataQuality.uniqueActivities = new Set();
   storeDataQuality.uniqueOrganizers = new Object();
   storeDataQuality.uniqueLocations = new Object();
+  storeDataQuality.showMap = false;
 
   getFilters();
   //console.log(filters);
@@ -811,6 +812,7 @@ function postDataQuality() {
         const longitude = getProperty(location, 'longitude');
         if (typeof latitude === 'number' && typeof longitude === 'number') {
           storeDataQuality.uniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
+          storeDataQuality.showMap = true;
         }
         numItemsWithLocation++;
       }
@@ -885,6 +887,16 @@ function postDataQuality() {
       "    <div>No matching results found.</div>" +
       "</div>"
     );
+
+    $("#resultTab").addClass("active");
+    $("#resultPanel").addClass("active");
+    $("#jsonTab").addClass("disabled");
+    $("#apiTab").removeClass("active");
+    $("#apiPanel").removeClass("active");
+    $("#organizerTab").addClass("disabled");
+    $("#locationTab").addClass("disabled");
+    $("#mapTab").addClass("disabled");
+
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -941,8 +953,12 @@ function postDataQuality() {
   // console.dir(`uniqueLocations: ${Object.keys(storeDataQuality.uniqueLocations)}`);
 
   $("#map").empty()
-  addMapPanel(storeDataQuality.uniqueLocations);
-
+  if (storeDataQuality.showMap === true) {
+    addMapPanel(storeDataQuality.uniqueLocations);
+  }
+  else {
+    $("#mapTab").addClass("disabled");
+  }
   // -------------------------------------------------------------------------------------------------
 
   console.log(`Number of items with present/future dates: ${numItemsNowToFuture}`);
@@ -1670,8 +1686,10 @@ function postDataQuality() {
 
 
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
-  sleep(1400).then(() => { $("#filterRows").fadeIn("slow"); });
   sleep(1400).then(() => {
+    if (storeDataQuality.numItemsMatchFilters !== 0) {
+      $("#filterRows").fadeIn("slow");
+    }
     document.getElementById("DQ_filterActivities").disabled = false;
     document.getElementById("DQ_filterGeos").disabled = false;
     document.getElementById("DQ_filterDates").disabled = false;
