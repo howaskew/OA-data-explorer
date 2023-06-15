@@ -24,6 +24,8 @@ function matchToActivityList(id) {
   return null;
 }
 
+// -------------------------------------------------------------------------------------------------
+
 function matchToFacilityList(id) {
   let concept = scheme_2.getConceptByID(id);
   if (concept) {
@@ -56,8 +58,8 @@ function setJSONButton(newActiveJSONButton) {
 function postResults(item) {
   results = $("#resultsDiv");
   results.append(
-    `<div id='row${storeDataQuality.numItemsMatchFilters}' class='row rowhover'>` +
-    `    <div id='text${storeDataQuality.numItemsMatchFilters}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
+    `<div id='row${storeDataQuality.numFilteredItems}' class='row rowhover'>` +
+    `    <div id='text${storeDataQuality.numFilteredItems}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
     `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
@@ -67,7 +69,7 @@ function postResults(item) {
     `        <div class='visualise'>` +
     `            <div class='row'>` +
     `                <div class='col' style='text-align: right'>` +
-    `                    <button id='json${storeDataQuality.numItemsMatchFilters}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>Show JSON</button>` +
+    `                    <button id='json${storeDataQuality.numFilteredItems}' class='btn btn-secondary btn-sm mb-1' style='background: ${inactiveJSONButtonColor}'>Show JSON</button>` +
     `                </div>` +
     `            </div>` +
     `        </div>` +
@@ -75,133 +77,88 @@ function postResults(item) {
     `</div>`
   );
 
-  if (storeDataQuality.numItemsMatchFilters === 1) {
+  if (storeDataQuality.numFilteredItems === 1) {
     setJSONButton(document.getElementById('json1'));
     setJSONTab(item.id || item.data['@id'], false);
   }
 
-  $(`#json${storeDataQuality.numItemsMatchFilters}`).on('click', function () {
+  $(`#json${storeDataQuality.numFilteredItems}`).on('click', function () {
     setJSONButton(this);
     setJSONTab(item.id || item.data['@id'], true);
   });
 
   if ((item.id && item.id.length > 8) || (item.data['@id'] && item.data['@id'].length > 8)) {
-    $(`#row${storeDataQuality.numItemsMatchFilters}`).hover(
+    $(`#row${storeDataQuality.numFilteredItems}`).hover(
       function () {
-        $(`#text${storeDataQuality.numItemsMatchFilters}`).removeClass("text-truncate");
-        $(`#text${storeDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 70%");
+        $(`#text${storeDataQuality.numFilteredItems}`).removeClass("text-truncate");
+        $(`#text${storeDataQuality.numFilteredItems}`).prop("style", "font-size: 70%");
       },
       function () {
-        $(`#text${storeDataQuality.numItemsMatchFilters}`).addClass("text-truncate");
-        $(`#text${storeDataQuality.numItemsMatchFilters}`).prop("style", "font-size: 100%");
+        $(`#text${storeDataQuality.numFilteredItems}`).addClass("text-truncate");
+        $(`#text${storeDataQuality.numFilteredItems}`).prop("style", "font-size: 100%");
       }
     );
   }
-
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// This feeds the right data store into the DQ metrics
-
-
-function runDataQuality() {
-
+function setStoreDataQualityItems() {
   storeSuperEventContentType = null;
   storeSubEventContentType = null;
-  numListings = 0; // We should really be calculating the numbers Opps/Listings later on.
-  numOpps = 0;
-  let listings = [];
-  let uniqueListings = null;
-
-
-  //console.log(link);
-  //console.log(storeSuperEvent);
-  //console.log(storeSubEvent);
 
   // First check for any unpacking of superevents or eventschedules
   if (
-    storeSuperEvent && link === null
+    storeSuperEvent &&
+    !link
   ) {
     cp.text("Unpacking Data Feed");
 
-    console.log(`storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
+    console.log(`Number of storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
     console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
     console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
     console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
 
-    console.log(`storeSubEvent items: ${Object.values(storeSubEvent.items).length}`);
+    console.log(`Number of storeSubEvent items: ${Object.values(storeSubEvent.items).length}`);
     console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
     console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
     console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
 
-    //console.log(storeSuperEvent);
-
-    //BwD - embedded superevent with series data
-    if (
-      storeSuperEvent.feedType === 'SessionSeries' &&
-      storeSuperEvent.itemDataType === 'ScheduledSession'
-    ) {
+    if (subEventFeedTypes.includes(storeSuperEvent.itemDataType)) {
+      // This is actually a subEvent feed but was initially labelled as a superEvent feed due to feedType.
+      // e.g. BwD
       console.log("1");
-      cp.text("Unpacking data feed - embedded SuperEvent with Series data");
+      cp.text("Unpacking data feed - subEvent feed with embedded superEvent data");
 
+      storeSubEvent = storeSuperEvent;
+      storeSuperEvent = null;
+      storeSubEvent.feedType = null;
       link = 'superEvent';
-      storeSubEvent.itemDataType = 'ScheduledSession';
-
-      for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-        if (storeSuperEventItem.data && storeSuperEventItem.data[link] && storeSuperEventItem.data[link].identifier) {
-          listings.push(storeSuperEventItem.data[link].identifier);
-        }
-      }
-      uniqueListings = [...new Set(listings)];
-
-      numListings = uniqueListings.length;
-      numOpps = Object.values(storeSuperEvent.items).length;
-      storeDataQuality.items = Object.values(storeSuperEvent.items);
+      storeDataQuality.items = Object.values(storeSubEvent.items);
     }
-
-    //SportSuite - embedded subevent with session data
     else if (
-      storeSuperEvent.feedType === 'SessionSeries' &&
-      storeSuperEvent.itemDataType === 'mixed'
+      Object.values(storeSuperEvent.items)
+        .filter(item => item.hasOwnProperty('data') && item.data.hasOwnProperty('subEvent'))
+        .length > 0
     ) {
-
+      // e.g. SportSuite
       console.log("2");
-      cp.text("Unpacking data feed - embedded SubEvent with session data");
+      cp.text("Unpacking data feed - superEvent feed with embedded subEvent data");
 
-      link = 'subEvent';
-      storeSubEvent.itemDataType = 'ScheduledSession';
       storeSubEvent.items = {};
-
       for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-        if (storeSuperEventItem.data && storeSuperEventItem.data[link]) {
-          if (Array.isArray(storeSuperEventItem.data[link])) {
-            const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
-            for (const subEvent of storeSuperEventItem.data[link]) {
-              const subEventId = subEvent.id || subEvent['@id'];
-              storeSubEvent.items[subEventId] = {
-                data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
-              };
-            }
+        if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
+          const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
+          for (const subEvent of storeSuperEventItem.data.subEvent) {
+            const subEventId = subEvent.id || subEvent['@id'];
+            storeSubEvent.items[subEventId] = {
+              data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
+            };
           }
         }
       }
-
-      for (const storeSuperEventItem of Object.values(storeSubEvent.items)) {
-        if (storeSuperEventItem.data && storeSuperEventItem.data.superEvent) {
-          const superEventId =
-            storeSuperEventItem.data.superEvent.id ||
-            storeSuperEventItem.data.superEvent['@id'] ||
-            storeSuperEventItem.data.superEvent.identifier;
-          if (superEventId) {
-            listings.push(superEventId);
-          }
-        }
-      }
-      uniqueListings = [...new Set(listings)];
-
-      numListings = uniqueListings.length;
-      numOpps = Object.values(storeSubEvent.items).length;
+      setStoreItemDataType(storeSubEvent);
+      link = 'superEvent';
       storeDataQuality.items = Object.values(storeSubEvent.items);
     }
   }
@@ -210,20 +167,12 @@ function runDataQuality() {
     storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
     link
   ) {
-
     console.log("3");
 
-    let ccounter = 0;
-
     storeCombinedItems = [];
-    let items = Object.values(storeSubEvent.items);
 
-    for (const storeSubEventItem of items) {
-
-      ccounter++;
-
+    for (let [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
-
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
         const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
         // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
@@ -242,28 +191,12 @@ function runDataQuality() {
         // If the match isn't found then the super-event has been deleted, so can lose the sub-event info...
         // If it is matched, we have the data in combined items so can delete
       }
-      // Remove the storeSubEventItem from the original storeSubEvent.items object
-      delete storeSubEvent.items[storeSubEventItem];
+      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx+1} of ${Object.values(storeSubEvent.items).length} items`);
     }
 
-    cp.text("Combining Data Feeds: " + ccounter + " of " + Object.values(storeSubEvent.items).length + " items");
-
-    //console.log(`Combined store contains: ${storeCombinedItems.length} items`);
-    //console.log(storeCombinedItems);
-
-    for (const storeSubEventItem of storeCombinedItems) {
-      if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link].identifier) {
-        listings.push(storeSubEventItem.data[link].identifier);
-      }
-      else if (storeSubEventItem.data && storeSubEventItem.data[link] && storeSubEventItem.data[link]['@id']) {
-        listings.push(storeSubEventItem.data[link]['@id']);
-      }
-    }
-    uniqueListings = [...new Set(listings)];
-
-    numListings = uniqueListings.length;
-    numOpps = storeCombinedItems.length;
     storeDataQuality.items = storeCombinedItems;
+    // console.error(Object.values(storeSubEvent.items).length);
+    // console.error(Object.values(storeDataQuality.items).length);
   }
   else {
     cp.empty();
@@ -273,9 +206,7 @@ function runDataQuality() {
       // We are here if we don't have storeSuperEvent or storeSubEvent, which should occur only if
       // storeIngressOrder1.feedType was not found in superEventFeedTypes or subEventFeedTypes when
       // runForm() was called. In this case, we don't know ahead of reading the full RPDE feed what the
-      // content type is, but now we can try again with itemDataType instead of the unknown feedType. If
-      // the content type is still unknown after this check, then numListings and numOpps retain their
-      // default values of 0.
+      // content type is, but now we can try again with itemDataType instead of the unknown feedType.
       if (superEventFeedTypes.includes(storeIngressOrder1.itemDataType)) {
         storeSuperEvent = storeIngressOrder1;
         storeSuperEventContentType = storeIngressOrder1.itemDataType;
@@ -291,49 +222,87 @@ function runDataQuality() {
       }
     }
 
-    numListings = storeSuperEvent ? Object.values(storeSuperEvent.items).length : 0;
-    numOpps = storeSubEvent ? Object.values(storeSubEvent.items).length : 0;
     storeDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('No combined store, data quality from selected feed only');
   }
-
-  measureDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
 
-
-// This applies the DQ checks to the whole data store
-
-function measureDataQuality() {
-
-  progress.append(`<div id='DQProgress'</div>`);
+function setStoreDataQualityItemFlags() {
   let dqp = $("#DQProgress");
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
 
-  const dateNow = new Date();
-  dateNow.setHours(0, 0, 0, 0);
+  const dateNow = new Date().setHours(0, 0, 0, 0);
 
-  let urlCounts = new Map();
-  let parentUrlCounts = new Map();
+  let urls = {};
+  let parents = {};
+  let parentUrls = {};
 
-  let counter = 0;
-  for (const item of storeDataQuality.items) {
+  // -------------------------------------------------------------------------------------------------
 
-    counter++;
+  for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
-    // Date info
+    // Organizer info
 
-    // Convert the date to a JavaScript Date object
-    const date = new Date(item.data.startDate);
+    const organizer = resolveProperty(item, 'organizer');
 
-    if (!isNaN(date)) {
-      // Check if the date is greater than or equal to today's date
-      if (date >= dateNow) {
-        item.DQ_futureDate = 1;
-      }
-    }
+    item.DQ_validOrganizer =
+      typeof organizer === 'object' &&
+      !Array.isArray(organizer) &&
+      organizer !== null &&
+      typeof organizer.name === 'string' &&
+      organizer.name.trim().length > 0;
+
+    // -------------------------------------------------------------------------------------------------
+
+    // Location info
+
+    const location = resolveProperty(item, 'location');
+
+    item.DQ_validLocation =
+      typeof location === 'object' &&
+      !Array.isArray(location) &&
+      location !== null &&
+      typeof location.name === 'string' &&
+      location.name.trim().length > 0;
+
+    // -------------------------------------------------------------------------------------------------
+
+    // Activity info
+
+    // An item may be associated with many activities, but here we only care if there is at least one:
+    const activities = resolveProperty(item, 'activity');
+
+    item.DQ_validActivity =
+      Array.isArray(activities) &&
+      activities
+      .map(activity => activity['id'] || activity['@id'])
+      .filter(activityId => activityId)
+      .map(activityId => matchToActivityList(activityId))
+      .filter(prefLabel => prefLabel)
+      .length > 0;
+
+    // -------------------------------------------------------------------------------------------------
+
+    // Name info
+
+    const name = getProperty(item, 'name');
+
+    item.DQ_validName =
+      typeof name === 'string' &&
+      name.trim().length > 0;
+
+    // -------------------------------------------------------------------------------------------------
+
+    // Description info
+
+    const description = getProperty(item, 'description');
+
+    item.DQ_validDescription =
+      typeof description === 'string' &&
+      description.trim().length > 0;
 
     // -------------------------------------------------------------------------------------------------
 
@@ -343,127 +312,103 @@ function measureDataQuality() {
     const latitude = getProperty(item, 'latitude');
     const longitude = getProperty(item, 'longitude');
 
-    const hasValidPostalCode =
-      typeof postalCode === 'string' &&
-      postalCode.length > 0 &&
-      ukPostalCodeRegex.test(postalCode);
-
-    const hasValidLatLon =
-      typeof latitude === 'number' &&
-      typeof longitude === 'number';
-
-    if (hasValidPostalCode || hasValidLatLon) {
-      item.DQ_validGeo = 1;
-    }
+    item.DQ_validGeo =
+      (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
+      (typeof latitude === 'number' && typeof longitude === 'number');
 
     // -------------------------------------------------------------------------------------------------
 
-    // Activity info
+    // Date info
 
-    // Count any ids/label that match in activityCounts
-    // But only increment items with matching activities once
-    let activities = resolveProperty(item, 'activity');
+    const date = new Date(item.data.startDate);
 
-    if (Array.isArray(activities)) {
-
-      // Unpack the activity json
-      activities
-        .map(activity => activity.id || activity['@id'])
-        .filter(activityId => activityId)
-        .forEach((activityId) => {
-
-          // See if there is a matching id / label
-          let label = matchToActivityList(activityId);
-
-          if (label) {
-            // Update item if a matching label found
-            item.DQ_validActivity = 1;
-          }
-
-        });
-
-    }
-
-    // -------------------------------------------------------------------------------------------------
-
-    // Name info
-
-    const name = getProperty(item, 'name');
-
-    const hasValidName =
-      typeof name === 'string' &&
-      name.length > 0 &&
-      name != " ";
-
-    if (hasValidName) {
-      item.DQ_validName = 1;
-    }
-    // -------------------------------------------------------------------------------------------------
-
-    // Description info
-
-    const description = getProperty(item, 'description');
-
-    const hasValidDescription =
-      typeof description === 'string' &&
-      description.length > 0 &&
-      description != " ";
-
-    if (hasValidDescription) {
-      item.DQ_validDescription = 1;
-    }
+    item.DQ_validDate =
+      !isNaN(date) &&
+      date >= dateNow;
 
     // -------------------------------------------------------------------------------------------------
 
     // URL info
 
-    // Stash all series URL values for later test for uniqueness
-
-    if (link && item.data && item.data[link] && item.data[link].url && typeof item.data[link].url === 'string') {
-      parentUrlCounts.set(item.data[link].url, (urlCounts.get(item.data[link].url) || 0) + 1);
+    if (item.data && item.data.url && typeof item.data.url === 'string') {
+      if (!urls.hasOwnProperty(item.data.url)) {
+        urls[item.data.url] = [];
+      }
+      urls[item.data.url].push(itemIdx);
     }
 
-    if (item.data && item.data.eventSchedule && item.data.eventSchedule.urlTemplate) {
-      item.DQ_validSessionUrl = 1;
-      item.DQ_validSeriesUrl = 1;
+    // -------------------------------------------------------------------------------------------------
+
+    // Parent info
+
+    if (link && item.data && item.data[link]) {
+      let parentId = item.data[link].id || item.data[link]['@id'] || item.data[link].identifier || null;
+      if (parentId) {
+        if (!parents.hasOwnProperty(parentId)) {
+          parents[parentId] = item.data[link];
+          parents[parentId].itemIdxs = [];
+        }
+        parents[parentId].itemIdxs.push(itemIdx);
+      }
+      item.DQ_validParent = parentId !== null;
     }
-    else if (item.data && item.data.url && typeof item.data.url === 'string') {
-      urlCounts.set(item.data.url, (urlCounts.get(item.data.url) || 0) + 1);
-    }
 
+    // -------------------------------------------------------------------------------------------------
 
-
+    dqp.text(`Measuring Data Quality: ${itemIdx+1} of ${storeDataQuality.items.length} items`);
   }
 
-  // After looping through all items and adding all urls to list - now go back and assign flag to those items with unique urls
-  // TODO: This counts unique explicit URL strings and adds them to the count of URL templates. We
-  // are assuming these explicit URL strings are specific booking URLs in many/most cases for this to
-  // be the metric we're after, but this may not truly be the case and needs to be investigated.
-  urlCounts.forEach((val, key) => {
-    if (val === 1) {
-      storeDataQuality.items.forEach(item => {
-        if (item.data && item.data.url && typeof item.data.url === 'string' && item.data.url === key) {
-          item.DQ_validSessionUrl = 1;
-        }
-      });
+  // -------------------------------------------------------------------------------------------------
+
+  // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
+  // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
+  // truly be the case and needs to be investigated.
+
+  for (const itemIdxs of Object.values(urls)) {
+    if (itemIdxs.length === 1) {
+      storeDataQuality.items[itemIdxs[0]].DQ_validUrl = true;
     }
-  });
+  }
 
-  // Go back and assign flag to those items with unique series urls
-  parentUrlCounts.forEach((val, key) => {
-    if (val === 1) {
-      storeDataQuality.items.forEach(item => {
-        if (link && item.data && item.data[link] && item.data[link].url && typeof item.data[link].url === 'string' && item.data[link].url === key) {
-          item.DQ_validSeriesUrl = 1;
-        }
-      });
+  for (const item of storeDataQuality.items) {
+    if (!item.hasOwnProperty('DQ_validUrl')) {
+      item.DQ_validUrl = false;
     }
-  });
+  }
 
-  dqp.text("Measuring Data Quality: " + counter + " of " + storeDataQuality.items.length + " items");
+  // -------------------------------------------------------------------------------------------------
 
-  $("#tabs").fadeIn("slow");
-  postDataQuality();
+  parents = Object.values(parents);
+
+  for (const [parentIdx, parent] of parents.entries()) {
+    if (parent.url && typeof parent.url === 'string') {
+      if (!parentUrls.hasOwnProperty(parent.url)) {
+        parentUrls[parent.url] = [];
+      }
+      parentUrls[parent.url].push(parentIdx);
+    }
+  }
+
+  for (const parentIdxs of Object.values(parentUrls)) {
+    if (parentIdxs.length === 1) {
+      for (const itemIdx of parents[parentIdxs[0]].itemIdxs) {
+        storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
+      }
+    }
+  }
+
+  for (const item of storeDataQuality.items) {
+    if (!item.hasOwnProperty('DQ_validParentUrl')) {
+      item.DQ_validParentUrl = false;
+    }
+  }
+
+  // -------------------------------------------------------------------------------------------------
+
+  urls = {};
+  parents = {};
+  parentUrls = {};
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -498,41 +443,25 @@ function postDataQuality() {
   results.append("<div id='resultsDiv'</div>");
   addResultsPanel();
 
-  // Reset store contents for after filters applied:
-  storeDataQuality.numItemsMatchFilters = 0;
-  storeDataQuality.uniqueActivities = new Set();
-  storeDataQuality.uniqueOrganizers = new Object();
-  storeDataQuality.uniqueLocations = new Object();
-  storeDataQuality.showMap = false;
-
-  getFilters();
-  //console.log(filters);
-
-  let numItems = 0;
-  let numParents = 0;
-  let numChild = 0;
-
-  let parents = [];
-  let uniqueParents = null;
-
   // -------------------------------------------------------------------------------------------------
 
-  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+  getFilters();
 
-  const dateNow = new Date().setHours(0, 0, 0, 0);
-  let dateCounts = new Map();
-  let activityCounts = new Map();
-  let urlCounts = new Map();
+  storeDataQuality.showMap = false;
+  storeDataQuality.filteredItemsUniqueOrganizers = new Object();
+  storeDataQuality.filteredItemsUniqueLocations = new Object();
+  storeDataQuality.filteredItemsUniqueActivities = new Object();
+  storeDataQuality.filteredItemsUniqueParentIds = new Set();
+  storeDataQuality.filteredItemsUniqueDates = new Map();
 
-  let numItemsNowToFuture = 0;
-  let numItemsWithGeo = 0; // TODO: Sort out duplication of effort with "numItemsWithOrganizer"
-  let numItemsWithActivity = 0;
-  let numItemsWithOrganizer = 0;
-  let numItemsWithLocation = 0;
-  let numItemsWithName = 0;
-  let numItemsWithDescription = 0;
-  let numItemsWithUrl = 0;
-  let numParentsWithUniqueUrl = 0;
+  storeDataQuality.numFilteredItems = 0;
+  let numFilteredItemsWithValidActivity = 0;
+  let numFilteredItemsWithValidName = 0;
+  let numFilteredItemsWithValidDescription = 0;
+  let numFilteredItemsWithValidGeo = 0;
+  let numFilteredItemsWithValidDate = 0;
+  let numFilteredItemsWithValidUrl = 0;
+  let numFilteredItemsWithValidParentUrl = 0;
 
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
@@ -540,247 +469,113 @@ function postDataQuality() {
 
     // Filters
 
-    let itemMatchesActivity =
-      !filters.relevantActivitySet
-        ? true
-        : (resolveProperty(item, 'activity') || []).filter(activity =>
-          filters.relevantActivitySet.has(activity.id || activity['@id'] || 'NONE')
-        ).length > 0;
-
-    let organizer = resolveProperty(item, 'organizer');
-    let hasValidOrganizer =
-      typeof organizer === 'object' &&
-      !Array.isArray(organizer) &&
-      organizer !== null &&
-      typeof organizer.name === 'string' &&
-      organizer.name.trim().length > 0;
     let itemMatchesOrganizer =
       !filters.organizer
         ? true
-        : hasValidOrganizer && organizer.name === filters.organizer;
+        : item.DQ_validOrganizer &&
+          resolveProperty(item, 'organizer').name === filters.organizer;
 
-    let location = resolveProperty(item, 'location');
-    let hasValidLocation =
-      typeof location === 'object' &&
-      !Array.isArray(location) &&
-      location !== null &&
-      typeof location.name === 'string' &&
-      location.name.trim().length > 0;
     let itemMatchesLocation =
       !filters.location
         ? true
-        : hasValidLocation && location.name === filters.location;
+        : item.DQ_validLocation &&
+          resolveProperty(item, 'location').name === filters.location;
+
+    let itemMatchesActivity =
+      !filters.relevantActivitySet
+        ? true
+        : item.DQ_validActivity &&
+          (resolveProperty(item, 'activity') || [])
+          .filter(activity => filters.relevantActivitySet.has(activity['id'] || activity['@id'] || 'NONE'))
+          .length > 0;
 
     let itemMatchesDay =
       !filters.day
         ? true
-        : item.data
-        && item.data.eventSchedule
-        && item.data.eventSchedule.filter(x =>
-          x.byDay
-          && x.byDay.includes(filters.day)
-          || x.byDay.includes(filters.day.replace('https', 'http'))
-        ).length > 0;
+        : item.data &&
+          item.data.eventSchedule &&
+          item.data.eventSchedule
+          .filter(x =>
+            x.byDay &&
+            x.byDay.includes(filters.day) ||
+            x.byDay.includes(filters.day.replace('https', 'http')))
+          .length > 0;
 
     let itemMatchesGender =
       !filters.gender
         ? true
         : resolveProperty(item, 'genderRestriction') === filters.gender;
 
-
-    let itemPassedDQDates =
-      item.DQ_futureDate || 0;
-    let itemMatchesDQDateFilter =
-      filters.DQ_filterDates === false || (filters.DQ_filterDates === true && itemPassedDQDates === 0);
-
-    let itemPassedDQActivities =
-      item.DQ_validActivity || 0;
     let itemMatchesDQActivityFilter =
-      filters.DQ_filterActivities === false || (filters.DQ_filterActivities === true && itemPassedDQActivities === 0);
+      !filters.DQ_filterActivities ||
+      (filters.DQ_filterActivities && !item.DQ_validActivity);
 
-    let itemPassedDQGeo =
-      item.DQ_validGeo || 0;
     let itemMatchesDQGeoFilter =
-      filters.DQ_filterGeos === false || (filters.DQ_filterGeos === true && itemPassedDQGeo === 0);
+      !filters.DQ_filterGeos ||
+      (filters.DQ_filterGeos && !item.DQ_validGeo);
 
-    let itemPassedDQUrl =
-      item.DQ_validSeriesUrl || 0;
+    let itemMatchesDQDateFilter =
+      !filters.DQ_filterDates ||
+      (filters.DQ_filterDates && !item.DQ_validDate);
+
     let itemMatchesDQUrlFilter =
-      filters.DQ_filterUrls === false || (filters.DQ_filterUrls === true && itemPassedDQUrl === 0);
-
+      !filters.DQ_filterUrls ||
+      (filters.DQ_filterUrls && !item.DQ_validUrl);
 
     if (
-      itemMatchesActivity &&
       itemMatchesOrganizer &&
       itemMatchesLocation &&
+      itemMatchesActivity &&
       itemMatchesDay &&
       itemMatchesGender &&
-      itemMatchesDQDateFilter &&
       itemMatchesDQActivityFilter &&
       itemMatchesDQGeoFilter &&
+      itemMatchesDQDateFilter &&
       itemMatchesDQUrlFilter
     ) {
 
-      numItems++;
-      numChild++;
-
-      storeDataQuality.numItemsMatchFilters++;
-
-      // Find parents, emulating opps / listings counts for earlier scenarios
-
-      // 1 and 3
-      if (item.data && item.data[link]) {
-        if (item.data[link].identifier) {
-          parents.push(item.data[link].identifier);
-        }
-        else if (item.data[link]['@id']) {
-          parents.push(item.data[link]['@id']);
-        }
-      }
-
-      // 2 could be rolled into the above
-      else if (item.data && item.data.superEvent) {
-        const superEventId =
-          item.data.superEvent.id ||
-          item.data.superEvent['@id'] ||
-          item.data.superEvent.identifier;
-        if (superEventId) {
-          parents.push(superEventId);
-        }
-      }
-
-
-      // Date info
-
-      // Convert the date to a JavaScript Date object
-      const date = new Date(item.data.startDate);
-
-      if (!isNaN(date)) {
-
-        // Check if the date is greater than or equal to today's date
-        if (date >= dateNow) {
-          numItemsNowToFuture++;
-        }
-
-        // Get the string representation of the date in the format "YYYY-MM-DD"
-        const dateString = date.toISOString().slice(0, 10);
-
-        // Increment the count for the date in the Map
-        dateCounts.set(dateString, (dateCounts.get(dateString) || 0) + 1);
-
-      } else {
-        //console.log(`Invalid date: ${date}`);
-      }
+      storeDataQuality.numFilteredItems++;
 
       // -------------------------------------------------------------------------------------------------
 
-      // Geo info
-      // TODO: Sort out duplication of effort with "Location info"
-
-      const postalCode = getProperty(item, 'postalCode');
-      const latitude = getProperty(item, 'latitude');
-      const longitude = getProperty(item, 'longitude');
-
-      const hasValidPostalCode =
-        typeof postalCode === 'string' &&
-        postalCode.length > 0 &&
-        ukPostalCodeRegex.test(postalCode);
-
-      const hasValidLatLon =
-        typeof latitude === 'number' &&
-        typeof longitude === 'number';
-
-      if (hasValidPostalCode || hasValidLatLon) {
-        numItemsWithGeo++;
-      }
-
-      // -------------------------------------------------------------------------------------------------
-
-      // Activity info
-
-      // Count any ids/label that match in activityCounts
-      // But only increment items with matching activities once
-      let activities = resolveProperty(item, 'activity');
-
-      if (Array.isArray(activities)) {
-
-        // Use a set to avoid counting multiple prefLabels for the same row
-        let activityLabelsSet = new Set();
-
-        // Unpack the activity json
-        activities
-          .map(activity => activity.id || activity['@id'])
-          .filter(activityId => activityId)
-          .forEach(activityId => {
-
-            // Add activity to list of unique activities (one of the original filters, now applied after loading completed)
-            storeDataQuality.uniqueActivities.add(activityId)
-
-            // New DQ measures
-
-            // See if there is a matching id / label
-            let label = matchToActivityList(activityId);
-
-            if (label) {
-              // Add to row level list of labels
-              activityLabelsSet.add(label);
-              // Add to feed level list of labels
-              activityCounts.set(label, (activityCounts.get(label) || 0) + 1);
-            }
-
-          });
-
-        // Update the count if a matching label found
-        if (activityLabelsSet.size > 0) {
-          numItemsWithActivity++;
-        }
-
-      }
-
-      // -------------------------------------------------------------------------------------------------
-
-      // Organizer info
-
-      if (hasValidOrganizer) {
+      if (item.DQ_validOrganizer) {
+        let organizer = resolveProperty(item, 'organizer');
         let organizerName = organizer.name.trim();
-        if (!storeDataQuality.uniqueOrganizers.hasOwnProperty(organizerName)) {
+        if (!storeDataQuality.filteredItemsUniqueOrganizers.hasOwnProperty(organizerName)) {
           // Note that these sets are converted to arrays after looping through all items:
-          storeDataQuality.uniqueOrganizers[organizerName] = {
+          storeDataQuality.filteredItemsUniqueOrganizers[organizerName] = {
             'url': new Set(),
             'email': new Set(),
             'telephone': new Set(),
           };
         }
 
-        // Don't pull urls for images, just top level organisation urls...
-        const topUrl1 = organizer.url || null;
-        if (typeof topUrl1 === 'string' && topUrl1.trim().length > 0) {
-          storeDataQuality.uniqueOrganizers[organizerName]['url'].add(topUrl1.trim());
-        }
-
-        for (const key in storeDataQuality.uniqueOrganizers[organizerName]) {
-          if (key !== 'url') {
-            const val = getProperty(organizer, key);
-            if (typeof val === 'string' && val.trim().length > 0) {
-              storeDataQuality.uniqueOrganizers[organizerName][key].add(val.trim());
-            }
-            else if (typeof val === 'number') {
-              storeDataQuality.uniqueOrganizers[organizerName][key].add(val);
-            }
+        // Note that this is 'const key of' rather than 'const key in':
+        for (const key of ['email', 'telephone']) {
+          const val = getProperty(organizer, key);
+          if (typeof val === 'string' && val.trim().length > 0) {
+            storeDataQuality.filteredItemsUniqueOrganizers[organizerName][key].add(val.trim());
+          }
+          else if (typeof val === 'number') {
+            storeDataQuality.filteredItemsUniqueOrganizers[organizerName][key].add(val);
           }
         }
-        numItemsWithOrganizer++;
+
+        // Don't pull urls for images, just top level organisation urls:
+        const topUrl = organizer.url || null;
+        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
+          storeDataQuality.filteredItemsUniqueOrganizers[organizerName]['url'].add(topUrl.trim());
+        }
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      // Location info
-
-      if (hasValidLocation) {
+      if (item.DQ_validLocation) {
+        let location = resolveProperty(item, 'location');
         let locationName = location.name.trim();
-        if (!storeDataQuality.uniqueLocations.hasOwnProperty(locationName)) {
+        if (!storeDataQuality.filteredItemsUniqueLocations.hasOwnProperty(locationName)) {
           // Note that these sets are converted to arrays after looping through all items:
-          storeDataQuality.uniqueLocations[locationName] = {
+          storeDataQuality.filteredItemsUniqueLocations[locationName] = {
             'url': new Set(),
             'email': new Set(),
             'telephone': new Set(),
@@ -790,97 +585,125 @@ function postDataQuality() {
           };
         }
 
-        // Don't pull urls for images, just top level location urls...
-        const topUrl = location.url || null;
-        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
-          storeDataQuality.uniqueLocations[locationName]['url'].add(topUrl.trim());
-        }
-
         // Note that this is 'const key of' rather than 'const key in':
         for (const key of ['email', 'telephone', 'streetAddress', 'postalCode']) {
           const val = getProperty(location, key);
           if (typeof val === 'string' && val.trim().length > 0) {
-            storeDataQuality.uniqueLocations[locationName][key].add(val.trim());
+            storeDataQuality.filteredItemsUniqueLocations[locationName][key].add(val.trim());
           }
           else if (typeof val === 'number') {
-            storeDataQuality.uniqueLocations[locationName][key].add(val);
+            storeDataQuality.filteredItemsUniqueLocations[locationName][key].add(val);
           }
         }
-        // The coordinates are stored as a single lat,lon combined string in order to be a single element
+
+        // Don't pull urls for images, just top level location urls:
+        const topUrl = location.url || null;
+        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
+          storeDataQuality.filteredItemsUniqueLocations[locationName]['url'].add(topUrl.trim());
+        }
+
+        // The coordinates are stored as a single 'lat,lon' combined string in order to be a single element
         // in the set, which is then relevant for comparing to further coordinates for only adding unique:
         const latitude = getProperty(location, 'latitude');
         const longitude = getProperty(location, 'longitude');
         if (typeof latitude === 'number' && typeof longitude === 'number') {
-          storeDataQuality.uniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
+          storeDataQuality.filteredItemsUniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
           storeDataQuality.showMap = true;
         }
-        numItemsWithLocation++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      // Name info
+      if (item.DQ_validActivity) {
+        let activities = resolveProperty(item, 'activity');
+        let itemUniqueActivities = new Set();
 
-      const name = getProperty(item, 'name');
+        activities
+          .map(activity => activity['id'] || activity['@id'])
+          .filter(activityId => activityId)
+          .forEach(activityId => {
+            let prefLabel = matchToActivityList(activityId);
+            if (prefLabel) {
+              itemUniqueActivities.add(prefLabel);
+              if (!storeDataQuality.filteredItemsUniqueActivities.hasOwnProperty(prefLabel)) {
+                storeDataQuality.filteredItemsUniqueActivities[prefLabel] = 0;
+              }
+              storeDataQuality.filteredItemsUniqueActivities[prefLabel] += 1;
+            }
+          });
 
-      const hasValidName =
-        typeof name === 'string' &&
-        name.length > 0 &&
-        name != " ";
-
-      if (hasValidName) {
-        numItemsWithName++;
-
-      }
-      // -------------------------------------------------------------------------------------------------
-
-      // Description info
-
-      const description = getProperty(item, 'description');
-
-      const hasValidDescription =
-        typeof description === 'string' &&
-        description.length > 0 &&
-        description != " ";
-
-      if (hasValidDescription) {
-        numItemsWithDescription++;
-
+        if (itemUniqueActivities.size > 0) {
+          numFilteredItemsWithValidActivity++;
+        }
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      // URL info
-
-      if (item.DQ_validSessionUrl && item.DQ_validSessionUrl === 1) {
-        numItemsWithUrl++;
-      }
-      if (item.DQ_validSeriesUrl && item.DQ_validSeriesUrl === 1) {
-        numParentsWithUniqueUrl++;
+      if (item.DQ_validName) {
+        numFilteredItemsWithValidName++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      //Post results for matching items...
+      if (item.DQ_validDescription) {
+        numFilteredItemsWithValidDescription++;
+      }
 
-      if (storeDataQuality.numItemsMatchFilters < 100) {
+      // -------------------------------------------------------------------------------------------------
+
+      if (item.DQ_validGeo) {
+        numFilteredItemsWithValidGeo++;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      if (item.DQ_validDate) {
+        numFilteredItemsWithValidDate++;
+        const date = new Date(item.data.startDate);
+        const dateString = date.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+        storeDataQuality.filteredItemsUniqueDates.set(dateString, (storeDataQuality.filteredItemsUniqueDates.get(dateString) || 0) + 1);
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      if (item.DQ_validParent) {
+        let parentId = item.data[link].id || item.data[link]['@id'] || item.data[link].identifier || null;
+        storeDataQuality.filteredItemsUniqueParentIds.add(parentId);
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      if (item.DQ_validUrl) {
+        numFilteredItemsWithValidUrl++;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      if (item.DQ_validParentUrl) {
+        numFilteredItemsWithValidParentUrl++;
+      }
+
+      // -------------------------------------------------------------------------------------------------
+
+      if (storeDataQuality.numFilteredItems < 100) {
         postResults(item);
       }
-      else if (storeDataQuality.numItemsMatchFilters === 100) {
+      else if (storeDataQuality.numFilteredItems === 100) {
         results.append(
           "<div class='row rowhover'>" +
           "    <div>Only the first 100 items are shown</div>" +
           "</div>"
         );
       }
-    }
-  }
+
+    } // If-statement selecting filtered items
+  } // For-loop over all items
 
   //console.log(storeDataQuality.items);
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
-  if (storeDataQuality.numItemsMatchFilters === 0) {
+  if (storeDataQuality.numFilteredItems === 0) {
     results.empty();
     results.append(
       "<div class='row rowhover'>" +
@@ -901,140 +724,126 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  // Calculate opps and listings counts, post filters
-
-  numChild = numItems;
-
-  uniqueParents = [...new Set(parents)];
-  numParents = uniqueParents.length;
-
-  //console.log(`Number of Parents: ${numParents}`);
-  //console.log(`Number of Children: ${numChild}`);
-
-  // -------------------------------------------------------------------------------------------------
-
   // Sort objects by keys in alphabetical order:
-  storeDataQuality.uniqueOrganizers = Object.fromEntries(Object.entries(storeDataQuality.uniqueOrganizers).sort());
-  storeDataQuality.uniqueLocations = Object.fromEntries(Object.entries(storeDataQuality.uniqueLocations).sort());
+  storeDataQuality.filteredItemsUniqueOrganizers = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueOrganizers).sort());
+  storeDataQuality.filteredItemsUniqueLocations = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueLocations).sort());
+  storeDataQuality.filteredItemsUniqueActivities = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueActivities).sort());
 
   // Convert sets to arrays:
-  for (const [organizerName, organizerInfo] of Object.entries(storeDataQuality.uniqueOrganizers)) {
+  for (const organizerInfo of Object.values(storeDataQuality.filteredItemsUniqueOrganizers)) {
     for (const [key, val] of Object.entries(organizerInfo)) {
       organizerInfo[key] = Array.from(val);
     }
   }
-  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
+  for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
     for (const [key, val] of Object.entries(locationInfo)) {
       locationInfo[key] = Array.from(val);
     }
   }
 
   // Convert 'lat,lon' strings to [lat,lon] numeric arrays:
-  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
+  for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
     locationInfo.coordinates = locationInfo.coordinates.map(x => x.split(',').map(x => Number(x)));
   }
 
+  // Create a new map from the first x entries:
+  const topActivities = new Map(Object.entries(storeDataQuality.filteredItemsUniqueActivities).slice(0, 5));
+
   // -------------------------------------------------------------------------------------------------
 
-  updateActivityList(storeDataQuality.uniqueActivities);
-  console.log(`Number of unique activities: ${storeDataQuality.uniqueActivities.size}`);
-  // console.dir(`uniqueActivities: ${Array.from(storeDataQuality.uniqueActivities)}`);
-
-  updateOrganizerList(storeDataQuality.uniqueOrganizers);
+  updateOrganizerList(storeDataQuality.filteredItemsUniqueOrganizers);
   $("#organizer").empty()
-  addOrganizerPanel(storeDataQuality.uniqueOrganizers);
-  console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.uniqueOrganizers).length}`);
-  // console.dir(`uniqueOrganizers: ${Object.keys(storeDataQuality.uniqueOrganizers)}`);
+  addOrganizerPanel(storeDataQuality.filteredItemsUniqueOrganizers);
+  console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.filteredItemsUniqueOrganizers).length}`);
+  // console.dir(`storeDataQuality.filteredItemsUniqueOrganizers: ${Object.keys(storeDataQuality.filteredItemsUniqueOrganizers)}`);
 
-  updateLocationList(storeDataQuality.uniqueLocations);
+  updateLocationList(storeDataQuality.filteredItemsUniqueLocations);
   $("#location").empty()
-  addLocationPanel(storeDataQuality.uniqueLocations);
-  console.log(`Number of unique locations: ${Object.keys(storeDataQuality.uniqueLocations).length}`);
-  // console.dir(`uniqueLocations: ${Object.keys(storeDataQuality.uniqueLocations)}`);
-
+  addLocationPanel(storeDataQuality.filteredItemsUniqueLocations);
   $("#map").empty()
   if (storeDataQuality.showMap === true) {
-    addMapPanel(storeDataQuality.uniqueLocations);
+    addMapPanel(storeDataQuality.filteredItemsUniqueLocations);
   }
   else {
     $("#mapTab").addClass("disabled");
   }
+  console.log(`Number of unique locations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations).length}`);
+  // console.dir(`storeDataQuality.filteredItemsUniqueLocations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations)}`);
+
+  updateActivityList(storeDataQuality.filteredItemsUniqueActivities);
+  console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities).length}`);
+  // console.dir(`storeDataQuality.filteredItemsUniqueActivities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities)}`);
+
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with present/future dates: ${numItemsNowToFuture}`);
-  console.log(`Number of unique past/present/future dates: ${dateCounts.size}`);
+  console.log(`Number of items with matching activities: ${numFilteredItemsWithValidActivity}`);
+  console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities).length}`);
 
-  const percent1 = (numItemsNowToFuture / numItems) * 100 || 0;
+  const percent3_a = (numFilteredItemsWithValidActivity / storeDataQuality.numFilteredItems) * 100 || 0;
+  const rounded3_a = percent3_a.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid name: ${numFilteredItemsWithValidName}`);
+
+  const percent3_b = (numFilteredItemsWithValidName / storeDataQuality.numFilteredItems) * 100 || 0;
+  const rounded3_b = percent3_b.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid description: ${numFilteredItemsWithValidDescription}`);
+
+  const percent3_c = (numFilteredItemsWithValidDescription / storeDataQuality.numFilteredItems) * 100 || 0;
+  const rounded3_c = percent3_c.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid postcode or lat-lon coordinates: ${numFilteredItemsWithValidGeo}`);
+
+  const percent2 = (numFilteredItemsWithValidGeo / storeDataQuality.numFilteredItems) * 100 || 0;
+  const rounded2 = percent2.toFixed(1);
+
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid present/future dates: ${numFilteredItemsWithValidDate}`);
+  console.log(`Number of unique present/future dates: ${storeDataQuality.filteredItemsUniqueDates.size}`);
+
+  const percent1 = (numFilteredItemsWithValidDate / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
 
-  // Sort the dateCounts Map by date, in ascending order
-  const sortedDateCounts = new Map(
-    Array.from(dateCounts.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
+  // Sort the storeDataQuality.filteredItemsUniqueDates Map by date, in ascending order
+  const sortedFilteredItemsUniqueDates = new Map(
+    Array.from(storeDataQuality.filteredItemsUniqueDates.entries()).sort((a, b) => new Date(a[0]) - new Date(b[0]))
   );
 
-  // Get an array of sorted keys
-  const sortedKeys = Array.from(sortedDateCounts.keys());
-
-  // Get the minimum (first) and maximum (last) keys
+  const sortedKeys = Array.from(sortedFilteredItemsUniqueDates.keys());
   const minDate = sortedKeys[0];
   const maxDate = sortedKeys[sortedKeys.length - 1];
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid postcode or lat-lon coordinates: ${numItemsWithGeo}`);
+  console.log(`Number of items with valid URLs: ${numFilteredItemsWithValidUrl}`);
 
-  const percent2 = (numItemsWithGeo / numItems) * 100 || 0;
-  const rounded2 = percent2.toFixed(1);
-
-  // -------------------------------------------------------------------------------------------------
-
-  console.log(`Number of items with matching activities: ${numItemsWithActivity}`);
-  console.log(`Number of unique activities: ${activityCounts.size}`);
-
-  const percent3_a = (numItemsWithActivity / numItems) * 100 || 0;
-  const rounded3_a = percent3_a.toFixed(1);
-
-  console.log(`Number of items with name: ${numItemsWithName}`);
-
-  const percent3_b = (numItemsWithName / numItems) * 100 || 0;
-  const rounded3_b = percent3_b.toFixed(1);
-
-  console.log(`Number of items with description: ${numItemsWithDescription}`);
-
-  const percent3_c = (numItemsWithDescription / numItems) * 100 || 0;
-  const rounded3_c = percent3_c.toFixed(1);
-
-  // Sort the activityCounts Map by activity, in ascending order
-  // TODO: Check if b[1] - a[1] is correct order, as this is different from sortedDateCounts
-  const sortedActivityCounts = new Map(
-    Array.from(activityCounts.entries()).sort((a, b) => b[1] - a[1])
-  );
-
-  // Create a new map from the first x entries
-  const top10activities = new Map(Array.from(sortedActivityCounts.entries()).slice(0, 5));
-
-  // -------------------------------------------------------------------------------------------------
-
-
-  console.log(`Number of items with unique URLs (either template or explicit string): ${numItemsWithUrl}`);
-
-  const percent4_a = (numItemsWithUrl / numChild) * 100 || 0;
+  const percent4_a = (numFilteredItemsWithValidUrl / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded4_a = percent4_a.toFixed(1);
 
-  const percent4_b = (numParentsWithUniqueUrl / numChild) * 100 || 0;
+  // -------------------------------------------------------------------------------------------------
+
+  console.log(`Number of items with valid parent URLs: ${numFilteredItemsWithValidParentUrl}`);
+
+  const percent4_b = (numFilteredItemsWithValidParentUrl / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded4_b = percent4_b.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
   // OUTPUT THE METRICS TO THE HTML...
 
-
   // -------------------------------------------------------------------------------------------------
 
   // Hide y axis if no chart to display
   let show_y_axis = false;
 
-  if (activityCounts.size > 0) {
+  if (Object.keys(storeDataQuality.filteredItemsUniqueActivities).length > 0) {
     show_y_axis = true;
   }
 
@@ -1042,7 +851,7 @@ function postDataQuality() {
 
   let x_axis_title = {};
 
-  if (activityCounts.size < 1) {
+  if (Object.keys(storeDataQuality.filteredItemsUniqueActivities).length < 1) {
     x_axis_title = {
       text: "No Matching Activity IDs",
       offsetX: -5,
@@ -1117,15 +926,15 @@ function postDataQuality() {
     },
     series: [{
       name: spark1SeriesName,
-      data: Array.from(top10activities.values()),
+      data: Array.from(topActivities.values()),
     }],
     dataLabels: {
       enabled: false,
     },
-    labels: Array.from(top10activities.keys()),
+    labels: Array.from(topActivities.keys()),
     colors: ['#71CBF2'],
     title: {
-      text: numParents.toLocaleString(),
+      text: storeDataQuality.filteredItemsUniqueParentIds.size.toLocaleString(),
       align: 'left',
       offsetX: 0,
       style: {
@@ -1225,9 +1034,7 @@ function postDataQuality() {
   chart1 = new ApexCharts(document.querySelector("#apexchart1"), spark1);
   chart1.render();
 
-
   // -------------------------------------------------------------------------------------------------
-
 
   let filter_chart = {
     chart: {
@@ -1271,10 +1078,10 @@ function postDataQuality() {
         events: {
           click: function (event, chartContext, config) {
             //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
-            //alert('Chart clicked')
-            console.log(event)
-            console.log(chartContext)
-            console.log(config)
+            //alert('Chart clicked');
+            console.log(event);
+            console.log(chartContext);
+            console.log(config);
           }
         }
       },
@@ -1332,7 +1139,7 @@ function postDataQuality() {
   }
 
   else {
-    options_percentItemsWithActivity = filter_chart
+    options_percentItemsWithActivity = filter_chart;
   }
 
   chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
@@ -1429,14 +1236,13 @@ function postDataQuality() {
     }
   }
   else {
-    options_percentItemsNowToFuture = filter_chart
+    options_percentItemsNowToFuture = filter_chart;
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
   sleep(600).then(() => { chart4.render(); });
 
   // -------------------------------------------------------------------------------------------------
-
 
   var optionsSessionUrl = {
     chart: {
@@ -1539,7 +1345,7 @@ function postDataQuality() {
   // -------------------------------------------------------------------------------------------------
 
   let annotation_text = {};
-  if (dateCounts.size > 0) {
+  if (storeDataQuality.filteredItemsUniqueDates.size > 0) {
     annotation_text = {
       xaxis: [
         {
@@ -1570,7 +1376,7 @@ function postDataQuality() {
     else if (['Event', 'OnDemandEvent'].includes(storeSubEventContentType)) {
       spark6SeriesName = 'Event';
     }
-    if (spark6SeriesName.length > 0 && numChild !== 1) {
+    if (spark6SeriesName.length > 0 && storeDataQuality.numFilteredItems !== 1) {
       spark6SeriesName += 's';
     }
   }
@@ -1619,9 +1425,9 @@ function postDataQuality() {
     annotations: annotation_text,
     series: [{
       name: spark6SeriesName,
-      data: Array.from(sortedDateCounts.values()),
+      data: Array.from(sortedFilteredItemsUniqueDates.values()),
     }],
-    labels: Array.from(sortedDateCounts.keys()),
+    labels: Array.from(sortedFilteredItemsUniqueDates.keys()),
     grid: {
       show: false
     },
@@ -1662,7 +1468,7 @@ function postDataQuality() {
     },
     colors: ['#E21483'],
     title: {
-      text: numChild.toLocaleString(),
+      text: storeDataQuality.numFilteredItems.toLocaleString(),
       align: 'right',
       offsetX: 0,
       style: {
@@ -1683,11 +1489,9 @@ function postDataQuality() {
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
   sleep(1000).then(() => { chart6.render(); });
-
-
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
   sleep(1400).then(() => {
-    if (storeDataQuality.numItemsMatchFilters !== 0) {
+    if (storeDataQuality.numFilteredItems !== 0) {
       $("#filterRows").fadeIn("slow");
     }
     document.getElementById("DQ_filterActivities").disabled = false;

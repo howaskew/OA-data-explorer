@@ -135,10 +135,13 @@ function clearStore(store) {
   store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
-  store.numItemsMatchFilters = 0;
-  store.uniqueActivities = new Set();
-  store.uniqueOrganizers = new Object();
-  store.uniqueLocations = new Object();
+  store.numFilteredItems = 0;
+  store.showMap = null;
+  store.filteredItemsUniqueOrganizers = null;
+  store.filteredItemsUniqueLocations = null;
+  store.filteredItemsUniqueActivities = null;
+  store.filteredItemsUniqueParentIds = null;
+  store.filteredItemsUniqueDates = null;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -235,9 +238,9 @@ function getFilters() {
     organizer: $('#organizer-list-selected').val(),
     activity: $('#activity-list-selected').val(),
     location: $('#location-list-selected').val(),
-    DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
+    DQ_filterDates: $('#DQ_filterDates').prop("checked"),
     DQ_filterUrls: $('#DQ_filterUrls').prop("checked"),
     coverage: $("#Coverage").val(),
     proximity: $("#Proximity").val(),
@@ -325,7 +328,6 @@ function setStoreItems(url, store) {
 
       //postResults(store, filters);
 
-
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
       if (url !== page.next && store.numItems < 25000) {
         progress.empty();
@@ -341,7 +343,7 @@ function setStoreItems(url, store) {
         progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
 
-        if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
+        if (page.items.length === 0 && store.numFilteredItems === 0 && store.ingressOrder === 1) {
           results.append("<div><p>No results found</p></div>");
         }
 
@@ -584,7 +586,6 @@ function setStoreItemDataType(store) {
 function loadingStart() {
   $("#tabs").hide();
   $("#record-limit").hide();
-
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
   }
@@ -612,10 +613,17 @@ function loadingComplete() {
     clearTimeout(loadingTimeout);
     loadingTimeout = null;
   }
+
   $("#loading-time").hide();
-  runDataQuality();
+  progress.append(`<div id='DQProgress'</div>`);
+
+  setStoreDataQualityItems();
+  setStoreDataQualityItemFlags();
   //console.log(storeDataQuality);
 
+  $("#tabs").fadeIn("slow");
+
+  postDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -810,6 +818,59 @@ function renderLocationList(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
+function renderLocationList(locations) {
+  locationListRefresh++;
+  let locationListSelected = $('#location-list-selected').val() || '';
+
+  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  $('#location-list-dropdown').empty();
+  $('#location-list-dropdown').append(
+    `<div id="location-list-dropdown-${locationListRefresh}" class="dropdown hierarchy-select">
+          <button id="location-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          </button>
+          <div class="dropdown-menu" aria-labelledby="location-list-button">
+              <div class="hs-searchbox">
+                  <input type="text" class="form-control" autocomplete="off">
+              </div>
+              <div class="hs-menu-inner">
+                  <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">Show All</a>
+              </div>
+          </div>
+          <input id="location-list-selected" name="location-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
+      </div>`);
+  $('#location-list-selected').val(locationListSelected);
+
+  // Render the location list in a format the HierarchySelect will understand
+  $(`#location-list-dropdown-${locationListRefresh} .hs-menu-inner`).append(
+    Object.keys(locations).map(locationName =>
+      $('<a/>', {
+        'class': 'dropdown-item',
+        'data-value': locationName,
+        'data-level': 1,
+        'href': '#',
+        'text': locationName
+      })
+    )
+  );
+
+  $(`#location-list-dropdown-${locationListRefresh}`).hierarchySelect({
+    width: '98%',
+    // Set initial dropdown state based on the hidden field's initial value
+    initialValueSet: true,
+    // Update other elements when a selection is made
+    // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
+    onChange: function (htmlDataValue) {
+      // Note that htmlDataValue is the same as $('#location-list-selected').val()
+      if (htmlDataValue !== locationListSelected) {
+        console.warn(`Selected location for filter: ${htmlDataValue}`);
+        postDataQuality();
+      }
+    }
+  });
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function renderSchedule(item) {
   if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
     return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
@@ -820,8 +881,8 @@ function renderSchedule(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateActivityList(activitiesSet) {
-  let activities = scheme_1.generateSubset(Array.from(activitiesSet));
+function updateActivityList(activitiesObj) {
+  let activities = scheme_1.generateSubset(Object.keys(activitiesObj));
   renderActivityList(activities);
 }
 
@@ -1025,7 +1086,6 @@ function addLocationPanel(locations) {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function addMapPanel(locations) {
   // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/) if you’re going to use the tiles in production
   // HA - We are following guidance but should keep an eye on usage / demand on server
@@ -1039,16 +1099,16 @@ function addMapPanel(locations) {
     maxZoom: 17,
     zoomSnap: 0.1,
     scrollWheelZoom: false,
-    attributionControl: false
+    attributionControl: false,
   });
+
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a><a href="https://www.openstreetmap.org/fixthemap"> - Improve this map <a/>'
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> - <a href="https://www.openstreetmap.org/fixthemap">Improve this map <a/>'
   }).addTo(map);
 
   L.control.attribution({
     position: 'topright'
   }).addTo(map);
-
 
   for (const [locationName, locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
@@ -1087,15 +1147,6 @@ function addMapPanel(locations) {
 
 }
 
-
-// As well as the live code below, these variants also work:
-//   $('body').on('click', '#mapTab', function() {
-//   $('body').on('show.bs.tab', '#mapTab', function() {
-//   $('#mapTab').on('click', function () {
-// See bottom of this page for more details:
-//   https://getbootstrap.com/docs/5.0/components/navs-tabs/
-
-
 // -------------------------------------------------------------------------------------------------
 
 // Handle nav tabs smooth to fill page
@@ -1120,15 +1171,23 @@ $('#locationTab').on('click', function () {
   updateScrollResults();
 });
 
+// As well as the live code below, these variants also work:
+//   $('body').on('click', '#mapTab', function() {
+//   $('body').on('show.bs.tab', '#mapTab', function() {
+//   $('#mapTab').on('click', function () {
+// See bottom of this page for more details:
+//   https://getbootstrap.com/docs/5.0/components/navs-tabs/
 $('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+
   // Calculate the bounds for the marker layer
   var markerBounds = L.latLngBounds();
-  for (const [locationName, locationInfo] of Object.entries(storeDataQuality.uniqueLocations)) {
+  for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
     for (const coordinates of locationInfo.coordinates) {
       markerBounds.extend(coordinates);
     }
   }
+
   // Zoom and pan the map to fit the marker bounds
   setTimeout(function () {
     map.fitBounds(markerBounds, {padding: [50,50]});
@@ -1143,6 +1202,15 @@ function updateScroll() {
   const element = document.getElementById("progress");
   element.scrollTop = element.scrollHeight;
 }
+
+function updateScrollResults() {
+  window.scrollTo({
+    top: 480,
+    behavior: 'smooth' // You can change this to 'auto' for instant scrolling
+  });
+}
+
+// -------------------------------------------------------------------------------------------------
 
 function updateScrollResults() {
   window.scrollTo({
@@ -1280,34 +1348,31 @@ function updateEndpointUpdate() {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateDQ_filterDates() {
-  DQ_filterDates = $("#DQ_filterDates").prop("checked");
-  postDataQuality();
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function updateDQ_filterActivities() {
-  DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
+  filters.DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
   postDataQuality();
 }
-
 
 // -------------------------------------------------------------------------------------------------
 
 function updateDQ_filterGeos() {
-  DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
+  filters.DQ_filterGeos = $("#DQ_filterGeos").prop("checked");
   postDataQuality();
 }
 
+// -------------------------------------------------------------------------------------------------
+
+function updateDQ_filterDates() {
+  filters.DQ_filterDates = $("#DQ_filterDates").prop("checked");
+  postDataQuality();
+}
 
 // -------------------------------------------------------------------------------------------------
 
 function updateDQ_filterUrls() {
-  DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
+  filters.DQ_filterUrls = $("#DQ_filterUrls").prop("checked");
   postDataQuality();
 }
-
 
 // -------------------------------------------------------------------------------------------------
 
@@ -1403,7 +1468,7 @@ function runForm(pageNumber) {
 
   loadingStart();
 
-  storeIngressOrder1FirstPageFromUser = $("#user-url").val().trim();
+  storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
   setStoreIngressOrder1FirstPage();
   setStoreFeedType(storeIngressOrder1);
@@ -1466,14 +1531,14 @@ function setPage() {
     updateParameters("endpoint", $("#user-url").val());
     clearForm($("#user-url").val());
   });
-  $("#DQ_filterDates").on("change", function () {
-    updateDQ_filterDates();
-  });
   $("#DQ_filterActivities").on("change", function () {
     updateDQ_filterActivities();
   });
   $("#DQ_filterGeos").on("change", function () {
     updateDQ_filterGeos();
+  });
+  $("#DQ_filterDates").on("change", function () {
+    updateDQ_filterDates();
   });
   $("#DQ_filterUrls").on("change", function () {
     updateDQ_filterUrls();
