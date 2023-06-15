@@ -1289,7 +1289,7 @@ function runForm(pageNumber) {
 
   loadingStart();
 
-  storeIngressOrder1FirstPageFromUser = $("#user-url").val().trim();
+  storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
   setStoreIngressOrder1FirstPage();
   setStoreFeedType(storeIngressOrder1);
