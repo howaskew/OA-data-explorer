@@ -474,12 +474,11 @@ function postDataQuality() {
         : item.DQ_validOrganizer &&
           resolveProperty(item, 'organizer').name === filters.organizer;
 
-    // TODO: No location drop-down menu at present, but could be ...
-    // let itemMatchesLocation =
-    //   !filters.location
-    //     ? true
-    //     : item.DQ_validLocation &&
-    //       resolveProperty(item, 'location').name === filters.location;
+    let itemMatchesLocation =
+      !filters.location
+        ? true
+        : item.DQ_validLocation &&
+          resolveProperty(item, 'location').name === filters.location;
 
     let itemMatchesActivity =
       !filters.relevantActivitySet
@@ -524,7 +523,7 @@ function postDataQuality() {
 
     if (
       itemMatchesOrganizer &&
-      // itemMatchesLocation && // TODO: No location drop-down menu at present, but could be ...
+      itemMatchesLocation &&
       itemMatchesActivity &&
       itemMatchesDay &&
       itemMatchesGender &&
@@ -733,7 +732,7 @@ function postDataQuality() {
   console.log(`Number of unique organizers: ${Object.keys(filteredItemsUniqueOrganizers).length}`);
   // console.dir(`filteredItemsUniqueOrganizers: ${Object.keys(filteredItemsUniqueOrganizers)}`);
 
-  // updateLocationList(filteredItemsUniqueLocations); // TODO: No location drop-down menu at present, but could be ...
+  updateLocationList(filteredItemsUniqueLocations);
   $("#location").empty()
   addLocationPanel(filteredItemsUniqueLocations);
   $("#map").empty()

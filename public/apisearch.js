@@ -6,7 +6,7 @@ let scheme_2 = null;
 
 let organizerListRefresh;
 let activityListRefresh;
-// let locationListRefresh; // TODO: No location drop-down menu at present, but could be ...
+let locationListRefresh;
 
 let loadingTimeout;
 let loadingStarted;
@@ -103,7 +103,7 @@ let cp = $("#combineProgress");
 function clearGlobals() {
   organizerListRefresh = 0;
   activityListRefresh = 0;
-  // locationListRefresh = 0;
+  locationListRefresh = 0;
   loadingTimeout = null;
   loadingStarted = null;
   loadingDone = false;
@@ -147,6 +147,7 @@ function clearFilters() {
   $("#DQ_filterUrls").prop("checked", false);
   $("#organizer-list-selected").val("");
   $("#activity-list-selected").val("");
+  $("#location-list-selected").val("");
   $("#Gender").val("");
   $("#Coverage").val("");
 }
@@ -229,8 +230,8 @@ function clearCache(store) {
 function getFilters() {
   filters = {
     organizer: $('#organizer-list-selected').val(),
-    // location: $('#location-list-selected').val(), // TODO: No location drop-down menu at present, but could be ...
     activity: $('#activity-list-selected').val(),
+    location: $('#location-list-selected').val(),
     DQ_filterActivities: $('#DQ_filterActivities').prop("checked"),
     DQ_filterGeos: $('#DQ_filterGeos').prop("checked"),
     DQ_filterDates: $('#DQ_filterDates').prop("checked"),
@@ -686,11 +687,11 @@ function renderOrganizerList(organizers) {
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
     Object.keys(organizers).map(organizerName =>
       $('<a/>', {
-          'class': 'dropdown-item',
-          'data-value': organizerName,
-          'data-level': 1,
-          'href': '#',
-          'text': organizerName
+        'class': 'dropdown-item',
+        'data-value': organizerName,
+        'data-level': 1,
+        'href': '#',
+        'text': organizerName
       })
     )
   );
@@ -757,6 +758,59 @@ function renderActivityList(activities) {
 
 // -------------------------------------------------------------------------------------------------
 
+function renderLocationList(locations) {
+  locationListRefresh++;
+  let locationListSelected = $('#location-list-selected').val() || '';
+
+  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  $('#location-list-dropdown').empty();
+  $('#location-list-dropdown').append(
+    `<div id="location-list-dropdown-${locationListRefresh}" class="dropdown hierarchy-select">
+          <button id="location-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          </button>
+          <div class="dropdown-menu" aria-labelledby="location-list-button">
+              <div class="hs-searchbox">
+                  <input type="text" class="form-control" autocomplete="off">
+              </div>
+              <div class="hs-menu-inner">
+                  <a class="dropdown-item" data-value="" data-level="1" data-default-selected="" href="#">Show All</a>
+              </div>
+          </div>
+          <input id="location-list-selected" name="location-list-selected" readonly="readonly" aria-hidden="true" type="hidden"/>
+      </div>`);
+  $('#location-list-selected').val(locationListSelected);
+
+  // Render the location list in a format the HierarchySelect will understand
+  $(`#location-list-dropdown-${locationListRefresh} .hs-menu-inner`).append(
+    Object.keys(locations).map(locationName =>
+      $('<a/>', {
+        'class': 'dropdown-item',
+        'data-value': locationName,
+        'data-level': 1,
+        'href': '#',
+        'text': locationName
+      })
+    )
+  );
+
+  $(`#location-list-dropdown-${locationListRefresh}`).hierarchySelect({
+    width: '98%',
+    // Set initial dropdown state based on the hidden field's initial value
+    initialValueSet: true,
+    // Update other elements when a selection is made
+    // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
+    onChange: function (htmlDataValue) {
+      // Note that htmlDataValue is the same as $('#location-list-selected').val()
+      if (htmlDataValue !== locationListSelected) {
+        console.warn(`Selected location for filter: ${htmlDataValue}`);
+        postDataQuality();
+      }
+    }
+  });
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function renderSchedule(item) {
   if (item.data && item.data.eventSchedule && Array.isArray(item.data.eventSchedule)) {
     return item.data.eventSchedule.filter(x => Array.isArray(x.byDay)).flatMap(x => x.byDay.map(day => `${day.replace(/https?:\/\/schema.org\//, '')} ${x.startTime}`)).join(', ');
@@ -776,6 +830,12 @@ function updateActivityList(activitiesObj) {
 
 function updateOrganizerList(organizers) {
   renderOrganizerList(organizers);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateLocationList(locations) {
+  renderLocationList(locations);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -922,7 +982,7 @@ function addOrganizerPanel(organizers) {
     '   <div class="col text-truncate">Phone</div>' +
     '</div>'
   );
-  for (const [organizerName,organizerInfo] of Object.entries(organizers)) {
+  for (const [organizerName, organizerInfo] of Object.entries(organizers)) {
     panel.append(
       `<div class='row rowhover'>` +
       `   <div class='col text-truncate'>${organizerName}</div>` +
@@ -949,7 +1009,7 @@ function addLocationPanel(locations) {
     '   <div class="col text-truncate">Coords</div>' +
     '</div>'
   );
-  for (const [locationName,locationInfo] of Object.entries(locations)) {
+  for (const [locationName, locationInfo] of Object.entries(locations)) {
     panel.append(
       `<div class='row rowhover'>` +
       `   <div class='col text-truncate'>${locationName}</div>` +
@@ -980,15 +1040,13 @@ function addMapPanel(locations) {
     scrollWheelZoom: false,
   });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
-
-  for (const [locationName,locationInfo] of Object.entries(locations)) {
+  for (const [locationName, locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
       const marker = L.marker(coordinates).addTo(map);
-
 
       marker.bindPopup(
         `<b>${locationName}</b><br>` +
