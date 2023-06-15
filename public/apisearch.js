@@ -135,10 +135,7 @@ function clearStore(store) {
   store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
-  store.numItemsMatchFilters = 0;
-  store.uniqueActivities = new Set();
-  store.uniqueOrganizers = new Object();
-  store.uniqueLocations = new Object();
+  store.numFilteredItems = 0;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -339,7 +336,7 @@ function setStoreItems(url, store) {
         progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
         progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
 
-        if (page.items.length === 0 && store.numItemsMatchFilters === 0 && store.ingressOrder === 1) {
+        if (page.items.length === 0 && store.numFilteredItems === 0 && store.ingressOrder === 1) {
           results.append("<div><p>No results found</p></div>");
         }
 
@@ -608,10 +605,17 @@ function loadingComplete() {
     clearTimeout(loadingTimeout);
     loadingTimeout = null;
   }
+
   $("#loading-time").hide();
-  runDataQuality();
+  progress.append(`<div id='DQProgress'</div>`);
+
+  setStoreDataQualityItems();
+  setStoreDataQualityItemFlags();
   //console.log(storeDataQuality);
 
+  $("#tabs").fadeIn("slow");
+
+  postDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -763,8 +767,8 @@ function renderSchedule(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateActivityList(activitiesSet) {
-  let activities = scheme_1.generateSubset(Array.from(activitiesSet));
+function updateActivityList(activitiesObj) {
+  let activities = scheme_1.generateSubset(Object.keys(activitiesObj));
   renderActivityList(activities);
 }
 
@@ -980,7 +984,7 @@ function addMapPanel(locations) {
       attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
- 
+
   for (const [locationName,locationInfo] of Object.entries(locations)) {
     for (const coordinates of locationInfo.coordinates) {
       const marker = L.marker(coordinates).addTo(map);
@@ -1147,7 +1151,7 @@ function updateEndpoint() {
   clearForm(endpoint);
 
   $("#user-url").val(endpoint);
- 
+
 }
 
 // -------------------------------------------------------------------------------------------------
