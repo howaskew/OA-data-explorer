@@ -724,10 +724,11 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  // Sort objects by keys in alphabetical order:
+  // Sort objects by keys in ascending alphabetical order:
   storeDataQuality.filteredItemsUniqueOrganizers = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueOrganizers).sort());
   storeDataQuality.filteredItemsUniqueLocations = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueLocations).sort());
-  storeDataQuality.filteredItemsUniqueActivities = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueActivities).sort());
+  // Sort objects by values in descending numerical order:
+  storeDataQuality.filteredItemsUniqueActivities = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueActivities).sort((a, b) => b[1] - a[1]));
 
   // Convert sets to arrays:
   for (const organizerInfo of Object.values(storeDataQuality.filteredItemsUniqueOrganizers)) {
@@ -774,10 +775,11 @@ function postDataQuality() {
   console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities).length}`);
   // console.dir(`storeDataQuality.filteredItemsUniqueActivities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities)}`);
 
+  console.log(`Number of unique present/future dates: ${storeDataQuality.filteredItemsUniqueDates.size}`);
+
   // -------------------------------------------------------------------------------------------------
 
   console.log(`Number of items with matching activities: ${numFilteredItemsWithValidActivity}`);
-  console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities).length}`);
 
   const percent3_a = (numFilteredItemsWithValidActivity / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded3_a = percent3_a.toFixed(1);
@@ -806,7 +808,6 @@ function postDataQuality() {
   // -------------------------------------------------------------------------------------------------
 
   console.log(`Number of items with valid present/future dates: ${numFilteredItemsWithValidDate}`);
-  console.log(`Number of unique present/future dates: ${storeDataQuality.filteredItemsUniqueDates.size}`);
 
   const percent1 = (numFilteredItemsWithValidDate / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
