@@ -940,13 +940,13 @@ function addResultsPanel() {
   let panel = $("#resultsDiv");
   panel.append(
     '<div class="row">' +
-    '   <div class="col text-truncate">ID</div>' +
+    '   <div class="col-md-1 col-sm-2 text-truncate">ID</div>' +
     '   <div class="col text-truncate">Name</div>' +
     '   <div class="col text-truncate">Activity</div>' +
     '   <div class="col text-truncate">Start</div>' +
     '   <div class="col text-truncate">End</div>' +
     '   <div class="col text-truncate">Location</div>' +
-    '   <div class="col text-truncate">Active JSON</div>' +
+    '   <div class="col text-truncate">&nbsp;</div>' +
     '</div>'
   );
 }
@@ -1035,6 +1035,7 @@ function addMapPanel(locations) {
 
   map = L.map('map', {
     maxZoom: 17,
+    zoomSnap: 0.1,
     scrollWheelZoom: false,
     attributionControl: false
   });
@@ -1128,7 +1129,7 @@ $('#mapTab').on('show.bs.tab', function () {
   }
   // Zoom and pan the map to fit the marker bounds
   setTimeout(function () {
-    map.fitBounds(markerBounds);
+    map.fitBounds(markerBounds, {padding: [50,50]});
   }, 100); // Delay the fitBounds to ensure markers plotted
 
   updateScrollResults();
