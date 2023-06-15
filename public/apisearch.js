@@ -1404,7 +1404,12 @@ function setPage() {
   $("#endpoint").on("change", function () {
     updateEndpoint();
   });
-
+  $("#user-url").on("change", function () {
+    $("#endpoint").empty();
+    $("#provider").empty();
+    updateParameters("endpoint", $("#user-url").val());
+    clearForm($("#user-url").val());
+  });
   $("#DQ_filterActivities").on("change", function () {
     updateDQ_filterActivities();
   });

@@ -1216,17 +1216,18 @@ function postDataQuality() {
 
   var optionsSessionUrl = {
     chart: {
-      offsetY: 30,
+      offsetY: 10,
+      height: 200,
       type: 'radialBar',
     },
     grid: {
       show: false,
       padding: {
-        left: -30,
-        right: -30,
-        top: -35,
+        left: -40,
+        right: -40,
+        top: -30,
         bottom: 0,
-      }
+      },
     },
     fill: {
       colors: ['#C76DAC'],
@@ -1261,13 +1262,15 @@ function postDataQuality() {
     options_percentItemsWithUrl = {
       chart: {
         type: 'radialBar',
+        offsetY: 10,
+        height: 200,
       },
       grid: {
         show: false,
         padding: {
-          left: -30,
-          right: -30,
-          top: -35,
+          left: -40,
+          right: -40,
+          top: -30,
           bottom: 0,
         }
       },
