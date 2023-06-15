@@ -136,6 +136,11 @@ function clearStore(store) {
   store.numPages = 0;
   store.numItems = 0;
   store.numFilteredItems = 0;
+  store.filteredItemsUniqueOrganizers = null;
+  store.filteredItemsUniqueLocations = null;
+  store.filteredItemsUniqueActivities = null;
+  store.filteredItemsUniqueParentIds = null;
+  store.filteredItemsUniqueDates = null;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1035,12 +1040,10 @@ function addMapPanel(locations) {
     map.remove();
   }
   map = L.map('map', {
-    center: [53.0, -2.0],
-    zoom: 6.5,
+    maxZoom: 17,
     scrollWheelZoom: false,
   });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
@@ -1078,6 +1081,7 @@ function addMapPanel(locations) {
         `</table>`);
     }
   }
+
 }
 
 // As well as the live code below, these variants also work:
@@ -1089,6 +1093,17 @@ function addMapPanel(locations) {
 
 $('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
+  // Calculate the bounds for the marker layer
+  var markerBounds = L.latLngBounds();
+  for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
+    for (const coordinates of locationInfo.coordinates) {
+      markerBounds.extend(coordinates);
+    }
+  }
+  // Zoom and pan the map to fit the marker bounds
+  setTimeout(function () {
+    map.fitBounds(markerBounds);
+  }, 100); // Delay the fitBounds to ensure markers plotted
 });
 
 // -------------------------------------------------------------------------------------------------
