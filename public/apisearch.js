@@ -585,6 +585,7 @@ function setStoreItemDataType(store) {
 
 function loadingStart() {
   $("#tabs").hide();
+  $("#record-limit").hide();
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
   }
