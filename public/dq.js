@@ -888,7 +888,7 @@ function postDataQuality() {
     }
     else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEventContentType)) {
       spark1SeriesName = 'Facility Use';
-      if (numParents !== 1) {
+      if (storeDataQuality.filteredItemsUniqueParentIds.size !== 1) {
         spark1SeriesName += 's';
       }
     }
