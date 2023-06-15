@@ -1033,18 +1033,25 @@ function addLocationPanel(locations) {
 
 
 function addMapPanel(locations) {
-  // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/)
-  // if you’re going to use the tiles in production
+  // Read the Tile Usage Policy of OpenStreetMap (https://operations.osmfoundation.org/policies/tiles/) if you’re going to use the tiles in production
+  // HA - We are following guidance but should keep an eye on usage / demand on server
   if (map) {
     map.off();
     map.remove();
   }
+
   map = L.map('map', {
     maxZoom: 17,
     scrollWheelZoom: false,
+    attributionControl: false,
   });
+
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> - <a href="https://www.openstreetmap.org/fixthemap">Improve this map <a/>'
+  }).addTo(map);
+
+  L.control.attribution({
+    position: 'topright'
   }).addTo(map);
 
   for (const [locationName, locationInfo] of Object.entries(locations)) {
