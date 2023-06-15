@@ -1491,7 +1491,7 @@ function postDataQuality() {
   sleep(1000).then(() => { chart6.render(); });
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
   sleep(1400).then(() => {
-    if (storeDataQuality.numItemsMatchFilters !== 0) {
+    if (storeDataQuality.numFilteredItems !== 0) {
       $("#filterRows").fadeIn("slow");
     }
     document.getElementById("DQ_filterActivities").disabled = false;
