@@ -48,12 +48,19 @@ div.col-md-2, div.col-md-6 {
   text-align: left;
 }
 
-.visual {
+.json-tab-subpanel {
   width: 50%;
 }
 
-#validateParent, #validateChild {
-  margin-left: 20px;
+.json-tab-heading {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.json-tab-button {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
 }
 
 .noPadding {
