@@ -114,12 +114,12 @@ function setStoreDataQualityItems() {
   ) {
     cp.text("Unpacking Data Feed");
 
-    console.log(`Number of storeSuperEvent items: ${Object.values(storeSuperEvent.items).length}`);
+    console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
     console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
     console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
     console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
 
-    console.log(`Number of storeSubEvent items: ${Object.values(storeSubEvent.items).length}`);
+    console.log(`Number of storeSubEvent items: ${Object.keys(storeSubEvent.items).length}`);
     console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
     console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
     console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
@@ -163,15 +163,15 @@ function setStoreDataQualityItems() {
     }
   }
   else if (
-    storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
-    storeSubEvent && Object.values(storeSubEvent.items).length > 0 &&
+    storeSuperEvent && Object.keys(storeSuperEvent.items).length > 0 &&
+    storeSubEvent && Object.keys(storeSubEvent.items).length > 0 &&
     link
   ) {
     console.log("3");
 
     storeCombinedItems = [];
 
-    for (let [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
+    for (const [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
         const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
@@ -189,14 +189,15 @@ function setStoreDataQualityItems() {
           storeCombinedItems.push(storeSubEventItemCopy);
         }
         // If the match isn't found then the super-event has been deleted, so can lose the sub-event info...
-        // If it is matched, we have the data in combined items so can delete
+        // If it is matched, we have the data in combined items so can delete...
+        // Actually, don't try and delete anything, as may still need storeSuperEvent and storeSubEvent elsewhere e.g. setJSONTab()
       }
-      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx+1} of ${Object.values(storeSubEvent.items).length} items`);
+      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx+1} of ${Object.keys(storeSubEvent.items).length} items`);
     }
 
     storeDataQuality.items = storeCombinedItems;
-    // console.error(Object.values(storeSubEvent.items).length);
-    // console.error(Object.values(storeDataQuality.items).length);
+    // console.error(Object.keys(storeSubEvent.items).length);
+    // console.error(Object.keys(storeDataQuality.items).length);
   }
   else {
     cp.empty();

@@ -93,9 +93,6 @@ let slotUrlParts = [
 let storeIngressOrder1FirstPageFromUser;
 let link; // Linking variable between super-event and sub-event feeds
 
-let numListings;
-let numOpps;
-
 let cp = $("#combineProgress");
 
 // -------------------------------------------------------------------------------------------------
@@ -117,8 +114,6 @@ function clearGlobals() {
   storeSubEventContentType = null;
   storeIngressOrder1FirstPageFromUser = null;
   link = null;
-  numListings = 0;
-  numOpps = 0;
 }
 
 clearGlobals();
@@ -127,6 +122,7 @@ clearGlobals();
 
 function clearStore(store) {
   store.timeHarvestStart = luxon.DateTime.now();
+  store.urls = {};
   store.items = {};
   store.feedType = null; // From the dataset page, not the RPDE feed
   store.itemKind = null; // From the RPDE feed
@@ -305,14 +301,15 @@ function setStoreItems(url, store) {
           //Update the store (check against modified dates for existing items)
           if (!store.items.hasOwnProperty(item.id) || (item.modified > store.items[item.id].modified)) {
             store.items[item.id] = item;
+            store.urls[item.id] = url;
           }
         }
         // For those records that are no longer 'live'...
         else if ((item.state === 'deleted') && store.items.hasOwnProperty(item.id)) {
           //Delete any matching items from the store
           delete store.items[item.id];
+          delete store.urls[item.id];
         }
-
       });
 
       let pageNo = page.number ? page.number : page.page;
@@ -867,11 +864,14 @@ function setJSONTab(itemId, switchTab) {
     updateScrollResults();
   }
 
+  document.getElementById('json').innerHTML = "<div id='json-tab-1' class='json-tab-subpanel'></div><div id='json-tab-2' class='json-tab-subpanel'></div>";
+
   // Output both relevant feeds if combined
   if (
-    storeSuperEvent && Object.values(storeSuperEvent.items).length > 0 &&
-    storeSubEvent && Object.values(storeSubEvent.items).length > 0
-    && storeSubEvent.feedType !== null
+    storeSuperEvent && Object.keys(storeSuperEvent.items).length > 0 &&
+    storeSubEvent && Object.keys(storeSubEvent.items).length > 0 &&
+    link &&
+    storeSubEvent.feedType !== null
   ) {
     const storeSubEventItem = storeSubEvent.items[itemId];
     const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
@@ -879,66 +879,59 @@ function setJSONTab(itemId, switchTab) {
     // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
     // which are purely numeric and stored as a number rather than a string, so we can still match on
     // storeSuperEventItemId which is always a string:
+    const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
 
-    const storeItemForJson = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+    if (storeSuperEventItem) {
+      document.getElementById('json-tab-1').innerHTML = `
+        <div class='flex_row'>
+            <h2 class='json-tab-heading'>${storeSuperEvent.itemDataType}</h2>
+            <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+            <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+        </div>
+        <pre>${JSON.stringify(storeSuperEventItem, null, 2)}</pre>`;
+      $('#json-tab-1-source').on('click', function () {
+        window.open(storeSuperEvent.urls[storeSuperEventItemId], '_blank').focus();
+      });
+      $('#json-tab-1-validate').on('click', function () {
+        openValidator(storeSuperEventItem);
+      });
+    }
 
-    $("#json").html(`<div class="visual">
-    <h2>${storeSuperEvent.itemDataType}
-    <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
-    </h2>
-    <pre>${JSON.stringify(storeItemForJson, null, 2)}</pre>
-    </div>
-    <div class="visual">
-    <h2>${storeSubEvent.itemDataType}
-    <button id='validateChild' class='btn btn-secondary btn-sm mb-1'>Validate</button>
-    </h2>
-    <pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre>
-    </div>`);
-
-    $(`#validateParent`).on("click", function () {
-      openValidator2(storeItemForJson);
+    document.getElementById('json-tab-2').innerHTML = `
+      <div class='flex_row'>
+          <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
+          <button id='json-tab-2-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+          <button id='json-tab-2-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+      </div>
+      <pre>${JSON.stringify(storeSubEventItem, null, 2)}</pre>`;
+    $('#json-tab-2-source').on('click', function () {
+      window.open(storeSubEvent.urls[itemId], '_blank').focus();
     });
-    $(`#validateChild`).on("click", function () {
-      openValidator(storeSubEvent, itemId);
+    $('#json-tab-2-validate').on('click', function () {
+      openValidator(storeSubEventItem);
     });
   } else {
-    console.log("Displaying storeIngressOrder1 and 2");
-    $("#json").html(`<div class="visual">
-    <h2>${storeIngressOrder1.feedType}
-    <button id='validateParent' class='btn btn-secondary btn-sm mb-1'>Validate</button>
-    </h2>
-    <pre>${JSON.stringify(storeIngressOrder1.items[itemId], null, 2)}</pre>
-    </div>
-    <div class="visual">
-    <h2>${storeIngressOrder2.itemDataType}
-    <button id='validateChild' class='btn btn-secondary btn-sm mb-1'>Validate</button>
-    </h2>
-    <pre>${JSON.stringify(storeIngressOrder2.items[itemId], null, 2)}</pre>
-    </div>`);
-
-    $(`#validateParent`).on("click", function () {
-      openValidator(storeIngressOrder1, itemId);
+    document.getElementById('json-tab-1').innerHTML = `
+      <div class='flex_row'>
+          <h2 class='json-tab-heading'>${storeIngressOrder1.itemDataType}</h2>
+          <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+          <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+      </div>
+      <pre>${JSON.stringify(storeIngressOrder1.items[itemId], null, 2)}</pre>`;
+    $('#json-tab-1-source').on('click', function () {
+      window.open(storeIngressOrder1.urls[itemId], '_blank').focus();
     });
-
-    $(`#validateChild`).on("click", function () {
-      openValidator(storeIngressOrder2, itemId);
+    $('#json-tab-1-validate').on('click', function () {
+      openValidator(storeIngressOrder1.items[itemId]);
     });
-
   }
+
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function openValidator(store, itemId) {
-  const jsonString = JSON.stringify(store.items[itemId].data, null, 2);
-  // console.log(jsonString)
-  const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
-  const win = window.open(url, "_blank", "height=800,width=1200");
-  win.focus();
-}
-function openValidator2(item) {
+function openValidator(item) {
   const jsonString = JSON.stringify(item.data, null, 2);
-  // console.log(jsonString)
   const url = `https://validator.openactive.io/#/json/${Base64.encodeURI(jsonString)}`;
   const win = window.open(url, "_blank", "height=800,width=1200");
   win.focus();
