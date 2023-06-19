@@ -173,12 +173,8 @@ function setStoreDataQualityItems() {
 
     for (const [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
-        const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
-        const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
-        // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
-        // which are purely numeric and stored as a number rather than a string, so we can still match on
-        // storeSuperEventItemId which is always a string:
-        const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+        const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
+        const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => String(storeSuperEventItem.id).split('/').at(-1) === storeSuperEventItemId);
         // If the match isn't found then the super-event has been deleted, so lose the sub-event info:
         if (storeSuperEventItem && storeSuperEventItem.data) {
           // Note that JSON.parse(JSON.stringify()) does not work for sets. Not an issue here as the items

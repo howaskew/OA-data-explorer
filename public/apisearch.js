@@ -874,12 +874,8 @@ function setJSONTab(itemId, switchTab) {
     storeSubEvent.feedType !== null
   ) {
     const storeSubEventItem = storeSubEvent.items[itemId];
-    const lastSlashIndex = storeSubEventItem.data[link].lastIndexOf('/');
-    const storeSuperEventItemId = storeSubEventItem.data[link].substring(lastSlashIndex + 1);
-    // Note that we intentionally use '==' here and not '===' to cater for those storeSuperEventItem.id
-    // which are purely numeric and stored as a number rather than a string, so we can still match on
-    // storeSuperEventItemId which is always a string:
-    const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => storeSuperEventItem.id == storeSuperEventItemId);
+    const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
+    const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => String(storeSuperEventItem.id).split('/').at(-1) === storeSuperEventItemId);
 
     if (storeSuperEventItem) {
       document.getElementById('json-tab-1').innerHTML = `
