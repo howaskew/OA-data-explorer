@@ -1098,7 +1098,7 @@ function postDataQuality() {
       //  }]
       //},
       series: [rounded3_a, rounded3_b, rounded3_c],
-      labels: ['Activity ID', 'Name', 'Description'],
+      labels: ['Have activity IDs', 'Have names', 'Have descriptions'],
       plotOptions: {
         radialBar: {
           hollow: {
@@ -1121,7 +1121,7 @@ function postDataQuality() {
             },
             total: {
               show: true,
-              label: "Valid Activity ID",
+              label: ['Have activity IDs'],
               color: "#888",
               fontSize: "18px",
               formatter: function (w) {
@@ -1159,7 +1159,7 @@ function postDataQuality() {
         colors: ['#B196CB'],
       },
       series: [rounded2],
-      labels: [['Valid postcode', 'or coordinates']],
+      labels: [['Have postcode', 'or coordinates']],
       plotOptions: {
         radialBar: {
           hollow: {
@@ -1207,7 +1207,7 @@ function postDataQuality() {
         colors: ['#BD82BB'],
       },
       series: [rounded1],
-      labels: [['Valid', 'Start Date']],
+      labels: [['Have future', 'start dates']],
       plotOptions: {
         radialBar: {
           hollow: {
@@ -1261,7 +1261,7 @@ function postDataQuality() {
       colors: ['#C76DAC'],
     },
     series: [rounded4_a],
-    labels: ['Session Urls'],
+    labels: ['Have session URLs'],
     plotOptions: {
       radialBar: {
         startAngle: -90,
@@ -1306,7 +1306,7 @@ function postDataQuality() {
         colors: ['#C76DAC'],
       },
       series: [rounded4_b],
-      labels: ['Series Urls'],
+      labels: ['Have series URLs'],
       plotOptions: {
         radialBar: {
           startAngle: -90,
