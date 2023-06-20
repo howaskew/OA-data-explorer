@@ -19,7 +19,7 @@ THIS TOOLS IS IN BETA - PLEASE RAISE ANY ISSUES HERE OR WITH THE OPENACTIVE TEAM
 
 The original Visualiser made it easy to query OpenActive SessionSeries data directly from RPDE feeds, leveraging the CDN to ensure fast query response times.
 
-This Data Quality Explorer built on the crawler and harvester aspects of the visualiser to provide data to test the DQ metric calculations and visualisation. However, the immediacy of the data quality feedback and the visualisations proved useful / positive so we made the tool a little more robust and available for data pulishers.
+This Data Quality Explorer built on the crawler and harvester aspects of the visualiser to provide data to test the DQ metric calculations and visualisation. However, the immediacy of the data quality feedback and the visualisations proved useful / positive so we made the tool a little more robust and available for data publishers.
 
 
 ## Credits
