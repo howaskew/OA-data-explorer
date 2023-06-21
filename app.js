@@ -116,26 +116,23 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
       })))
       .filter(dataset => dataset);
 
-
       //console.log(datasets);
 
       console.log("Unique Types in feeds (untreated):");
       const typeCounts = {};
-      
+
       datasets.forEach(dataset => {
         (dataset?.distribution ?? []).forEach(feedInfo => {
           const { name } = feedInfo;
           typeCounts[name] = (typeCounts[name] || 0) + 1;
         });
       });
-      
+
       const sortedTypes = Object.keys(typeCounts).sort((a, b) => typeCounts[b] - typeCounts[a]);
-      
+
       sortedTypes.forEach(type => {
         console.log(`${type} (${typeCounts[type]})`);
       });
-      
-      
 
 // Dataset providers should be encouraged to adjust the following in their dataset pages, and make
 // sure there are none which are undefined, then we won't need the normalisation in the following
@@ -174,8 +171,6 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         return feed;
       });
 
-
-
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
       // Prefetch pages into cache to reduce initial load
@@ -195,6 +190,14 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
 
 app.get('/feeds', function (req, res) {
   res.send({"feeds": feeds});
+});
+
+app.get('/api/cache/performance', (req, res) => {
+  res.json(apicache.getPerformance());
+});
+
+app.get('/api/cache/index', (req, res) => {
+  res.json(apicache.getIndex());
 });
 
 app.post('/api/clear-cache', (req, res) => {
@@ -218,14 +221,13 @@ async function harvest(url) {
 app.use(function (err, req, res, next) {
     res.status(500).json({error: err.stack});
     console.error(err.stack);
-})
+});
 
 const server = http.createServer(app);
 server.on('error', onError);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-
 });
 
 /**

@@ -280,9 +280,11 @@ function setStoreItems(url, store) {
   }
 
   $.ajax({
-    async: true,
+    async: true, // Default is true
     type: 'GET',
     url: '/fetch?url=' + encodeURIComponent(url),
+    // url: url, // Just use the URL like this to bypass the local /fetch endpoint in app.js that otherwise acts as a broker (for caching purposes and intermediate error handling)
+    cache: false, // Default is true to enable client-side caching, but we want to have server-side caching only (via app.js) to ensure that all users get the same data
     timeout: 30000
   })
     .done(async function (page) {
