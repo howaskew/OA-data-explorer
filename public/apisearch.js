@@ -1446,6 +1446,20 @@ function runForm(pageNumber) {
 
 // -------------------------------------------------------------------------------------------------
 
+
+function getSummary() {
+// Make a GET request to retrieve the sum values from the server
+$.getJSON('/sum', function(response) {
+  console.log(`numParent: ${response.sum1} numChild: ${response.sum2}`);
+})
+.fail(function(error) {
+  console.error('Error retrieving sum values:', error);
+});
+}
+
+// -------------------------------------------------------------------------------------------------
+
+
 function setPage() {
 
   $("#provider").on("change", function () {
