@@ -1278,19 +1278,19 @@ function updateParameters(parm, parmVal) {
 // -------------------------------------------------------------------------------------------------
 
 function updateProvider() {
-  provider = $("#provider option:selected").text();
+  provider = $('#provider option:selected').text();
   clearDisplay();
   //Replicating setEndpoints, without the page reset
-  $.getJSON("/feeds", function (data) {
-    $("#endpoint").empty();
+  $.getJSON('/feeds', function (data) {
+    $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
       if (feed.publisherName === provider) {
-        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
       }
     });
   })
     .done(function () {
-      endpoint = $("#endpoint").val();
+      endpoint = $('#endpoint').val();
       updateEndpoint();
     });
 }
@@ -1602,11 +1602,11 @@ function setPage() {
 // -------------------------------------------------------------------------------------------------
 
 function setProvider() {
-  $.getJSON("/feeds", function (data) {
-    $("#provider").empty()
+  $.getJSON('/feeds', function (data) {
+    $('#provider').empty()
     providers = [... new Set(data.feeds.map(feed => feed.publisherName))];
     $.each(providers, function (index, name) {
-      $("#provider").append("<option value='" + name + "'>" + name + "</option>");
+      $('#provider').append(`<option value='${name}'>${name}</option>`);
     });
   })
     .done(function () {
@@ -1615,20 +1615,20 @@ function setProvider() {
 }
 
 function setEndpoints() {
-  provider = $("#provider option:selected").text();
-  $.getJSON("/feeds", function (data) {
-    $("#endpoint").empty();
+  provider = $('#provider option:selected').text();
+  $.getJSON('/feeds', function (data) {
+    $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
       feeds[feed.url] = feed;
       if (feed.publisherName === provider) {
-        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
       }
     });
   })
     .done(function () {
-      updateParameters("endpoint", $("#endpoint").val());
+      updateParameters('endpoint', $('#endpoint').val());
       setPage();
-      $("#user-url").val($("#endpoint").val());
+      $('#user-url').val($('#endpoint').val());
     });
 }
 
