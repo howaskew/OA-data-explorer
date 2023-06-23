@@ -179,7 +179,7 @@ function clearStore(store) {
   store.showMap = null;
   store.filteredItemsUniqueOrganizers = null;
   store.filteredItemsUniqueLocations = null;
-  store.filteredItemsUniqueActivities = null;
+  store.filteredItemsUniqueActivityIds = null;
   store.filteredItemsUniqueParentIds = null;
   store.filteredItemsUniqueDates = null;
 }
@@ -701,7 +701,7 @@ function renderTree(concepts, level, output) {
   // Recursively .getNarrower() on concepts
   concepts.forEach(function (concept) {
     let label = concept.prefLabel;
-    let hidden = "";
+    let hidden = '';
     // Include altLabels (e.g. Group Cycling) to make them visible to the user
     if (concept.altLabel && concept.altLabel.length > 0) {
       label = label + ' / ' + concept.altLabel.join(' / ')
@@ -717,7 +717,7 @@ function renderTree(concepts, level, output) {
       'data-value': concept.id,
       'data-level': level,
       'data-hidden': hidden,
-      'href': "#",
+      'href': '#',
       'text': label
     }));
 
@@ -753,7 +753,7 @@ function renderOrganizerList(organizers) {
     </div>`);
   $('#organizer-list-selected').val(organizerListSelected);
 
-  // Render the organizer list in a format the HierarchySelect will understand
+  // Render the organizer list in a format HierarchySelect will understand:
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
     Object.keys(organizers).map(organizerName =>
       $('<a/>', {
@@ -768,9 +768,9 @@ function renderOrganizerList(organizers) {
 
   $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#organizer-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
       // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
@@ -791,7 +791,7 @@ function renderActivityList(activities) {
   // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
   $('#activity-list-dropdown').empty();
   $('#activity-list-dropdown').append(
-    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown">
+    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
         <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="activity-list-button">
@@ -806,17 +806,16 @@ function renderActivityList(activities) {
     </div>`);
   $('#activity-list-selected').val(activityListSelected);
 
-  // Render the activity list in a format the HierarchySelect will understand
+  // Render the activity list in a format HierarchySelect will understand:
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
 
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
-      let concept = activities.getConceptByID(htmlDataValue);
       // Note that htmlDataValue is the same as $('#activity-list-selected').val()
       if (htmlDataValue !== activityListSelected) {
         console.warn(`Selected activity for filter: ${htmlDataValue}`);
@@ -850,7 +849,7 @@ function renderLocationList(locations) {
       </div>`);
   $('#location-list-selected').val(locationListSelected);
 
-  // Render the location list in a format the HierarchySelect will understand
+  // Render the location list in a format HierarchySelect will understand:
   $(`#location-list-dropdown-${locationListRefresh} .hs-menu-inner`).append(
     Object.keys(locations).map(locationName =>
       $('<a/>', {
@@ -865,9 +864,9 @@ function renderLocationList(locations) {
 
   $(`#location-list-dropdown-${locationListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
       // Note that htmlDataValue is the same as $('#location-list-selected').val()
@@ -891,8 +890,8 @@ function renderSchedule(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateActivityList(activitiesObj) {
-  let activities = scheme_1.generateSubset(Object.keys(activitiesObj));
+function updateActivityList(activityIds) {
+  let activities = scheme_1.generateSubset(Object.keys(activityIds));
   renderActivityList(activities);
 }
 
