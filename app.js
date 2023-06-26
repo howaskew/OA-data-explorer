@@ -5,6 +5,9 @@ const apicache = require('apicache');
 const { Handler } = require('htmlmetaparser');
 const { Parser } = require('htmlparser2');
 const sleep = require('util').promisify(setTimeout);
+require('dotenv').config(); // Load environment variables from .env
+
+
 
 const port = normalizePort(process.env.PORT || '3000');
 
@@ -57,7 +60,7 @@ const cacheSuccesses = cache('48 hours', onlyStatus200);
 
 // ** Passthrough RPDE fetch **
 // TODO: Restrict with cors and to RPDE only
-app.get('/fetch', cacheSuccesses, async(req, res, next) => {
+app.get('/fetch', cacheSuccesses, async (req, res, next) => {
   try {
     // req.url is the exact call to this function, and becomes the cache handle e.g. '/fetch?url=https%3A%2F%2Fopendata.leisurecloud.live%2Fapi%2Ffeeds%2FActiveNewham-live-live-session-series'
     // req.query.url is the page we actually want to go to e.g. 'https://opendata.leisurecloud.live/api/feeds/ActiveNewham-live-live-session-series'
@@ -98,14 +101,13 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         try {
           return await axios.get(catalogueUrl);
         }
-        catch (error)
-        {
+        catch (error) {
           console.log("Error getting catalogue: " + catalogueUrl);
           return null;
         }
       })))
-      .filter(catalogue => catalogue)
-      .flatMap(catalogue => catalogue.data.dataset);
+        .filter(catalogue => catalogue)
+        .flatMap(catalogue => catalogue.data.dataset);
 
       const datasets = (await Promise.all(datasetUrls.map(async (datasetUrl) => {
         try {
@@ -114,13 +116,12 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
             (await axios.get(datasetUrl)).data
           );
         }
-        catch (error)
-        {
+        catch (error) {
           console.log("Error getting dataset: " + datasetUrl);
           return null;
         }
       })))
-      .filter(dataset => dataset);
+        .filter(dataset => dataset);
 
       //console.log(datasets);
 
@@ -140,13 +141,15 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
         console.log(`${type} (${typeCounts[type]})`);
       });
 
-// Dataset providers should be encouraged to adjust the following in their dataset pages, and make
-// sure there are none which are undefined, then we won't need the normalisation in the following
-// code block:
-//
-//   'ScheduledSessions' -> 'ScheduledSession'
-//   'sessions' -> 'ScheduledSession'
-//   'Slot for FacilityUse' -> 'Slot'
+
+
+      // Dataset providers should be encouraged to adjust the following in their dataset pages, and make
+      // sure there are none which are undefined, then we won't need the normalisation in the following
+      // code block:
+      //
+      //   'ScheduledSessions' -> 'ScheduledSession'
+      //   'sessions' -> 'ScheduledSession'
+      //   'Slot for FacilityUse' -> 'Slot'
 
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
@@ -158,24 +161,24 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
           licenseUrl: dataset.license,
           publisherName: dataset.publisher.name,
         })
-      )))
-      .filter(feed => feed.type !== 'CourseInstance')
-      .filter(feed => feed.type !== 'Event')
-      .filter(feed => feed.type !== undefined)
-      .filter(feed => feed.type !== 'OnDemandEvent')
-      .filter(feed => feed.url && feed.name.substr(0,1).trim())
-      .sort(function(feed1, feed2) {
-         return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
-      })
-      .map(feed => {
-        if (['ScheduledSessions', 'sessions'].includes(feed.type)) {
-          feed.type = 'ScheduledSession';
-        }
-        else if (['Slot for FacilityUse'].includes(feed.type)) {
-          feed.type = 'Slot';
-        }
-        return feed;
-      });
+        )))
+        .filter(feed => feed.type !== 'CourseInstance')
+        .filter(feed => feed.type !== 'Event')
+        .filter(feed => feed.type !== undefined)
+        .filter(feed => feed.type !== 'OnDemandEvent')
+        .filter(feed => feed.url && feed.name.substr(0, 1).trim())
+        .sort(function (feed1, feed2) {
+          return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
+        })
+        .map(feed => {
+          if (['ScheduledSessions', 'sessions'].includes(feed.type)) {
+            feed.type = 'ScheduledSession';
+          }
+          else if (['Slot for FacilityUse'].includes(feed.type)) {
+            feed.type = 'Slot';
+          }
+          return feed;
+        });
 
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
@@ -195,7 +198,7 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
 })();
 
 app.get('/feeds', function (req, res) {
-  res.send({"feeds": feeds});
+  res.send({ "feeds": feeds });
 });
 
 app.get('/api/cache/performance', (req, res) => {
@@ -231,6 +234,7 @@ app.use(function (err, req, res, next) {
     res.status(500).json({error: err.stack});
     console.error(err.stack);
 });
+
 
 const server = http.createServer(app);
 server.on('error', onError);
@@ -286,3 +290,166 @@ function onError(error) {
       throw error;
   }
 }
+
+
+// additions for summary data storage
+
+const bodyParser = require('body-parser');
+const { Client } = require('pg');
+
+// Middleware
+app.use(bodyParser.json());
+
+// Create a new PostgreSQL client
+const client = new Client({
+  // Heroku provides the DATABASE_URL environment variable
+  // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
+  // host and port: localhost:5432
+  connectionString: process.env.DATABASE_URL 
+});
+
+async function createTableIfNotExists() {
+  try {
+    await client.connect()
+      .then(() => {
+        console.log('Connected to the database!');
+      })
+      .catch((err) => {
+        console.error('Error connecting to the database:', err);
+      });
+
+    const checkTableQuery = `
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.tables
+      WHERE table_name = 'openactivedq'
+    );
+  `;
+
+    const { rows } = await client.query(checkTableQuery);
+
+    const tableExists = rows[0].exists;
+
+    if (!tableExists) {
+      const createTableQuery = `
+        CREATE TABLE openactivedq (
+          id VARCHAR(255) PRIMARY KEY,
+          numParent INTEGER,
+          numChild INTEGER,
+          DQ_validActivity INTEGER, 
+          DQ_validGeo INTEGER, 
+          DQ_validDate INTEGER, 
+          DQ_validSeriesUrl INTEGER, 
+          DQ_validSessionUrl INTEGER, 
+          dateUpdated INTEGER
+        );
+      `;
+
+      await client.query(createTableQuery);
+
+      console.log('Table created successfully!');
+    } else {
+      console.log('Table already exists.');
+
+      //During development, may be convenient to recreate the database (when adding fields etc)
+      
+      const deleteTableQuery = 'DROP TABLE openactivedq';
+
+      client.query(deleteTableQuery);
+
+      const createTableQuery = `
+        CREATE TABLE openactivedq (
+          id VARCHAR(255) PRIMARY KEY,
+          numParent INTEGER,
+          numChild INTEGER,
+          DQ_validActivity INTEGER, 
+          DQ_validGeo INTEGER, 
+          DQ_validDate INTEGER, 
+          DQ_validSeriesUrl INTEGER, 
+          DQ_validSessionUrl INTEGER, 
+          dateUpdated INTEGER
+        );
+      `;
+
+      await client.query(createTableQuery);
+
+      console.log('Table recreated successfully!');
+
+
+
+    }
+  } catch (err) {
+    console.error('Error creating table:', err);
+  } finally {
+    // IF testing for connection, can end connection HERE
+    //  await client.end();
+  }
+}
+
+createTableIfNotExists();
+
+// API endpoint for inserting data
+
+app.post('/api/insert', async (req, res) => {
+  try {
+
+    // Test for existing connection HERE
+
+    // Assuming the client sends the name and email in the request body
+    const { id, numParent, numChild, DQ_validActivity,
+    DQ_validGeo, DQ_validDate, DQ_validSeriesUrl,
+  DQ_validSessionUrl, dateUpdated } = req.body;
+
+    // Validate and sanitize the input
+    // Implement appropriate validation logic based on your requirements
+
+    // Insert data into the database using a parameterized query
+    const insertQuery = `
+    INSERT INTO openactivedq (id, numparent, numchild, dq_validactivity,dq_validgeo, dq_validdate,
+      dq_validseriesurl, dq_validsessionurl,dateupdated)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (id)
+    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild, 
+    dq_validactivity = EXCLUDED.dq_validactivity, 
+    dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate, 
+    dq_validseriesurl = EXCLUDED.dq_validseriesurl,
+    dq_validsessionurl = EXCLUDED.dq_validsessionurl, 
+    dateupdated = EXCLUDED.dateupdated
+
+    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validseriesurl, dq_validsessionurl, dateupdated;    
+    `;
+
+    const values = [id, numParent, numChild, DQ_validActivity,
+      DQ_validGeo, DQ_validDate, DQ_validSeriesUrl,DQ_validSessionUrl, dateUpdated];
+    const result = await client.query(insertQuery, values);
+
+    // Send the inserted data back to the client as a response
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error inserting data:', err);
+    res.status(500).json({ error: 'An error occurred while inserting data.' });
+  }
+});
+
+
+
+
+// Define a route handler to retrieve the sum values
+app.get('/sum', async (req, res) => {
+  try {
+    const sumQuery = `
+      SELECT SUM(numparent) AS sum1, SUM(numchild) AS sum2
+      FROM openactivedq;
+    `;
+    const result = await client.query(sumQuery);
+    const sum1 = result.rows[0].sum1;
+    const sum2 = result.rows[0].sum2;
+    res.json({ sum1, sum2 });
+  } catch (error) {
+    console.error('Error executing the sum query:', error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
+
+// app.js resumes...
+

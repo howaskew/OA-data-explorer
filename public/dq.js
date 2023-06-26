@@ -188,7 +188,7 @@ function setStoreDataQualityItems() {
         // If it is matched, we have the data in combined items so can delete...
         // Actually, don't try and delete anything, as may still need storeSuperEvent and storeSubEvent elsewhere e.g. setJSONTab()
       }
-      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx+1} of ${Object.keys(storeSubEvent.items).length} items`);
+      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx + 1} of ${Object.keys(storeSubEvent.items).length} items`);
     }
 
     storeDataQuality.items = storeCombinedItems;
@@ -227,6 +227,19 @@ function setStoreDataQualityItems() {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItemFlags() {
+
+  let storeSummary = {
+    id: storeIngressOrder1.firstPage,
+    numParent: 0,
+    numChild: storeDataQuality.items.length,
+    DQ_validActivity: 0,
+    DQ_validGeo: 0, 
+    DQ_validDate: 0, 
+    DQ_validSeriesUrl: 0, 
+    DQ_validSessionUrl: 0, 
+    dateUpdated: 0
+  };
+
   let dqp = $("#DQProgress");
 
   const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
@@ -281,6 +294,9 @@ function setStoreDataQualityItemFlags() {
         .filter(prefLabel => prefLabel)
         .length > 0;
 
+    if (item.DQ_validActivity) {
+      storeSummary.DQ_validActivity++;
+    }
     // -------------------------------------------------------------------------------------------------
 
     // Name info
@@ -313,6 +329,9 @@ function setStoreDataQualityItemFlags() {
       (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
       (typeof latitude === 'number' && typeof longitude === 'number');
 
+      if (item.DQ_validGeo) {
+        storeSummary.DQ_validGeo++;
+      }
     // -------------------------------------------------------------------------------------------------
 
     // Date info
@@ -323,6 +342,9 @@ function setStoreDataQualityItemFlags() {
       !isNaN(date) &&
       date >= dateNow;
 
+      if (item.DQ_validDate) {
+        storeSummary.DQ_validDate++;
+      }
     // -------------------------------------------------------------------------------------------------
 
     // URL info
@@ -352,7 +374,7 @@ function setStoreDataQualityItemFlags() {
 
     // -------------------------------------------------------------------------------------------------
 
-    dqp.text(`Measuring Data Quality: ${itemIdx+1} of ${storeDataQuality.items.length} items`);
+    dqp.text(`Measuring Data Quality: ${itemIdx + 1} of ${storeDataQuality.items.length} items`);
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -364,6 +386,7 @@ function setStoreDataQualityItemFlags() {
   for (const itemIdxs of Object.values(urls)) {
     if (itemIdxs.length === 1) {
       storeDataQuality.items[itemIdxs[0]].DQ_validUrl = true;
+      storeSummary.DQ_validSessionUrl++;
     }
   }
 
@@ -390,6 +413,7 @@ function setStoreDataQualityItemFlags() {
     if (parentIdxs.length === 1) {
       for (const itemIdx of parents[parentIdxs[0]].itemIdxs) {
         storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
+        storeSummary.DQ_validSeriesUrl++;
       }
     }
   }
@@ -400,11 +424,46 @@ function setStoreDataQualityItemFlags() {
     }
   }
 
+  storeSummary.numParent = parents.length;
+
   // -------------------------------------------------------------------------------------------------
 
   urls = {};
   parents = {};
   parentUrls = {};
+
+
+  // -------------------------------------------------------------------------------------------------
+
+  // Write feed level data to database
+
+  console.log(storeSummary);
+  //console.log(storeDataQuality);
+
+  (async () => {
+    try {  
+      const response = await fetch('/api/insert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(storeSummary)
+      });
+  
+      if (response.ok) {
+        const insertedData = await response.json();
+        console.log('Data inserted successfully:', insertedData);
+      } else {
+        console.error('Error inserting data:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+    }
+  })();
+  
+  getSummary();
+
 
 }
 
@@ -470,19 +529,19 @@ function postDataQuality() {
       !filters.organizer
         ? true
         : item.DQ_validOrganizer &&
-          resolveProperty(item, 'organizer').name === filters.organizer;
+        resolveProperty(item, 'organizer').name === filters.organizer;
 
     let itemMatchesLocation =
       !filters.location
         ? true
         : item.DQ_validLocation &&
-          resolveProperty(item, 'location').name === filters.location;
+        resolveProperty(item, 'location').name === filters.location;
 
     let itemMatchesActivity =
       !filters.relevantActivitySet
         ? true
         : item.DQ_validActivity &&
-          (resolveProperty(item, 'activity') || [])
+        (resolveProperty(item, 'activity') || [])
           .filter(activity => filters.relevantActivitySet.has(activity['id'] || activity['@id'] || 'NONE'))
           .length > 0;
 
@@ -490,8 +549,8 @@ function postDataQuality() {
       !filters.day
         ? true
         : item.data &&
-          item.data.eventSchedule &&
-          item.data.eventSchedule
+        item.data.eventSchedule &&
+        item.data.eventSchedule
           .filter(x =>
             x.byDay &&
             x.byDay.includes(filters.day) ||
