@@ -46,11 +46,6 @@ let feeds = {};
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-// app.all('/', function(req, res, next) {
-//   res.header('Access-Control-Allow-Origin', '*');
-//   res.header('Access-Control-Allow-Headers', 'X-Requested-With');
-//   next();
-// });
 
 axios.defaults.timeout = 30000; // In ms. Default 0. Increase to wait for longer to receive response. Should be less than the timeout in apisearch.js which calls /fetch herein.
 
@@ -60,7 +55,19 @@ const cacheSuccesses = cache('48 hours', onlyStatus200);
 
 // ** Passthrough RPDE fetch **
 // TODO: Restrict with cors and to RPDE only
-app.get('/fetch', cacheSuccesses, async (req, res, next) => {
+
+// Use this approach to enable access control for all HTTP methods that go to /fetch (and likewise
+// for any other endpoint). Note that after the headers are set, the next() command then goes to the
+// actual method requested. This approach is not currently needed as we only use one method per
+// endpoint, so just adjust the headers inside each one:
+// app.all('/fetch', function(req, res, next) {
+//   res.header('Access-Control-Allow-Origin', '*');
+//   res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+//   next();
+// });
+app.get('/fetch', cacheSuccesses, async(req, res, next) => {
+  // res.header('Access-Control-Allow-Origin', '*');
+  // res.header('Access-Control-Allow-Headers', 'X-Requested-With');
   try {
     // req.url is the exact call to this function, and becomes the cache handle e.g. '/fetch?url=https%3A%2F%2Fopendata.leisurecloud.live%2Fapi%2Ffeeds%2FActiveNewham-live-live-session-series'
     // req.query.url is the page we actually want to go to e.g. 'https://opendata.leisurecloud.live/api/feeds/ActiveNewham-live-live-session-series'
@@ -182,11 +189,11 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
 
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
-      // Prefetch pages into cache to reduce initial load
+      // Prefetch pages into cache to reduce initial load:
       //for (const feed of feeds) {
-      //  // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site
+      //  // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
       //  await sleep(60000);
-      //  harvest(dataset.url);
+      //  harvest(feed.url);
       //}
 
     }
@@ -305,7 +312,7 @@ const client = new Client({
   // Heroku provides the DATABASE_URL environment variable
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
-  connectionString: process.env.DATABASE_URL 
+  connectionString: process.env.DATABASE_URL
 });
 
 async function createTableIfNotExists() {
@@ -336,11 +343,11 @@ async function createTableIfNotExists() {
           id VARCHAR(255) PRIMARY KEY,
           numParent INTEGER,
           numChild INTEGER,
-          DQ_validActivity INTEGER, 
-          DQ_validGeo INTEGER, 
-          DQ_validDate INTEGER, 
-          DQ_validSeriesUrl INTEGER, 
-          DQ_validSessionUrl INTEGER, 
+          DQ_validActivity INTEGER,
+          DQ_validGeo INTEGER,
+          DQ_validDate INTEGER,
+          DQ_validSeriesUrl INTEGER,
+          DQ_validSessionUrl INTEGER,
           dateUpdated INTEGER
         );
       `;
@@ -352,7 +359,7 @@ async function createTableIfNotExists() {
       console.log('Table already exists.');
 
       //During development, may be convenient to recreate the database (when adding fields etc)
-      
+
       const deleteTableQuery = 'DROP TABLE openactivedq';
 
       client.query(deleteTableQuery);
@@ -362,11 +369,11 @@ async function createTableIfNotExists() {
           id VARCHAR(255) PRIMARY KEY,
           numParent INTEGER,
           numChild INTEGER,
-          DQ_validActivity INTEGER, 
-          DQ_validGeo INTEGER, 
-          DQ_validDate INTEGER, 
-          DQ_validSeriesUrl INTEGER, 
-          DQ_validSessionUrl INTEGER, 
+          DQ_validActivity INTEGER,
+          DQ_validGeo INTEGER,
+          DQ_validDate INTEGER,
+          DQ_validSeriesUrl INTEGER,
+          DQ_validSessionUrl INTEGER,
           dateUpdated INTEGER
         );
       `;
@@ -409,14 +416,14 @@ app.post('/api/insert', async (req, res) => {
       dq_validseriesurl, dq_validsessionurl,dateupdated)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (id)
-    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild, 
-    dq_validactivity = EXCLUDED.dq_validactivity, 
-    dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate, 
+    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild,
+    dq_validactivity = EXCLUDED.dq_validactivity,
+    dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate,
     dq_validseriesurl = EXCLUDED.dq_validseriesurl,
-    dq_validsessionurl = EXCLUDED.dq_validsessionurl, 
+    dq_validsessionurl = EXCLUDED.dq_validsessionurl,
     dateupdated = EXCLUDED.dateupdated
 
-    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validseriesurl, dq_validsessionurl, dateupdated;    
+    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validseriesurl, dq_validsessionurl, dateupdated;
     `;
 
     const values = [id, numParent, numChild, DQ_validActivity,
@@ -452,4 +459,3 @@ app.get('/sum', async (req, res) => {
 });
 
 // app.js resumes...
-
