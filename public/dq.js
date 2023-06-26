@@ -232,7 +232,12 @@ function setStoreDataQualityItemFlags() {
     id: storeIngressOrder1.firstPage,
     numParent: 0,
     numChild: storeDataQuality.items.length,
-    DQ_validActivity: 0
+    DQ_validActivity: 0,
+    DQ_validGeo: 0, 
+    DQ_validDate: 0, 
+    DQ_validSeriesUrl: 0, 
+    DQ_validSessionUrl: 0, 
+    dateUpdated: 0
   };
 
   let dqp = $("#DQProgress");
@@ -324,6 +329,9 @@ function setStoreDataQualityItemFlags() {
       (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
       (typeof latitude === 'number' && typeof longitude === 'number');
 
+      if (item.DQ_validGeo) {
+        storeSummary.DQ_validGeo++;
+      }
     // -------------------------------------------------------------------------------------------------
 
     // Date info
@@ -334,6 +342,9 @@ function setStoreDataQualityItemFlags() {
       !isNaN(date) &&
       date >= dateNow;
 
+      if (item.DQ_validDate) {
+        storeSummary.DQ_validDate++;
+      }
     // -------------------------------------------------------------------------------------------------
 
     // URL info
@@ -375,6 +386,7 @@ function setStoreDataQualityItemFlags() {
   for (const itemIdxs of Object.values(urls)) {
     if (itemIdxs.length === 1) {
       storeDataQuality.items[itemIdxs[0]].DQ_validUrl = true;
+      storeSummary.DQ_validSessionUrl++;
     }
   }
 
@@ -401,6 +413,7 @@ function setStoreDataQualityItemFlags() {
     if (parentIdxs.length === 1) {
       for (const itemIdx of parents[parentIdxs[0]].itemIdxs) {
         storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
+        storeSummary.DQ_validSeriesUrl++;
       }
     }
   }

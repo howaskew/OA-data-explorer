@@ -322,7 +322,12 @@ async function createTableIfNotExists() {
           id VARCHAR(255) PRIMARY KEY,
           numParent INTEGER,
           numChild INTEGER,
-          DQ_validActivity INTEGER 
+          DQ_validActivity INTEGER, 
+          DQ_validGeo INTEGER, 
+          DQ_validDate INTEGER, 
+          DQ_validSeriesUrl INTEGER, 
+          DQ_validSessionUrl INTEGER, 
+          dateUpdated INTEGER
         );
       `;
 
@@ -334,22 +339,27 @@ async function createTableIfNotExists() {
 
       //During development, may be convenient to recreate the database (when adding fields etc)
       
-      //const deleteTableQuery = 'DROP TABLE openactivedq';
+      const deleteTableQuery = 'DROP TABLE openactivedq';
 
-      //client.query(deleteTableQuery);
+      client.query(deleteTableQuery);
 
-      //const createTableQuery = `
-      //CREATE TABLE openactivedq (
-      //  id VARCHAR(255) PRIMARY KEY,
-      //  numParent INTEGER,
-      //  numChild INTEGER,
-      //  DQ_validActivity INTEGER 
-      //);
-      //`;
+      const createTableQuery = `
+        CREATE TABLE openactivedq (
+          id VARCHAR(255) PRIMARY KEY,
+          numParent INTEGER,
+          numChild INTEGER,
+          DQ_validActivity INTEGER, 
+          DQ_validGeo INTEGER, 
+          DQ_validDate INTEGER, 
+          DQ_validSeriesUrl INTEGER, 
+          DQ_validSessionUrl INTEGER, 
+          dateUpdated INTEGER
+        );
+      `;
 
-      //await client.query(createTableQuery);
+      await client.query(createTableQuery);
 
-      //console.log('Table recreated successfully!');
+      console.log('Table recreated successfully!');
 
 
 
@@ -372,21 +382,31 @@ app.post('/api/insert', async (req, res) => {
     // Test for existing connection HERE
 
     // Assuming the client sends the name and email in the request body
-    const { id, numParent, numChild, DQ_validActivity } = req.body;
+    const { id, numParent, numChild, DQ_validActivity,
+    DQ_validGeo, DQ_validDate, DQ_validSeriesUrl,
+  DQ_validSessionUrl, dateUpdated } = req.body;
 
     // Validate and sanitize the input
     // Implement appropriate validation logic based on your requirements
 
     // Insert data into the database using a parameterized query
     const insertQuery = `
-    INSERT INTO openactivedq (id, numparent, numchild, dq_validactivity)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO openactivedq (id, numparent, numchild, dq_validactivity,dq_validgeo, dq_validdate,
+      dq_validseriesurl, dq_validsessionurl,dateupdated)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (id)
-    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild, dq_validactivity = EXCLUDED.dq_validactivity
-    RETURNING id, numparent, numchild, dq_validactivity;    
+    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild, 
+    dq_validactivity = EXCLUDED.dq_validactivity, 
+    dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate, 
+    dq_validseriesurl = EXCLUDED.dq_validseriesurl,
+    dq_validsessionurl = EXCLUDED.dq_validsessionurl, 
+    dateupdated = EXCLUDED.dateupdated
+
+    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validseriesurl, dq_validsessionurl, dateupdated;    
     `;
 
-    const values = [id, numParent, numChild, DQ_validActivity];
+    const values = [id, numParent, numChild, DQ_validActivity,
+      DQ_validGeo, DQ_validDate, DQ_validSeriesUrl,DQ_validSessionUrl, dateUpdated];
     const result = await client.query(insertQuery, values);
 
     // Send the inserted data back to the client as a response
