@@ -46,17 +46,27 @@ let feeds = {};
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
+app.all('/', function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+  next();
+});
+
+axios.defaults.timeout = 30000; // In ms. Default 0. Increase to wait for longer to receive response. Should be less than the timeout in apisearch.js which calls /fetch herein.
 
 let cache = apicache.middleware;
-
 const onlyStatus200 = (req, res) => res.statusCode === 200;
-
 const cacheSuccesses = cache('48 hours', onlyStatus200);
 
 // ** Passthrough RPDE fetch **
 // TODO: Restrict with cors and to RPDE only
 app.get('/fetch', cacheSuccesses, async (req, res, next) => {
   try {
+    // req.url is the exact call to this function, and becomes the cache handle e.g. '/fetch?url=https%3A%2F%2Fopendata.leisurecloud.live%2Fapi%2Ffeeds%2FActiveNewham-live-live-session-series'
+    // req.query.url is the page we actually want to go to e.g. 'https://opendata.leisurecloud.live/api/feeds/ActiveNewham-live-live-session-series'
+    // See the apicache source code and search for 'originalUrl' for further details:
+    // - https://www.npmjs.com/package/apicache?activeTab=code
+    // console.log(`Making call for: ${req.url} => ${req.query.url}`);
     const page = await axios.get(req.query.url);
     res.status(200).send(page.data);
   } catch (error) {
@@ -89,9 +99,7 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
 
       const datasetUrls = (await Promise.all(catalogueCollection.data.hasPart.map(async (catalogueUrl) => {
         try {
-          return await axios.get(catalogueUrl, {
-            timeout: 20000
-          });
+          return await axios.get(catalogueUrl);
         }
         catch (error) {
           console.log("Error getting catalogue: " + catalogueUrl);
@@ -105,9 +113,7 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
         try {
           return extractJSONLDfromHTML(
             datasetUrl,
-            (await axios.get(datasetUrl, {
-              timeout: 20000
-            })).data
+            (await axios.get(datasetUrl)).data
           );
         }
         catch (error) {
@@ -116,7 +122,6 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
         }
       })))
         .filter(dataset => dataset);
-
 
       //console.log(datasets);
 
@@ -175,8 +180,6 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
           return feed;
         });
 
-
-
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
       // Prefetch pages into cache to reduce initial load
@@ -198,15 +201,26 @@ app.get('/feeds', function (req, res) {
   res.send({ "feeds": feeds });
 });
 
-app.post('/api/clear-cache', (req, res) => {
+app.get('/api/cache/performance', (req, res) => {
+  res.json(apicache.getPerformance());
+});
+
+app.get('/api/cache/index', (req, res) => {
+  res.json(apicache.getIndex());
+});
+
+app.post('/api/cache/clear', (req, res) => {
   const url = req.body.url;
   apicache.clear(url);
+  // For client-side logging:
   res.send(`Cache cleared for ${url}`);
+  // For server-side logging:
+  // console.log(`Cache cleared for ${url}`);
 });
 
 async function harvest(url) {
   console.log(`Prefetch: ${url}`);
-  const { data } = await axios.get(`http://localhost:${port}/fetch?url=` + encodeURIComponent(url));
+  const { data } = await axios.get(`/fetch?url=${encodeURIComponent(url)}`);
   if (!data.next) {
     console.log(`Error prefetching: ${url}`);
   } else if (data.next !== url) {
@@ -217,16 +231,16 @@ async function harvest(url) {
 // ** Error handling **
 
 app.use(function (err, req, res, next) {
-  res.status(500).json({ error: err.stack });
-  console.error(err.stack);
-})
+    res.status(500).json({error: err.stack});
+    console.error(err.stack);
+});
+
 
 const server = http.createServer(app);
 server.on('error', onError);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-
 });
 
 /**
