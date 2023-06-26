@@ -43,11 +43,11 @@ let feeds = {};
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-app.all('/', function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'X-Requested-With');
-  next();
-});
+// app.all('/', function(req, res, next) {
+//   res.header('Access-Control-Allow-Origin', '*');
+//   res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+//   next();
+// });
 
 axios.defaults.timeout = 30000; // In ms. Default 0. Increase to wait for longer to receive response. Should be less than the timeout in apisearch.js which calls /fetch herein.
 
