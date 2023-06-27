@@ -371,27 +371,27 @@ async function createTableIfNotExists() {
 
       //During development, may be convenient to recreate the database (when adding fields etc)
 
-      const deleteTableQuery = 'DROP TABLE openactivedq';
+      //const deleteTableQuery = 'DROP TABLE openactivedq';
 
-      client.query(deleteTableQuery);
+      //client.query(deleteTableQuery);
 
-      const createTableQuery = `
-        CREATE TABLE openactivedq (
-          id VARCHAR(255) PRIMARY KEY,
-          numParent INTEGER,
-          numChild INTEGER,
-          DQ_validActivity INTEGER,
-          DQ_validGeo INTEGER,
-          DQ_validDate INTEGER,
-          DQ_validSeriesUrl INTEGER,
-          DQ_validSessionUrl INTEGER,
-          dateUpdated INTEGER
-        );
-      `;
+      //const createTableQuery = `
+      //  CREATE TABLE openactivedq (
+      //    id VARCHAR(255) PRIMARY KEY,
+      //    numParent INTEGER,
+      //    numChild INTEGER,
+      //   DQ_validActivity INTEGER,
+      //    DQ_validGeo INTEGER,
+      //    DQ_validDate INTEGER,
+      //    DQ_validSeriesUrl INTEGER,
+      //    DQ_validSessionUrl INTEGER,
+      //    dateUpdated INTEGER
+      //  );
+      //`;
 
-      await client.query(createTableQuery);
+      //await client.query(createTableQuery);
 
-      console.log('Table recreated successfully!');
+      //console.log('Table recreated successfully!');
 
 
 
