@@ -483,9 +483,9 @@ function resolveDate(item, prop) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder1FirstPage() {
+async function setStoreIngressOrder1FirstPage() {
   if (storeIngressOrder1FirstPageFromUser) {
-    axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
+    await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
       .then(response => {
         storeIngressOrder1.firstPage = (response.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
       })
@@ -500,22 +500,22 @@ function setStoreIngressOrder1FirstPage() {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder2FirstPage() {
+async function setStoreIngressOrder2FirstPage() {
   switch (storeIngressOrder1.feedType) {
     case 'SessionSeries':
-      setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
       break;
     case 'ScheduledSession':
-      setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
       break;
     case 'FacilityUse':
-      setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
       break;
     case 'IndividualFacilityUse':
-      setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
       break;
     case 'Slot':
-      setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
+      await setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
       break;
     default:
       storeIngressOrder2.firstPage = null;
@@ -1426,7 +1426,7 @@ function updateKeywords() {
 
 // -------------------------------------------------------------------------------------------------
 
-function runForm(pageNumber) {
+async function runForm(pageNumber) {
 
   if (pageNumber === undefined) {
     pageNumber = null;
@@ -1464,7 +1464,7 @@ function runForm(pageNumber) {
 
   storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
-  setStoreIngressOrder1FirstPage();
+  await setStoreIngressOrder1FirstPage();
   setStoreFeedType(storeIngressOrder1);
 
   if (superEventFeedTypes.includes(storeIngressOrder1.feedType)) {
@@ -1480,7 +1480,7 @@ function runForm(pageNumber) {
   }
 
   if (storeSuperEvent && storeSubEvent) {
-    setStoreIngressOrder2FirstPage();
+    await setStoreIngressOrder2FirstPage();
     setStoreFeedType(storeIngressOrder2);
 
     if (storeIngressOrder1.feedType && storeIngressOrder2.feedType && storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
