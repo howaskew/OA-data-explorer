@@ -506,7 +506,7 @@ function postDataQuality() {
   storeDataQuality.showMap = false;
   storeDataQuality.filteredItemsUniqueOrganizers = new Object();
   storeDataQuality.filteredItemsUniqueLocations = new Object();
-  storeDataQuality.filteredItemsUniqueActivities = new Object();
+  storeDataQuality.filteredItemsUniqueActivityIds = new Object();
   storeDataQuality.filteredItemsUniqueParentIds = new Set();
   storeDataQuality.filteredItemsUniqueDates = new Map();
 
@@ -672,7 +672,7 @@ function postDataQuality() {
 
       if (item.DQ_validActivity) {
         let activities = resolveProperty(item, 'activity');
-        let itemUniqueActivities = new Set();
+        let itemUniqueActivityIds = new Set();
 
         activities
           .map(activity => activity['id'] || activity['@id'])
@@ -680,15 +680,15 @@ function postDataQuality() {
           .forEach(activityId => {
             let prefLabel = matchToActivityList(activityId);
             if (prefLabel) {
-              itemUniqueActivities.add(prefLabel);
-              if (!storeDataQuality.filteredItemsUniqueActivities.hasOwnProperty(prefLabel)) {
-                storeDataQuality.filteredItemsUniqueActivities[prefLabel] = 0;
+              itemUniqueActivityIds.add(activityId);
+              if (!storeDataQuality.filteredItemsUniqueActivityIds.hasOwnProperty(activityId)) {
+                storeDataQuality.filteredItemsUniqueActivityIds[activityId] = 0;
               }
-              storeDataQuality.filteredItemsUniqueActivities[prefLabel] += 1;
+              storeDataQuality.filteredItemsUniqueActivityIds[activityId] += 1;
             }
           });
 
-        if (itemUniqueActivities.size > 0) {
+        if (itemUniqueActivityIds.size > 0) {
           numFilteredItemsWithValidActivity++;
         }
       }
@@ -784,7 +784,7 @@ function postDataQuality() {
   storeDataQuality.filteredItemsUniqueOrganizers = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueOrganizers).sort());
   storeDataQuality.filteredItemsUniqueLocations = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueLocations).sort());
   // Sort objects by values in descending numerical order:
-  storeDataQuality.filteredItemsUniqueActivities = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueActivities).sort((a, b) => b[1] - a[1]));
+  storeDataQuality.filteredItemsUniqueActivityIds = Object.fromEntries(Object.entries(storeDataQuality.filteredItemsUniqueActivityIds).sort((a, b) => b[1] - a[1]));
 
   // Convert sets to arrays:
   for (const organizerInfo of Object.values(storeDataQuality.filteredItemsUniqueOrganizers)) {
@@ -804,7 +804,7 @@ function postDataQuality() {
   }
 
   // Create a new map from the first x entries:
-  const topActivities = new Map(Object.entries(storeDataQuality.filteredItemsUniqueActivities).slice(0, 5));
+  const topActivities = new Map(Object.entries(storeDataQuality.filteredItemsUniqueActivityIds).slice(0, 5));
 
   // -------------------------------------------------------------------------------------------------
 
@@ -827,9 +827,9 @@ function postDataQuality() {
   console.log(`Number of unique locations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations).length}`);
   // console.dir(`storeDataQuality.filteredItemsUniqueLocations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations)}`);
 
-  updateActivityList(storeDataQuality.filteredItemsUniqueActivities);
-  console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities).length}`);
-  // console.dir(`storeDataQuality.filteredItemsUniqueActivities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivities)}`);
+  updateActivityList(storeDataQuality.filteredItemsUniqueActivityIds);
+  console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length}`);
+  // console.dir(`storeDataQuality.filteredItemsUniqueActivityIds: ${Object.keys(storeDataQuality.filteredItemsUniqueActivityIds)}`);
 
   console.log(`Number of unique present/future dates: ${storeDataQuality.filteredItemsUniqueDates.size}`);
 
@@ -900,7 +900,7 @@ function postDataQuality() {
   // Hide y axis if no chart to display
   let show_y_axis = false;
 
-  if (Object.keys(storeDataQuality.filteredItemsUniqueActivities).length > 0) {
+  if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length > 0) {
     show_y_axis = true;
   }
 
@@ -908,7 +908,7 @@ function postDataQuality() {
 
   let x_axis_title = {};
 
-  if (Object.keys(storeDataQuality.filteredItemsUniqueActivities).length < 1) {
+  if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length < 1) {
     x_axis_title = {
       text: "No Matching Activity IDs",
       offsetX: -5,
@@ -988,7 +988,7 @@ function postDataQuality() {
     dataLabels: {
       enabled: false,
     },
-    labels: Array.from(topActivities.keys()),
+    labels: Array.from(topActivities.keys()).map(activityId => matchToActivityList(activityId)),
     colors: ['#71CBF2'],
     title: {
       text: storeDataQuality.filteredItemsUniqueParentIds.size.toLocaleString(),

@@ -97,6 +97,49 @@ let cp = $("#combineProgress");
 
 // -------------------------------------------------------------------------------------------------
 
+// Axios
+
+// Info on 'response' and 'error' from:
+// - https://axios-http.com/docs/res_schema
+// - https://www.sitepoint.com/axios-beginner-guide/
+
+// The 'response' object has the following properties:
+// - request (object): the actual XMLHttpRequest object (when running in a browser).
+// - config (object): the original request configuration.
+// - status (number): the HTTP code returned from the server.
+// - statusText (string): the HTTP status message returned by the server.
+// - headers (object): all the headers sent back by the server.
+// - data (object): the payload returned from the server. By default, Axios expects JSON and will parse this back into a JavaScript object for you.
+
+// The 'error' object will contain at least some of the following properties:
+// - request (object): the actual XMLHttpRequest object (when running in a browser).
+// - config (object): the original request configuration.
+// - response (object): the response object (if received) as described above.
+// - message (string): the error message text.
+
+// Note that with axios, if getting a remote URL directly then there may be issues due to sending the
+// request from the client-side herein, and extra steps will be required to sort out CORS policy details
+// (try it and see). However, we are going via our /fetch endpoint in the app.js server, so we don't
+// experience this issue in the current setup. See here for details:
+// - https://stackoverflow.com/questions/54212220/how-to-fix-access-to-xmlhttprequest-has-been-blocked-by-cors-policy-redirect-i
+
+// Disable client-side caching. Note that according to some sources, even this approach may still have
+// issues with routers, firewalls and proxies not honouring the settings. The only fool-proof method
+// may be a random string suffix on the URL, but that has issues when we actually do want to cache
+// on the server-side, and would require steps to remove the random suffix. Stick with this succinct
+// approach for now until as and when it clearly doesn't work. See here for details:
+// - https://stackoverflow.com/questions/49263559/using-javascript-axios-fetch-can-you-disable-browser-cache#comment132084883_69342671
+// - https://stackoverflow.com/questions/61224287/how-to-force-axios-to-not-cache-in-get-requests
+// - https://thewebdev.info/2021/11/18/how-to-disable-browser-cache-with-javascript-axios/
+axios.defaults.headers = {
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Expires': '0',
+};
+axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer to receive response. Should be greater than the timeout in app.js which calls out to the actual feed.
+
+// -------------------------------------------------------------------------------------------------
+
 function clearGlobals() {
   organizerListRefresh = 0;
   activityListRefresh = 0;
@@ -128,6 +171,7 @@ function clearStore(store) {
   store.itemKind = null; // From the RPDE feed
   store.itemDataType = null; // From the RPDE feed
   store.firstPage = null;
+  store.penultimatePage = null;
   store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
@@ -135,7 +179,7 @@ function clearStore(store) {
   store.showMap = null;
   store.filteredItemsUniqueOrganizers = null;
   store.filteredItemsUniqueLocations = null;
-  store.filteredItemsUniqueActivities = null;
+  store.filteredItemsUniqueActivityIds = null;
   store.filteredItemsUniqueParentIds = null;
   store.filteredItemsUniqueDates = null;
 }
@@ -210,21 +254,28 @@ function clearTabs() {
 // -------------------------------------------------------------------------------------------------
 
 function clearCache(store) {
-  // Call the clear cache endpoint with URL parameter
-  fetch('/api/clear-cache', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: store.lastPage })
-  })
-    .then(response => {
-      return response.text();
-    })
-    .then(data => {
-      console.log(data);
-    })
-    .catch(error => {
-      console.log(error);
-    });
+  for (const url of [store.penultimatePage, store.lastPage]) {
+    // By default, axios serializes JavaScript objects in the body to JSON via JSON.stringify(), so we
+    // don't need to explicitly use JSON.stringify() as with the 'fetch' package. See here for details:
+    // - https://axios-http.com/docs/urlencoded
+    axios.post(
+      '/api/cache/clear',
+      {
+        url: `/fetch?url=${encodeURIComponent(url)}`,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+      .then(response => {
+        console.log(response.data);
+      })
+      .catch(error => {
+        console.warn(error.message);
+      });
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -279,118 +330,134 @@ function setStoreItems(url, store) {
     progress = $("#progressDiv2");
   }
 
-  $.ajax({
-    async: true,
-    type: 'GET',
-    url: '/fetch?url=' + encodeURIComponent(url),
-    timeout: 30000
-  })
-    .done(async function (page) {
+  // Note that the following commented example does not work as intended, as 'url' is a special
+  // parameter name and becomes the actual URL of the GET request, so it doesn't end up going to
+  // '/fetch?url=xxx' at all. Would have to rename the 'url' parameter to something else, and adjust
+  // in app.js too, otherwise just stick to the live method unless this method is really needed for
+  // some reason later on:
+  // axios.get(
+  //   '/fetch',
+  //   {
+  //     params: {
+  //       url: ${encodeURIComponent(url)},
+  //     },
+  //   }
+  // )
+  axios.get(`/fetch?url=${encodeURIComponent(url)}`)
+    .then(response => {
+      if (
+        response.status === 200 &&
+        response.data.hasOwnProperty('items') &&
+        response.data.hasOwnProperty('next')
+      ) {
 
-      store.numPages++;
-      addApiPanel(url, store.ingressOrder);
+        store.numPages++;
+        addApiPanel(url, store.ingressOrder);
 
-      $.each(page.content ? page.content : page.items, function (_, item) {
-
-        // Processing each item on the page returned from the API
-
-        store.numItems++; // Count total number of records returned
-
-        // For those records that are 'live' in the feed...
-        if (item.state === 'updated') {
-          //Update the store (check against modified dates for existing items)
-          if (!store.items.hasOwnProperty(item.id) || (item.modified > store.items[item.id].modified)) {
-            store.items[item.id] = item;
-            store.urls[item.id] = url;
+        for (const item of response.data.items) {
+          store.numItems++;
+          // For those records that are 'live' in the feed ...
+          if (item.state === 'updated') {
+            // Update the store (check against modified dates for existing items):
+            if (!store.items.hasOwnProperty(item.id) || (item.modified > store.items[item.id].modified)) {
+              store.items[item.id] = item;
+              store.urls[item.id] = url;
+            }
+          }
+          // For those records that are no longer 'live' ...
+          else if ((item.state === 'deleted') && store.items.hasOwnProperty(item.id)) {
+            // Delete any matching items from the store:
+            delete store.items[item.id];
+            delete store.urls[item.id];
           }
         }
-        // For those records that are no longer 'live'...
-        else if ((item.state === 'deleted') && store.items.hasOwnProperty(item.id)) {
-          //Delete any matching items from the store
-          delete store.items[item.id];
-          delete store.urls[item.id];
-        }
-      });
 
-      let pageNo = page.number ? page.number : page.page;
-      let firstPage = "";
-      if (page.first === true) {
-        firstPage = "disabled='disabled'";
-      }
+        // DT: What were these for? Not used anywhere.
+        // let firstPage = "";
+        // if (page.first === true) {
+        //   firstPage = "disabled='disabled'";
+        // }
+        //
+        // let lastPage = "";
+        // if (page.last === true) {
+        //   lastPage = "disabled='disabled'";
+        // }
 
-      let lastPage = "";
-      if (page.last === true) {
-        lastPage = "disabled='disabled'";
-      }
-
-      //postResults(store, filters);
-
-      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
-      if (url !== page.next && store.numItems < 25000) {
-        progress.empty();
-        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
-        progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
-        setStoreItems(page.next, store);
-      }
-      else {
-        if (store.numItems >= 25000) {
-          $("#record-limit").fadeIn();
-        }
-        progress.empty();
-        progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
-        progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
-
-        if (page.items.length === 0 && store.numFilteredItems === 0 && store.ingressOrder === 1) {
-          results.append("<div><p>No results found</p></div>");
-        }
-
-        store.lastPage = url;
-        clearCache(store);
-        setStoreItemKind(store);
-        setStoreItemDataType(store);
-
-        // console.log(`feedType: ${store.feedType}`);
-        // console.log(`itemKind: ${store.itemKind}`);
-        // console.log(`itemDataType: ${store.itemDataType}`);
-
+        const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
         if (
-          (store.feedType !== store.itemKind) ||
-          (store.feedType !== store.itemDataType) ||
-          (store.itemKind !== store.itemDataType)
+          url !== response.data.next &&
+          store.numItems < 25000
         ) {
-          console.warn(
-            `Mismatched content types:\n` +
-            `  feedType: ${store.feedType}\n` +
-            `  itemKind: ${store.itemKind}\n` +
-            `  itemDataType: ${store.itemDataType}`
-          );
-        }
-
-        console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
-
-        if (store.ingressOrder === 1 && storeIngressOrder2.firstPage && link) {
-          console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
-          setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
+          progress.empty();
+          progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
+          progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
+          store.penultimatePage = url;
+          setStoreItems(response.data.next, store);
         }
         else {
-          progress.append("<div id='combineProgress'></div>");
-          cp = $("#combineProgress");
-          cp.text("Processing data feed...");
-          cp.append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
-          sleep(100).then(() => { loadingComplete(); });
+          if (store.numItems === 25000) {
+            $('#record-limit').fadeIn();
+          }
+          progress.empty();
+          progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
+          progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
+
+          if (
+            response.data.items.length === 0 &&
+            store.numFilteredItems === 0 &&
+            store.ingressOrder === 1
+          ) {
+            results.append('<div><p>No results found</p></div>');
+          }
+
+          store.lastPage = url;
+          clearCache(store);
+          setStoreItemKind(store);
+          setStoreItemDataType(store);
+
+          if (
+            store.feedType !== store.itemKind ||
+            store.feedType !== store.itemDataType ||
+            store.itemKind !== store.itemDataType
+          ) {
+            console.warn(
+              `Mismatched content types:\n` +
+              `  feedType: ${store.feedType}\n` +
+              `  itemKind: ${store.itemKind}\n` +
+              `  itemDataType: ${store.itemDataType}`
+            );
+          }
+
+          console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
+
+          if (
+            store.ingressOrder === 1 &&
+            storeIngressOrder2.firstPage &&
+            link
+          ) {
+            console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
+            setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
+          }
+          else {
+            progress.append('<div id="combineProgress"></div>');
+            cp = $('#combineProgress');
+            cp.text('Processing data feed...');
+            cp.append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
+            sleep(100).then(() => { loadingComplete(); });
+          }
         }
       }
     })
-    .fail(function (jqXHR, textStatus, errorThrown) {
+    .catch(error => {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-      $("#loading-time").hide();
+      $('#loading-time').hide();
       progress.empty();
-      progress.append("Reading " + store.feedType + " feed: <a href='" + store.firstPage + "' target='_blank'>" + store.firstPage + "</a></br>");
+      progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
       progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
-      progress.append("API Request failed with status: " + jqXHR.status + " - " + jqXHR.statusText + " " + errorThrown);
+      progress.append(`API Request failed with message: ${error.message}`);
       progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
-      $(".show-error").on("click", function () {
-        setStoreItems(url, store);;
+      $('.show-error').on('click', function () {
+        setStoreItems(url, store);
       });
     });
 }
@@ -416,15 +483,15 @@ function resolveDate(item, prop) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder1FirstPage() {
+async function setStoreIngressOrder1FirstPage() {
   if (storeIngressOrder1FirstPageFromUser) {
-    let page = $.ajax({
-      async: false,
-      type: 'GET',
-      url: '/fetch?url=' + encodeURIComponent(storeIngressOrder1FirstPageFromUser),
-      timeout: 30000
-    });
-    storeIngressOrder1.firstPage = (page.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
+    await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
+      .then(response => {
+        storeIngressOrder1.firstPage = (response.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
+      })
+      .catch(error => {
+        console.error(`Error from user URL: ${error.message}`);
+      });
   }
   else {
     storeIngressOrder1.firstPage = $("#endpoint").val();
@@ -433,22 +500,22 @@ function setStoreIngressOrder1FirstPage() {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder2FirstPage() {
+async function setStoreIngressOrder2FirstPage() {
   switch (storeIngressOrder1.feedType) {
     case 'SessionSeries':
-      setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
       break;
     case 'ScheduledSession':
-      setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
       break;
     case 'FacilityUse':
-      setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
       break;
     case 'IndividualFacilityUse':
-      setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
+      await setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
       break;
     case 'Slot':
-      setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
+      await setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
       break;
     default:
       storeIngressOrder2.firstPage = null;
@@ -458,7 +525,7 @@ function setStoreIngressOrder2FirstPage() {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2UrlParts) {
+async function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2UrlParts) {
   for (const feedType1UrlPart of feedType1UrlParts) {
     if (storeIngressOrder1.firstPage.includes(feedType1UrlPart)) {
       for (const feedType2UrlPart of feedType2UrlParts) {
@@ -468,14 +535,13 @@ function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2UrlPar
         if (feedType1UrlPart !== feedType2UrlPart) {
           let storeIngressOrder2FirstPage = storeIngressOrder1.firstPage.replace(feedType1UrlPart, feedType2UrlPart);
           if (storeIngressOrder1FirstPageFromUser) {
-            let page = $.ajax({
-              async: false,
-              type: 'GET',
-              url: '/fetch?url=' + encodeURIComponent(storeIngressOrder2FirstPage),
-              timeout: 30000
-            });
-            if (page.status === 200) {
-              storeIngressOrder2.firstPage = storeIngressOrder2FirstPage;
+            // We expect that a number of URL combinations may be made before a success is had, so we don't
+            // worry about catching errors here:
+            await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder2FirstPage)}`)
+              .then(response => {
+                storeIngressOrder2.firstPage = (response.status === 200) ? storeIngressOrder2FirstPage : null;
+              });
+            if (storeIngressOrder2.firstPage) {
               return;
             }
           }
@@ -635,7 +701,7 @@ function renderTree(concepts, level, output) {
   // Recursively .getNarrower() on concepts
   concepts.forEach(function (concept) {
     let label = concept.prefLabel;
-    let hidden = "";
+    let hidden = '';
     // Include altLabels (e.g. Group Cycling) to make them visible to the user
     if (concept.altLabel && concept.altLabel.length > 0) {
       label = label + ' / ' + concept.altLabel.join(' / ')
@@ -651,7 +717,7 @@ function renderTree(concepts, level, output) {
       'data-value': concept.id,
       'data-level': level,
       'data-hidden': hidden,
-      'href': "#",
+      'href': '#',
       'text': label
     }));
 
@@ -687,7 +753,7 @@ function renderOrganizerList(organizers) {
     </div>`);
   $('#organizer-list-selected').val(organizerListSelected);
 
-  // Render the organizer list in a format the HierarchySelect will understand
+  // Render the organizer list in a format HierarchySelect will understand:
   $(`#organizer-list-dropdown-${organizerListRefresh} .hs-menu-inner`).append(
     Object.keys(organizers).map(organizerName =>
       $('<a/>', {
@@ -702,9 +768,9 @@ function renderOrganizerList(organizers) {
 
   $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#organizer-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
       // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
@@ -725,7 +791,7 @@ function renderActivityList(activities) {
   // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
   $('#activity-list-dropdown').empty();
   $('#activity-list-dropdown').append(
-    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown">
+    `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
         <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="activity-list-button">
@@ -740,17 +806,16 @@ function renderActivityList(activities) {
     </div>`);
   $('#activity-list-selected').val(activityListSelected);
 
-  // Render the activity list in a format the HierarchySelect will understand
+  // Render the activity list in a format HierarchySelect will understand:
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
 
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
-      let concept = activities.getConceptByID(htmlDataValue);
       // Note that htmlDataValue is the same as $('#activity-list-selected').val()
       if (htmlDataValue !== activityListSelected) {
         console.warn(`Selected activity for filter: ${htmlDataValue}`);
@@ -784,7 +849,7 @@ function renderLocationList(locations) {
       </div>`);
   $('#location-list-selected').val(locationListSelected);
 
-  // Render the location list in a format the HierarchySelect will understand
+  // Render the location list in a format HierarchySelect will understand:
   $(`#location-list-dropdown-${locationListRefresh} .hs-menu-inner`).append(
     Object.keys(locations).map(locationName =>
       $('<a/>', {
@@ -799,9 +864,9 @@ function renderLocationList(locations) {
 
   $(`#location-list-dropdown-${locationListRefresh}`).hierarchySelect({
     width: '98%',
-    // Set initial dropdown state based on the hidden field's initial value
+    // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
-    // Update other elements when a selection is made
+    // Update other elements when a selection is made:
     // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
       // Note that htmlDataValue is the same as $('#location-list-selected').val()
@@ -825,8 +890,8 @@ function renderSchedule(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateActivityList(activitiesObj) {
-  let activities = scheme_1.generateSubset(Object.keys(activitiesObj));
+function updateActivityList(activityIds) {
+  let activities = scheme_1.generateSubset(Object.keys(activityIds));
   renderActivityList(activities);
 }
 
@@ -1111,8 +1176,8 @@ $('#locationTab').on('click', function () {
 //   $('body').on('click', '#mapTab', function() {
 //   $('body').on('show.bs.tab', '#mapTab', function() {
 //   $('#mapTab').on('click', function () {
-// See bottom of this page for more details:
-//   https://getbootstrap.com/docs/5.0/components/navs-tabs/
+// See here for details:
+// - https://getbootstrap.com/docs/5.0/components/navs-tabs/
 $('#mapTab').on('show.bs.tab', function () {
   L.Util.requestAnimFrame(map.invalidateSize, map, !1, map._container);
 
@@ -1212,19 +1277,19 @@ function updateParameters(parm, parmVal) {
 // -------------------------------------------------------------------------------------------------
 
 function updateProvider() {
-  provider = $("#provider option:selected").text();
+  provider = $('#provider option:selected').text();
   clearDisplay();
   //Replicating setEndpoints, without the page reset
-  $.getJSON("/feeds", function (data) {
-    $("#endpoint").empty();
+  $.getJSON('/feeds', function (data) {
+    $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
       if (feed.publisherName === provider) {
-        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
       }
     });
   })
     .done(function () {
-      endpoint = $("#endpoint").val();
+      endpoint = $('#endpoint').val();
       updateEndpoint();
     });
 }
@@ -1361,7 +1426,7 @@ function updateKeywords() {
 
 // -------------------------------------------------------------------------------------------------
 
-function runForm(pageNumber) {
+async function runForm(pageNumber) {
 
   if (pageNumber === undefined) {
     pageNumber = null;
@@ -1399,7 +1464,7 @@ function runForm(pageNumber) {
 
   storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
-  setStoreIngressOrder1FirstPage();
+  await setStoreIngressOrder1FirstPage();
   setStoreFeedType(storeIngressOrder1);
 
   if (superEventFeedTypes.includes(storeIngressOrder1.feedType)) {
@@ -1415,7 +1480,7 @@ function runForm(pageNumber) {
   }
 
   if (storeSuperEvent && storeSubEvent) {
-    setStoreIngressOrder2FirstPage();
+    await setStoreIngressOrder2FirstPage();
     setStoreFeedType(storeIngressOrder2);
 
     if (storeIngressOrder1.feedType && storeIngressOrder2.feedType && storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
@@ -1437,7 +1502,7 @@ function runForm(pageNumber) {
 
   if (storeIngressOrder1.firstPage) {
     console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
-    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1, getFilters());
+    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1);
   }
   else {
     console.error('No valid first page for storeIngressOrder1, can\'t begin');
@@ -1550,11 +1615,11 @@ function setPage() {
 // -------------------------------------------------------------------------------------------------
 
 function setProvider() {
-  $.getJSON("/feeds", function (data) {
-    $("#provider").empty()
+  $.getJSON('/feeds', function (data) {
+    $('#provider').empty()
     providers = [... new Set(data.feeds.map(feed => feed.publisherName))];
     $.each(providers, function (index, name) {
-      $("#provider").append("<option value='" + name + "'>" + name + "</option>");
+      $('#provider').append(`<option value='${name}'>${name}</option>`);
     });
   })
     .done(function () {
@@ -1563,20 +1628,20 @@ function setProvider() {
 }
 
 function setEndpoints() {
-  provider = $("#provider option:selected").text();
-  $.getJSON("/feeds", function (data) {
-    $("#endpoint").empty();
+  provider = $('#provider option:selected').text();
+  $.getJSON('/feeds', function (data) {
+    $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
       feeds[feed.url] = feed;
       if (feed.publisherName === provider) {
-        $("#endpoint").append("<option value='" + feed.url + "'>" + feed.type + "</option>");
+        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
       }
     });
   })
     .done(function () {
-      updateParameters("endpoint", $("#endpoint").val());
+      updateParameters('endpoint', $('#endpoint').val());
       setPage();
-      $("#user-url").val($("#endpoint").val());
+      $('#user-url').val($('#endpoint').val());
     });
 }
 
