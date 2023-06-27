@@ -312,7 +312,10 @@ let ssl_string = '';
 
 if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
   // Set to true in production to validate the certificate  
-  ssl_string = "ssl: {rejectUnauthorized: true }";
+  ssl_string = `ssl: {ssl: {
+    sslmode: 'require',
+    rejectUnauthorized: false,
+  }`;
 }
 
 console.log(process.env.ENVIRONMENT + ' ' + ssl_string);
@@ -323,9 +326,7 @@ const client = new Client({
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: true 
-  }
+  ssl_string
 });
 
 async function createTableIfNotExists() {
