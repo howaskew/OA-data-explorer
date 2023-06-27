@@ -326,7 +326,9 @@ const client = new Client({
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
   connectionString: process.env.DATABASE_URL,
-  ssl_string
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function createTableIfNotExists() {
