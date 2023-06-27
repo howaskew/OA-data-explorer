@@ -303,16 +303,27 @@ function onError(error) {
 
 const bodyParser = require('body-parser');
 const { Client } = require('pg');
+const { rejects } = require('assert');
 
 // Middleware
 app.use(bodyParser.json());
+
+let ssl_string = '';
+
+if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
+  // Set to true in production to validate the certificate  
+  ssl_string = "ssl: {rejectUnauthorized: true }";
+}
+
+console.log(process.env.ENVIRONMENT + ' ' + ssl_string);
 
 // Create a new PostgreSQL client
 const client = new Client({
   // Heroku provides the DATABASE_URL environment variable
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  ssl_string
 });
 
 async function createTableIfNotExists() {
