@@ -103,71 +103,122 @@ function postResults(item) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreDataQualityItems() {
-  storeSuperEventContentType = null;
-  storeSubEventContentType = null;
+function setStoreSuperEventAndStoreSubEvent() {
 
-  // First check for any unpacking of superevents or eventschedules
-  if (
-    storeSuperEvent &&
-    !link
-  ) {
-    cp.text("Unpacking Data Feed");
+  if (superEventContentTypes.includes(storeIngressOrder1.feedType)) {
+    storeSuperEvent = storeIngressOrder1;
+    storeSubEvent = storeIngressOrder2;
+    type = 'feedType';
+  }
+  else if (subEventContentTypes.includes(storeIngressOrder1.feedType)) {
+    storeSubEvent = storeIngressOrder1;
+    storeSuperEvent = storeIngressOrder2;
+    type = 'feedType';
+  }
+  else if (superEventContentTypes.includes(storeIngressOrder1.itemDataType)) {
+    storeSuperEvent = storeIngressOrder1;
+    storeSubEvent = storeIngressOrder2;
+    type = 'itemDataType';
+  }
+  else if (subEventContentTypes.includes(storeIngressOrder1.itemDataType)) {
+    storeSubEvent = storeIngressOrder1;
+    storeSuperEvent = storeIngressOrder2;
+    type = 'itemDataType';
+  }
+  else {
+    type = null;
+    console.error('Unknown storeIngressOrder1 content type, can\'t determine whether super-event or sub-event, can\'t continue');
+  }
 
-    console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
-    console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
-    console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
-    console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
-
-    console.log(`Number of storeSubEvent items: ${Object.keys(storeSubEvent.items).length}`);
-    console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
-    console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
-    console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
-
-    if (subEventFeedTypes.includes(storeSuperEvent.itemDataType)) {
-      // This is actually a subEvent feed but was initially labelled as a superEvent feed due to feedType.
-      // e.g. BwD
-      console.log("1");
-      cp.text("Unpacking data feed - subEvent feed with embedded superEvent data");
-
-      storeSubEvent = storeSuperEvent;
+  if (type) {
+    if (storeIngressOrder1[type] === storeIngressOrder2[type]) {
+      console.error(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t continue`);
       storeSuperEvent = null;
-      storeSubEvent.feedType = null;
-      link = 'superEvent';
-      storeDataQuality.items = Object.values(storeSubEvent.items);
+      storeSubEvent = null;
     }
-    else if (
-      Object.values(storeSuperEvent.items)
-        .filter(item => item.hasOwnProperty('data') && item.data.hasOwnProperty('subEvent'))
-        .length > 0
-    ) {
-      // e.g. SportSuite
-      console.log("2");
-      cp.text("Unpacking data feed - superEvent feed with embedded subEvent data");
+    else {
 
-      storeSubEvent.items = {};
-      for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-        if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
-          const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
-          for (const subEvent of storeSuperEventItem.data.subEvent) {
-            const subEventId = subEvent.id || subEvent['@id'];
-            storeSubEvent.items[subEventId] = {
-              data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
-            };
-          }
-        }
+      if (subEventContentTypes.includes(storeSuperEvent.itemDataType)) {
+        // This is actually a subEvent feed but was initially labelled as a superEvent feed, due to feedType
+        // being assessed before itemDataType
+        // e.g. BwD
+        console.log('1');
+        cp.text('Unpacking data feed - subEvent feed with embedded superEvent data');
+
+        storeSubEvent = storeSuperEvent;
+        storeSuperEvent = storeSubEvent.ingressOrder === 1 ? storeIngressOrder2 : storeIngressOrder1;
+        type = 'itemDataType';
       }
-      setStoreItemDataType(storeSubEvent);
-      link = 'superEvent';
-      storeDataQuality.items = Object.values(storeSubEvent.items);
+
+      storeSuperEvent.eventType = 'superEvent';
+      storeSubEvent.eventType = 'subEvent';
+
+      switch (storeSubEvent[type]) {
+        case 'ScheduledSession':
+          link = 'superEvent';
+          break;
+        case 'Slot':
+          link = 'facilityUse';
+          break;
+        default:
+          link = null;
+          console.warn('No feed linking variable, can\'t create combined store');
+          break;
+      }
+
+      console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
+      console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
+      console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
+      console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
+
+      console.log(`Number of storeSubEvent items: ${Object.keys(storeSubEvent.items).length}`);
+      console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
+      console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
+      console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
+
     }
   }
+
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setStoreDataQualityItems() {
+  if (
+    storeSuperEvent &&
+    Object.values(storeSuperEvent.items)
+      .filter(item => item.hasOwnProperty('data') && item.data.hasOwnProperty('subEvent'))
+      .length > 0
+  ) {
+    // e.g. SportSuite
+    console.log('2');
+    cp.text('Unpacking data feed - superEvent feed with embedded subEvent data');
+
+    storeSubEvent.items = {};
+    for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+      if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
+        const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
+        for (const subEvent of storeSuperEventItem.data.subEvent) {
+          const subEventId = subEvent.id || subEvent['@id'];
+          storeSubEvent.items[subEventId] = {
+            data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
+          };
+        }
+      }
+    }
+    setStoreItemDataType(storeSubEvent);
+    link = 'superEvent';
+    storeDataQuality.items = Object.values(storeSubEvent.items);
+    storeDataQuality.eventType = storeSubEvent.eventType;
+  }
   else if (
-    storeSuperEvent && Object.keys(storeSuperEvent.items).length > 0 &&
-    storeSubEvent && Object.keys(storeSubEvent.items).length > 0 &&
+    storeSuperEvent &&
+    storeSubEvent &&
+    Object.keys(storeSuperEvent.items).length > 0 &&
+    Object.keys(storeSubEvent.items).length > 0 &&
     link
   ) {
-    console.log("3");
+    console.log('3');
 
     storeCombinedItems = [];
 
@@ -192,35 +243,32 @@ function setStoreDataQualityItems() {
     }
 
     storeDataQuality.items = storeCombinedItems;
-    // console.error(Object.keys(storeSubEvent.items).length);
-    // console.error(Object.keys(storeDataQuality.items).length);
+    storeDataQuality.eventType = storeSubEvent.eventType;
+  }
+  else if (
+    storeSubEvent &&
+    Object.keys(storeSubEvent.items).length > 0
+  ){
+    console.log('4');
+    storeDataQuality.items = Object.values(storeSubEvent.items);
+    storeDataQuality.eventType = storeSubEvent.eventType;
+    console.warn('No combined store, data quality from storeSubEvent only');
+    cp.empty();
+  }
+  else if (
+    storeSuperEvent &&
+    Object.keys(storeSuperEvent.items).length > 0
+  ){
+    console.log('5');
+    storeDataQuality.items = Object.values(storeSuperEvent.items);
+    storeDataQuality.eventType = storeSuperEvent.eventType;
+    console.warn('No combined store, data quality from storeSuperEvent only');
+    cp.empty();
   }
   else {
+    storeDataQuality.items = [];
+    console.warn('No data for metrics');
     cp.empty();
-    console.log("4");
-
-    if (!(storeSuperEvent && storeSubEvent)) {
-      // We are here if we don't have storeSuperEvent or storeSubEvent, which should occur only if
-      // storeIngressOrder1.feedType was not found in superEventFeedTypes or subEventFeedTypes when
-      // runForm() was called. In this case, we don't know ahead of reading the full RPDE feed what the
-      // content type is, but now we can try again with itemDataType instead of the unknown feedType.
-      if (superEventFeedTypes.includes(storeIngressOrder1.itemDataType)) {
-        storeSuperEvent = storeIngressOrder1;
-        storeSuperEventContentType = storeIngressOrder1.itemDataType;
-        storeSubEventContentType = 'None';
-      }
-      else if (subEventFeedTypes.includes(storeIngressOrder1.itemDataType)) {
-        storeSubEvent = storeIngressOrder1;
-        storeSubEventContentType = storeIngressOrder1.itemDataType;
-        storeSuperEventContentType = 'None';
-      }
-      else {
-        console.warn('Unknown storeIngressOrder1 itemDataType, can\'t determine whether super-event or sub-event')
-      }
-    }
-
-    storeDataQuality.items = Object.values(storeIngressOrder1.items);
-    console.warn('No combined store, data quality from selected feed only');
   }
 }
 
@@ -233,10 +281,10 @@ function setStoreDataQualityItemFlags() {
     numParent: 0,
     numChild: storeDataQuality.items.length,
     DQ_validActivity: 0,
-    DQ_validGeo: 0, 
-    DQ_validDate: 0, 
-    DQ_validSeriesUrl: 0, 
-    DQ_validSessionUrl: 0, 
+    DQ_validGeo: 0,
+    DQ_validDate: 0,
+    DQ_validSeriesUrl: 0,
+    DQ_validSessionUrl: 0,
     dateUpdated: 0
   };
 
@@ -297,6 +345,7 @@ function setStoreDataQualityItemFlags() {
     if (item.DQ_validActivity) {
       storeSummary.DQ_validActivity++;
     }
+
     // -------------------------------------------------------------------------------------------------
 
     // Name info
@@ -329,9 +378,10 @@ function setStoreDataQualityItemFlags() {
       (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
       (typeof latitude === 'number' && typeof longitude === 'number');
 
-      if (item.DQ_validGeo) {
-        storeSummary.DQ_validGeo++;
-      }
+    if (item.DQ_validGeo) {
+      storeSummary.DQ_validGeo++;
+    }
+
     // -------------------------------------------------------------------------------------------------
 
     // Date info
@@ -342,9 +392,10 @@ function setStoreDataQualityItemFlags() {
       !isNaN(date) &&
       date >= dateNow;
 
-      if (item.DQ_validDate) {
-        storeSummary.DQ_validDate++;
-      }
+    if (item.DQ_validDate) {
+      storeSummary.DQ_validDate++;
+    }
+
     // -------------------------------------------------------------------------------------------------
 
     // URL info
@@ -432,7 +483,6 @@ function setStoreDataQualityItemFlags() {
   parents = {};
   parentUrls = {};
 
-
   // -------------------------------------------------------------------------------------------------
 
   // Write feed level data to database
@@ -441,7 +491,7 @@ function setStoreDataQualityItemFlags() {
   //console.log(storeDataQuality);
 
   (async () => {
-    try {  
+    try {
       const response = await fetch('/api/insert', {
         method: 'POST',
         headers: {
@@ -449,7 +499,7 @@ function setStoreDataQualityItemFlags() {
         },
         body: JSON.stringify(storeSummary)
       });
-  
+
       if (response.ok) {
         const insertedData = await response.json();
         console.log('Data inserted successfully:', insertedData);
@@ -461,9 +511,8 @@ function setStoreDataQualityItemFlags() {
     } finally {
     }
   })();
-  
-  getSummary();
 
+  getSummary();
 
 }
 
@@ -724,7 +773,9 @@ function postDataQuality() {
 
       if (item.DQ_validParent) {
         let parentId = item.data[link].id || item.data[link]['@id'] || item.data[link].identifier || null;
-        storeDataQuality.filteredItemsUniqueParentIds.add(parentId);
+        if (parentId) {
+          storeDataQuality.filteredItemsUniqueParentIds.add(parentId);
+        }
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -766,7 +817,6 @@ function postDataQuality() {
       "    <div>No matching results found.</div>" +
       "</div>"
     );
-
     $("#resultTab").addClass("active");
     $("#resultPanel").addClass("active");
     $("#jsonTab").addClass("disabled");
@@ -775,7 +825,6 @@ function postDataQuality() {
     $("#organizerTab").addClass("disabled");
     $("#locationTab").addClass("disabled");
     $("#mapTab").addClass("disabled");
-
   }
 
   // -------------------------------------------------------------------------------------------------
@@ -931,23 +980,17 @@ function postDataQuality() {
     }
   }
 
+  let spark1Count = (storeDataQuality.eventType === 'subEvent') ? storeDataQuality.filteredItemsUniqueParentIds.size : storeDataQuality.numFilteredItems;
 
-  // Show relevant name based on parent in feed, if present
-
+  // Show relevant name based on parent in feed, if present:
   let spark1SeriesName = '';
-
-  if (!storeSuperEventContentType && storeSuperEvent) {
-    storeSuperEventContentType = storeSuperEvent.feedType;
+  if (['SessionSeries'].includes(storeSuperEvent[type])) {
+    spark1SeriesName = 'Series';
   }
-  if (storeSuperEventContentType) {
-    if (['SessionSeries'].includes(storeSuperEventContentType)) {
-      spark1SeriesName = 'Series';
-    }
-    else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEventContentType)) {
-      spark1SeriesName = 'Facility Use';
-      if (storeDataQuality.filteredItemsUniqueParentIds.size !== 1) {
-        spark1SeriesName += 's';
-      }
+  else if (['FacilityUse', 'IndividualFacilityUse'].includes(storeSuperEvent[type])) {
+    spark1SeriesName = 'Facility Use';
+    if (spark1Count !== 1) {
+      spark1SeriesName += 's';
     }
   }
 
@@ -991,7 +1034,7 @@ function postDataQuality() {
     labels: Array.from(topActivities.keys()).map(activityId => matchToActivityList(activityId)),
     colors: ['#71CBF2'],
     title: {
-      text: storeDataQuality.filteredItemsUniqueParentIds.size.toLocaleString(),
+      text: spark1Count.toLocaleString(),
       align: 'left',
       offsetX: 0,
       style: {
@@ -1320,7 +1363,7 @@ function postDataQuality() {
       colors: ['#C76DAC'],
     },
     series: [rounded4_a],
-    labels: ['Have session URLs'],
+    labels: ['Have URLs'],
     plotOptions: {
       radialBar: {
         startAngle: -90,
@@ -1365,7 +1408,7 @@ function postDataQuality() {
         colors: ['#C76DAC'],
       },
       series: [rounded4_b],
-      labels: ['Have series URLs'],
+      labels: ['Have parent URLs'],
       plotOptions: {
         radialBar: {
           startAngle: -90,
@@ -1419,23 +1462,22 @@ function postDataQuality() {
     };
   }
 
+  // If storeDataQuality.eventType is 'superEvent', then we haven't determined subEvent data and so the
+  // subEvent count here is zero:
+  let spark6Count = (storeDataQuality.eventType === 'subEvent') ? storeDataQuality.numFilteredItems : 0;
+
   let spark6SeriesName = '';
-  if (!storeSubEventContentType && storeSubEvent) {
-    storeSubEventContentType = storeSubEvent.feedType;
+  if (['ScheduledSession'].includes(storeSubEvent[type])) {
+    spark6SeriesName = 'Session';
   }
-  if (storeSubEventContentType) {
-    if (['ScheduledSession'].includes(storeSubEventContentType)) {
-      spark6SeriesName = 'Session';
-    }
-    else if (['Slot'].includes(storeSubEventContentType)) {
-      spark6SeriesName = 'Slot';
-    }
-    else if (['Event', 'OnDemandEvent'].includes(storeSubEventContentType)) {
-      spark6SeriesName = 'Event';
-    }
-    if (spark6SeriesName.length > 0 && storeDataQuality.numFilteredItems !== 1) {
-      spark6SeriesName += 's';
-    }
+  else if (['Slot'].includes(storeSubEvent[type])) {
+    spark6SeriesName = 'Slot';
+  }
+  else if (['Event', 'OnDemandEvent'].includes(storeSubEvent[type])) {
+    spark6SeriesName = 'Event';
+  }
+  if (spark6SeriesName.length > 0 && spark6Count !== 1) {
+    spark6SeriesName += 's';
   }
 
   let spark6 = {
@@ -1525,7 +1567,7 @@ function postDataQuality() {
     },
     colors: ['#E21483'],
     title: {
-      text: storeDataQuality.numFilteredItems.toLocaleString(),
+      text: spark6Count.toLocaleString(),
       align: 'right',
       offsetX: 0,
       style: {

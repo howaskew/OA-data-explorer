@@ -56,12 +56,8 @@ let storeCombinedItems; // This is present only if we have valid storeSuperEvent
 let storeSuperEvent;
 let storeSubEvent;
 
-// These may be the feedType or the itemDataType, depending on conditions:
-let storeSuperEventContentType;
-let storeSubEventContentType;
-
-let superEventFeedTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-let subEventFeedTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
+let superEventContentTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
+let subEventContentTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
 
 let sessionSeriesUrlParts = [
   'session-series',
@@ -96,6 +92,7 @@ let slotUrlParts = [
 ];
 
 let storeIngressOrder1FirstPageFromUser;
+let type; // This may be the feedType or the itemDataType, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
@@ -158,9 +155,8 @@ function clearGlobals() {
   storeCombinedItems = [];
   storeSuperEvent = null;
   storeSubEvent = null;
-  storeSuperEventContentType = null;
-  storeSubEventContentType = null;
   storeIngressOrder1FirstPageFromUser = null;
+  type = null;
   link = null;
 }
 
@@ -175,6 +171,7 @@ function clearStore(store) {
   store.feedType = null; // From the dataset page, not the RPDE feed
   store.itemKind = null; // From the RPDE feed
   store.itemDataType = null; // From the RPDE feed
+  store.eventType = null; // Either 'superEvent' or 'subEvent'
   store.firstPage = null;
   store.penultimatePage = null;
   store.lastPage = null;
@@ -438,8 +435,7 @@ function setStoreItems(url, store) {
 
           if (
             store.ingressOrder === 1 &&
-            storeIngressOrder2.firstPage &&
-            link
+            storeIngressOrder2.firstPage
           ) {
             console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
             setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
@@ -590,7 +586,7 @@ async function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreFeedType(store) {
+async function setStoreFeedType(store) {
   if (!store.firstPage) {
     store.feedType = null;
     return;
@@ -711,6 +707,7 @@ function loadingComplete() {
   $("#loading-time").hide();
   progress.append(`<div id='DQProgress'</div>`);
 
+  setStoreSuperEventAndStoreSubEvent();
   setStoreDataQualityItems();
   setStoreDataQualityItemFlags();
   //console.log(storeDataQuality);
@@ -964,10 +961,10 @@ function setJSONTab(itemId, switchTab) {
 
   // Output both relevant feeds if combined
   if (
-    storeSuperEvent && Object.keys(storeSuperEvent.items).length > 0 &&
-    storeSubEvent && Object.keys(storeSubEvent.items).length > 0 &&
+    storeSuperEvent &&
+    storeSubEvent &&
     link &&
-    storeSubEvent.feedType !== null
+    storeSubEvent.items.hasOwnProperty(itemId)
   ) {
     const storeSubEventItem = storeSubEvent.items[itemId];
     const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
@@ -989,32 +986,56 @@ function setJSONTab(itemId, switchTab) {
       });
     }
 
-    document.getElementById('json-tab-2').innerHTML = `
-      <div class='flex_row'>
-          <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
-          <button id='json-tab-2-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
-          <button id='json-tab-2-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
-      </div>
-      <pre>${JSON.stringify(storeSubEventItem, null, 2)}</pre>`;
-    $('#json-tab-2-source').on('click', function () {
-      window.open(storeSubEvent.urls[itemId], '_blank').focus();
-    });
-    $('#json-tab-2-validate').on('click', function () {
-      openValidator(storeSubEventItem);
-    });
-  } else {
+    if (storeSubEventItem) {
+      document.getElementById('json-tab-2').innerHTML = `
+        <div class='flex_row'>
+            <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
+            <button id='json-tab-2-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+            <button id='json-tab-2-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+        </div>
+        <pre>${JSON.stringify(storeSubEventItem, null, 2)}</pre>`;
+      $('#json-tab-2-source').on('click', function () {
+        window.open(storeSubEvent.urls[itemId], '_blank').focus();
+      });
+      $('#json-tab-2-validate').on('click', function () {
+        openValidator(storeSubEventItem);
+      });
+    }
+  }
+  else if (
+    storeSubEvent &&
+    storeSubEvent.items.hasOwnProperty(itemId)
+  ){
     document.getElementById('json-tab-1').innerHTML = `
       <div class='flex_row'>
-          <h2 class='json-tab-heading'>${storeIngressOrder1.itemDataType}</h2>
+          <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
           <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
           <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
       </div>
-      <pre>${JSON.stringify(storeIngressOrder1.items[itemId], null, 2)}</pre>`;
+      <pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre>`;
     $('#json-tab-1-source').on('click', function () {
-      window.open(storeIngressOrder1.urls[itemId], '_blank').focus();
+      window.open(storeSubEvent.urls[itemId], '_blank').focus();
     });
     $('#json-tab-1-validate').on('click', function () {
-      openValidator(storeIngressOrder1.items[itemId]);
+      openValidator(storeSubEvent.items[itemId]);
+    });
+  }
+  else if (
+    storeSuperEvent &&
+    storeSuperEvent.items.hasOwnProperty(itemId)
+  ){
+    document.getElementById('json-tab-1').innerHTML = `
+      <div class='flex_row'>
+          <h2 class='json-tab-heading'>${storeSuperEvent.itemDataType}</h2>
+          <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+          <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+      </div>
+      <pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre>`;
+    $('#json-tab-1-source').on('click', function () {
+      window.open(storeSuperEvent.urls[itemId], '_blank').focus();
+    });
+    $('#json-tab-1-validate').on('click', function () {
+      openValidator(storeSuperEvent.items[itemId]);
     });
   }
 
@@ -1496,40 +1517,9 @@ async function runForm(pageNumber) {
   storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
   await setStoreIngressOrder1FirstPage();
-  setStoreFeedType(storeIngressOrder1);
-
-  if (superEventFeedTypes.includes(storeIngressOrder1.feedType)) {
-    storeSuperEvent = storeIngressOrder1;
-    storeSubEvent = storeIngressOrder2;
-  }
-  else if (subEventFeedTypes.includes(storeIngressOrder1.feedType)) {
-    storeSubEvent = storeIngressOrder1;
-    storeSuperEvent = storeIngressOrder2;
-  }
-  else {
-    console.warn('Unknown storeIngressOrder1 feedType, can\'t create combined store');
-  }
-
-  if (storeSuperEvent && storeSubEvent) {
-    await setStoreIngressOrder2FirstPage();
-    setStoreFeedType(storeIngressOrder2);
-
-    if (storeIngressOrder1.feedType && storeIngressOrder2.feedType && storeIngressOrder1.feedType === storeIngressOrder2.feedType) {
-      console.warn(`Matching feedType for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1.feedType}'`);
-    }
-
-    switch (storeSubEvent.feedType) {
-      case 'ScheduledSession':
-        link = 'superEvent';
-        break;
-      case 'Slot':
-        link = 'facilityUse';
-        break;
-      default:
-        console.warn('No feed linking variable, can\'t create combined store');
-        break;
-    }
-  }
+  await setStoreFeedType(storeIngressOrder1);
+  await setStoreIngressOrder2FirstPage();
+  await setStoreFeedType(storeIngressOrder2);
 
   if (storeIngressOrder1.firstPage) {
     console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
@@ -1542,15 +1532,14 @@ async function runForm(pageNumber) {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function getSummary() {
-// Make a GET request to retrieve the sum values from the server
-$.getJSON('/sum', function(response) {
-  console.log(`numParent: ${response.sum1} numChild: ${response.sum2}`);
-})
-.fail(function(error) {
-  console.error('Error retrieving sum values:', error);
-});
+  // Make a GET request to retrieve the sum values from the server
+  $.getJSON('/sum', function(response) {
+    console.log(`numParent: ${response.sum1} numChild: ${response.sum2}`);
+  })
+  .fail(function(error) {
+    console.error('Error retrieving sum values:', error);
+  });
 }
 
 // -------------------------------------------------------------------------------------------------
