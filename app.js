@@ -189,13 +189,14 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
 
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
 
-      // Prefetch pages into cache to reduce initial load:
-      //for (const feed of feeds) {
-      //  // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
-      //  await sleep(60000);
-      //  harvest(feed.url);
-      //}
-
+      // Prefetch pages into cache to reduce initial load (if not dev environment):
+      if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
+      for (const feed of feeds) {
+        // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
+        await sleep(60000);
+        harvest(feed.url);
+      }
+      }
     }
   }
   catch (error) {
@@ -311,9 +312,7 @@ app.use(bodyParser.json());
 let ssl_string = '';
 
 if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
-  // Set to true in production to validate the certificate  
-  ssl_string = `ssl: {ssl: {
-    sslmode: 'require',
+   ssl_string = `ssl: {ssl: {
     rejectUnauthorized: false,
   }`;
 }
@@ -326,9 +325,7 @@ const client = new Client({
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl_string
 });
 
 async function createTableIfNotExists() {

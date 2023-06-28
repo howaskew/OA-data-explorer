@@ -9,6 +9,12 @@
   align-items: center;
 }
 
+#beta {
+  padding: 5px;
+  background-color: yellow;
+  border-radius: 5px;
+}
+
 #api {
   margin-right: 10px;
   margin-left: 10px;
