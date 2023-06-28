@@ -92,6 +92,7 @@ let individualFacilityUseUrlParts = [
 let slotUrlParts = [
   'slots',
   'slot',
+  'facility-use-slots'
 ];
 
 let storeIngressOrder1FirstPageFromUser;
