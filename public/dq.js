@@ -62,8 +62,8 @@ function postResults(item) {
     `    <div id='text${storeDataQuality.numFilteredItems}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'activity') || []).filter(activity => activity.id || activity['@id']).map(activity => activity.prefLabel).join(', ')}</div>` +
-    `    <div class='col'>${(getProperty(item, 'startDate') || '')}</div>` +
-    `    <div class='col'>${(getProperty(item, 'endDate') || '')}</div>` +
+    `    <div class='col'>${(resolveDate(item, 'startDate') || getProperty(item, 'startDate') || '')}</div>` +
+    `    <div class='col'>${(resolveDate(item, 'endDate') || getProperty(item, 'endDate') || '')}</div>` +
     `    <div class='col'>${((item.data && item.data.location && item.data.location.name) || (item.data && item.data.superEvent && item.data.superEvent.location && item.data.superEvent.location.name) || '')}</div>` +
     `    <div class='col'>` +
     `        <div class='visualise'>` +
