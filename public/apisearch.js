@@ -95,6 +95,8 @@ let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
 
+let retryCount = 0;
+    
 // -------------------------------------------------------------------------------------------------
 
 // Axios
@@ -435,6 +437,7 @@ function setStoreItems(url, store) {
             storeIngressOrder2.firstPage &&
             link
           ) {
+            let retryCount = 0;
             console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
             setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
           }
@@ -447,19 +450,44 @@ function setStoreItems(url, store) {
           }
         }
       }
-    })
-    .catch(error => {
+    }).catch(error => {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
       $('#loading-time').hide();
       progress.empty();
       progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
       progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
       progress.append(`API Request failed with message: ${error.message}`);
-      progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
-      $('.show-error').on('click', function () {
-        setStoreItems(url, store);
-      });
+    
+      const retryRequest = () => {
+        retryCount++;
+        progress.append(`<div>Retrying (${retryCount} of 3) in <span id="countdown">5</span> seconds...</div>`);
+        const countdownElement = $('#countdown');
+        let countdown = 5;
+        const countdownInterval = setInterval(() => {
+          countdownElement.text(countdown);
+          countdown--;
+          if (countdown < 1) {
+            clearInterval(countdownInterval);
+            setStoreItems(url, store);
+          }
+        }, 1000);
+      };
+    
+      if (retryCount < 3) {
+        retryRequest();
+      } else {
+        progress.append(`<div>${retryCount} retries attempted.</div>`);
+        const retryButton = $('<div><button class="show-error btn btn-success">Retry</button></div>');
+        progress.append(retryButton);
+      
+        $('.show-error').on('click', function () {
+          retryCount++;
+          setStoreItems(url, store);
+        });
+      
+      }
     });
+    
 }
 
 // -------------------------------------------------------------------------------------------------
