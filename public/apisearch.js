@@ -391,8 +391,8 @@ function setStoreItems(url, store) {
 
         const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
         if (
-          url !== response.data.next // &&
-          // store.numItems < 25000
+          url !== response.data.next &&
+          store.numItems < 25000
         ) {
           progress.empty();
           progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
@@ -401,9 +401,9 @@ function setStoreItems(url, store) {
           setStoreItems(response.data.next, store);
         }
         else {
-          //if (store.numItems > 24999) {
-          //  $('#record-limit').fadeIn();
-          //}
+          if (store.numItems === 25000) {
+            $('#record-limit').fadeIn();
+          }
           progress.empty();
           progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
           progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
