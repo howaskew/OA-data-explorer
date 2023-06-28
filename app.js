@@ -59,15 +59,18 @@ const cacheSuccesses = cache('48 hours', onlyStatus200);
 // Use this approach to enable access control for all HTTP methods that go to /fetch (and likewise
 // for any other endpoint). Note that after the headers are set, the next() command then goes to the
 // actual method requested. This approach is not currently needed as we only use one method per
-// endpoint, so just adjust the headers inside each one:
+// endpoint, so just adjust the headers inside each one. Alternatively, if CORS issues need to be
+// handled more holistically, then the 'cors' package on npm may be useful.
 // app.all('/fetch', function(req, res, next) {
 //   res.header('Access-Control-Allow-Origin', '*');
 //   res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+//   res.header('Access-Control-Expose-Headers', 'Content-Security-Policy, Location');
 //   next();
 // });
 app.get('/fetch', cacheSuccesses, async(req, res, next) => {
   // res.header('Access-Control-Allow-Origin', '*');
   // res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+  // res.header('Access-Control-Expose-Headers', 'Content-Security-Policy, Location');
   try {
     // req.url is the exact call to this function, and becomes the cache handle e.g. '/fetch?url=https%3A%2F%2Fopendata.leisurecloud.live%2Fapi%2Ffeeds%2FActiveNewham-live-live-session-series'
     // req.query.url is the page we actually want to go to e.g. 'https://opendata.leisurecloud.live/api/feeds/ActiveNewham-live-live-session-series'
@@ -191,11 +194,11 @@ app.get('/fetch', cacheSuccesses, async(req, res, next) => {
 
       // Prefetch pages into cache to reduce initial load (if not dev environment):
       if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
-      for (const feed of feeds) {
-        // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
-        await sleep(60000);
-        harvest(feed.url);
-      }
+        for (const feed of feeds) {
+          // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
+          await sleep(60000);
+          harvest(feed.url);
+        }
       }
     }
   }
