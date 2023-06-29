@@ -95,7 +95,6 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
   }
 });
 
-
 // additions for summary data storage
 
 const bodyParser = require('body-parser');
@@ -194,6 +193,7 @@ async function createTableIfNotExists() {
 
 
     }
+
   } catch (err) {
     console.error('Error creating table:', err);
   } finally {
@@ -251,7 +251,7 @@ app.post('/api/insert', async (req, res) => {
 app.get('/sum', async (req, res) => {
   try {
     const sumQuery = `
-      SELECT SUM(numparent) AS sumParent, 
+      SELECT SUM(numparent) AS sumParent,
       SUM(numchild) AS sumChild,
       SUM(numchild) AS sumChild,
       SUM(DQ_validActivity) AS sumDQ_validActivity
@@ -288,7 +288,7 @@ app.get('/sum', async (req, res) => {
           return await axios.get(catalogueUrl);
         }
         catch (error) {
-          console.log("Error getting catalogue: " + catalogueUrl);
+          console.log(`Error getting catalogue: ${catalogueUrl}`);
           return null;
         }
       })))
@@ -303,7 +303,7 @@ app.get('/sum', async (req, res) => {
           );
         }
         catch (error) {
-          console.log("Error getting dataset: " + datasetUrl);
+          console.log(`Error getting dataset: ${datasetUrl}: ${error.message}`);
           return null;
         }
       })))
@@ -311,7 +311,7 @@ app.get('/sum', async (req, res) => {
 
       //console.log(datasets);
 
-      console.log("Unique Types in feeds (untreated):");
+      console.log('Unique Types in feeds (untreated):');
       const typeCounts = {};
 
       datasets.forEach(dataset => {
@@ -327,43 +327,22 @@ app.get('/sum', async (req, res) => {
         console.log(`${type} (${typeCounts[type]})`);
       });
 
-
-
-      // Dataset providers should be encouraged to adjust the following in their dataset pages, and make
-      // sure there are none which are undefined, then we won't need the normalisation in the following
-      // code block:
-      //
-      //   'ScheduledSessions' -> 'ScheduledSession'
-      //   'sessions' -> 'ScheduledSession'
-      //   'Slot for FacilityUse' -> 'Slot'
-
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
-          name: dataset.name,
-          type: feedInfo.name,
-          url: feedInfo.contentUrl,
-          datasetUrl: dataset.url,
-          discussionUrl: dataset.discussionUrl,
-          licenseUrl: dataset.license,
-          publisherName: dataset.publisher.name,
+          name: dataset.name || '',
+          type: feedInfo.name || '',
+          url: feedInfo.contentUrl || '',
+          datasetUrl: dataset.url || '',
+          discussionUrl: dataset.discussionUrl || '',
+          licenseUrl: dataset.license || '',
+          publisherName: dataset.publisher.name || '',
         })
         )))
-        .filter(feed => feed.type !== 'CourseInstance')
-        //.filter(feed => feed.type !== 'Event')
+        // .filter(feed => feed.type !== 'CourseInstance')
         //.filter(feed => feed.type !== undefined)
-        .filter(feed => feed.type !== 'OnDemandEvent')
         .filter(feed => feed.url && feed.name.substr(0, 1).trim())
         .sort(function (feed1, feed2) {
           return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
-        })
-        .map(feed => {
-          if (['ScheduledSessions', 'sessions'].includes(feed.type)) {
-            feed.type = 'ScheduledSession';
-          }
-          else if (['Slot for FacilityUse'].includes(feed.type)) {
-            feed.type = 'Slot';
-          }
-          return feed;
         });
 
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
@@ -394,118 +373,114 @@ app.get('/sum', async (req, res) => {
         // Do something after merging the data (e.g., send a response)
         //console.log('Data merged successfully:', feeds);
         console.log('Data merged successfully');
-      })
+      });
 
-
-        // Prefetch pages into cache to reduce initial load (if not dev environment):
-        if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
-          for (const feed of feeds) {
-            // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
-            await sleep(60000);
-            harvest(feed.url);
-          }
+      // Prefetch pages into cache to reduce initial load (if not dev environment):
+      if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
+        for (const feed of feeds) {
+          // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
+          await sleep(60000);
+          harvest(feed.url);
         }
       }
+
+    }
   }
   catch (error) {
-      console.error(error.stack);
+    console.error(error.stack);
+    process.exit(1);
+  }
+}) ();
+
+app.get('/feeds', function (req, res) {
+  res.send({ "feeds": feeds });
+});
+
+app.get('/api/cache/performance', (req, res) => {
+  res.json(apicache.getPerformance());
+});
+
+app.get('/api/cache/index', (req, res) => {
+  res.json(apicache.getIndex());
+});
+
+app.post('/api/cache/clear', (req, res) => {
+  const url = req.body.url;
+  apicache.clear(url);
+  // For client-side logging:
+  res.send(`Cache cleared for ${url}`);
+  // For server-side logging:
+  // console.log(`Cache cleared for ${url}`);
+});
+
+async function harvest(url) {
+  console.log(`Prefetch: ${url}`);
+  const { data } = await axios.get(`https://localhost:${port}/fetch?url=` + encodeURIComponent(url));
+  if (!data.next) {
+    console.log(`Error prefetching: ${url}`);
+  } else if (data.next !== url) {
+    harvest(data.next);
+  }
+}
+
+// ** Error handling **
+
+app.use(function (err, req, res, next) {
+  res.status(500).json({ error: err.stack });
+  console.error(err.stack);
+});
+
+const server = http.createServer(app);
+server.on('error', onError);
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  const integerPort = parseInt(val, 10);
+
+  if (Number.isNaN(integerPort)) {
+    // named pipe
+    return val;
+  }
+
+  if (integerPort >= 0) {
+    // port number
+    return integerPort;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof port === 'string'
+    ? `Pipe ${port}`
+    : `Port ${port}`;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(`${bind} requires elevated privileges`);
       process.exit(1);
-    }
-  }) ();
-
-  app.get('/feeds', function (req, res) {
-    res.send({ "feeds": feeds });
-  });
-
-  app.get('/api/cache/performance', (req, res) => {
-    res.json(apicache.getPerformance());
-  });
-
-  app.get('/api/cache/index', (req, res) => {
-    res.json(apicache.getIndex());
-  });
-
-  app.post('/api/cache/clear', (req, res) => {
-    const url = req.body.url;
-    apicache.clear(url);
-    // For client-side logging:
-    res.send(`Cache cleared for ${url}`);
-    // For server-side logging:
-    // console.log(`Cache cleared for ${url}`);
-  });
-
-  async function harvest(url) {
-    console.log(`Prefetch: ${url}`);
-    const { data } = await axios.get(`https://localhost:${port}/fetch?url=` + encodeURIComponent(url));
-    if (!data.next) {
-      console.log(`Error prefetching: ${url}`);
-    } else if (data.next !== url) {
-      harvest(data.next);
-    }
-  }
-
-  // ** Error handling **
-
-  app.use(function (err, req, res, next) {
-    res.status(500).json({ error: err.stack });
-    console.error(err.stack);
-  });
-
-
-  const server = http.createServer(app);
-  server.on('error', onError);
-
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-
-  /**
-   * Normalize a port into a number, string, or false.
-   */
-
-  function normalizePort(val) {
-    const integerPort = parseInt(val, 10);
-
-    if (Number.isNaN(integerPort)) {
-      // named pipe
-      return val;
-    }
-
-    if (integerPort >= 0) {
-      // port number
-      return integerPort;
-    }
-
-    return false;
-  }
-
-  /**
-   * Event listener for HTTP server "error" event.
-   */
-
-  function onError(error) {
-    if (error.syscall !== 'listen') {
+      break;
+    case 'EADDRINUSE':
+      console.error(`${bind} is already in use`);
+      process.exit(1);
+      break;
+    default:
       throw error;
-    }
-
-    const bind = typeof port === 'string'
-      ? `Pipe ${port}`
-      : `Port ${port}`;
-
-    // handle specific listen errors with friendly messages
-    switch (error.code) {
-      case 'EACCES':
-        console.error(`${bind} requires elevated privileges`);
-        process.exit(1);
-        break;
-      case 'EADDRINUSE':
-        console.error(`${bind} is already in use`);
-        process.exit(1);
-        break;
-      default:
-        throw error;
-    }
   }
-
-
-
+}

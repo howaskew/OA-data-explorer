@@ -57,7 +57,7 @@ let storeSuperEvent;
 let storeSubEvent;
 
 let superEventContentTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-let subEventContentTypes = ['ScheduledSession', 'Slot', 'Event', 'OnDemandEvent'];
+let subEventContentTypes = ['ScheduledSession', 'ScheduledSessions', 'sessions', 'Slot', 'Slot for FacilityUse', 'Event', 'OnDemandEvent'];
 
 let sessionSeriesUrlParts = [
   'session-series',
