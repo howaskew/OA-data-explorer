@@ -387,7 +387,8 @@ app.get('/sum', async (req, res) => {
             // Merge properties from the database row into the existing feed object
             Object.assign(existingFeed, row);
           } else {
-            feeds.push(row);
+            // Only adding infor to existing feeds at this stage
+            // feeds.push(row);
           }
         });
 

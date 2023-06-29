@@ -1329,7 +1329,7 @@ function updateParameters(parm, parmVal) {
 // -------------------------------------------------------------------------------------------------
 
 function updateProvider() {
-  provider = $('#provider option:selected').text();
+  provider = $('#provider option:selected').val();
   clearDisplay();
   //Replicating setEndpoints, without the page reset
   $.getJSON('/feeds', function (data) {
