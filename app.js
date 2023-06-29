@@ -393,7 +393,7 @@ app.get('/sum', async (req, res) => {
 
         // Do something after merging the data (e.g., send a response)
         //console.log('Data merged successfully:', feeds);
-        console.log('Data merged successfully);
+        console.log('Data merged successfully');
       })
 
 
@@ -436,7 +436,7 @@ app.get('/sum', async (req, res) => {
 
   async function harvest(url) {
     console.log(`Prefetch: ${url}`);
-    const { data } = await axios.get(`http://localhost:${port}/fetch?url=` + encodeURIComponent(url));
+    const { data } = await axios.get(`https://localhost:${port}/fetch?url=` + encodeURIComponent(url));
     if (!data.next) {
       console.log(`Error prefetching: ${url}`);
     } else if (data.next !== url) {
