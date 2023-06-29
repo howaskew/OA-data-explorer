@@ -1005,7 +1005,7 @@ function setJSONTab(itemId, switchTab) {
   else if (
     storeSubEvent &&
     storeSubEvent.items.hasOwnProperty(itemId)
-  ){
+  ) {
     document.getElementById('json-tab-1').innerHTML = `
       <div class='flex_row'>
           <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
@@ -1023,7 +1023,7 @@ function setJSONTab(itemId, switchTab) {
   else if (
     storeSuperEvent &&
     storeSuperEvent.items.hasOwnProperty(itemId)
-  ){
+  ) {
     document.getElementById('json-tab-1').innerHTML = `
       <div class='flex_row'>
           <h2 class='json-tab-heading'>${storeSuperEvent.itemDataType}</h2>
@@ -1243,7 +1243,7 @@ $('#mapTab').on('show.bs.tab', function () {
 
   // Zoom and pan the map to fit the marker bounds
   setTimeout(function () {
-    map.fitBounds(markerBounds, {padding: [50,50]});
+    map.fitBounds(markerBounds, { padding: [50, 50] });
   }, 100); // Delay the fitBounds to ensure markers plotted
 
   updateScrollResults();
@@ -1534,12 +1534,12 @@ async function runForm(pageNumber) {
 
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
-  $.getJSON('/sum', function(response) {
+  $.getJSON('/sum', function (response) {
     console.log(`numParent: ${response.sum1} numChild: ${response.sum2}`);
   })
-  .fail(function(error) {
-    console.error('Error retrieving sum values:', error);
-  });
+    .fail(function (error) {
+      console.error('Error retrieving sum values:', error);
+    });
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1635,11 +1635,34 @@ function setPage() {
 // -------------------------------------------------------------------------------------------------
 
 function setProvider() {
+
   $.getJSON('/feeds', function (data) {
-    $('#provider').empty()
-    providers = [... new Set(data.feeds.map(feed => feed.publisherName))];
-    $.each(providers, function (index, name) {
-      $('#provider').append(`<option value='${name}'>${name}</option>`);
+    $('#provider').empty();
+    // Extract unique providers
+    const providers = [...new Set(data.feeds.map(feed => feed.publisherName))];
+    // Calculate the combined sum for each unique provider
+    const providerSums = providers.map(provider => {
+      let combinedSum = 0;
+      data.feeds.forEach(feed => {
+        if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
+          combinedSum += feed.numparent + feed.numchild;
+        }
+      });
+      return { provider, sum: combinedSum };
+    });
+    // Sort providers by descending sum, then alphabetically
+    providerSums.sort((a, b) => {
+      if (b.sum === a.sum) {
+        return a.provider.localeCompare(b.provider);
+      }
+      return b.sum - a.sum;
+    });
+    // Output the sorted providers to HTML
+    providerSums.forEach(providerSum => {
+      // Round the combinedSum
+      const roundedSum = Math.round(providerSum.sum / 500) * 500;
+      const formattedSum = roundedSum.toLocaleString() + (roundedSum !== 0 ? '+' : '');
+      $('#provider').append(`<option value="${providerSum.provider}">${providerSum.provider} (${formattedSum})</option>`);
     });
   })
     .done(function () {
@@ -1648,7 +1671,7 @@ function setProvider() {
 }
 
 function setEndpoints() {
-  provider = $('#provider option:selected').text();
+  provider = $('#provider option:selected').val();
   $.getJSON('/feeds', function (data) {
     $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
