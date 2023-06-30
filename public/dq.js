@@ -144,10 +144,10 @@ function setStoreSuperEventAndStoreSubEvent() {
     !storeSubEvent &&
     !type
   ) {
-    console.error('Unknown content type, can\'t determine storeSuperEvent or storeSubEvent, can\'t continue');
+    console.warn('Unknown content type, can\'t determine storeSuperEvent or storeSubEvent');
   }
   else if (storeIngressOrder1[type] === storeIngressOrder2[type]) {
-    console.error(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t continue`);
+    console.warn(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t determine storeSuperEvent or storeSubEvent`);
     storeSuperEvent = null;
     storeSubEvent = null;
   }
@@ -160,7 +160,7 @@ function setStoreSuperEventAndStoreSubEvent() {
       // storeSuperEvent is actually a subEvent feed but was initially misjudged, due to feedType being
       // misleading and assessed before itemDataType
       // e.g. BwD
-      console.log('1');
+      console.log('DQ case 1');
       cp.text('Unpacking data feed - subEvent feed with embedded superEvent data');
 
       if (storeSuperEvent.ingressOrder === 1) {
@@ -207,28 +207,42 @@ function setStoreSuperEventAndStoreSubEvent() {
 function setStoreDataQualityItems() {
   if (
     storeSuperEvent &&
+    storeSubEvent &&
     Object.values(storeSuperEvent.items)
       .filter(item => item.hasOwnProperty('data') && item.data.hasOwnProperty('subEvent'))
-      .length > 0
+      .length > 0 &&
+    Object.keys(storeSubEvent.items).length === 0
   ) {
     // e.g. SportSuite
-    console.log('2');
+    console.log('DQ case 2');
     cp.text('Unpacking data feed - superEvent feed with embedded subEvent data');
 
-    storeSubEvent.items = {};
+    type = 'itemDataType';
+    link = 'superEvent';
+
     for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
       if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
-        const { subEvent, ...newStoreSuperEventItem } = storeSuperEventItem.data;
+        // Here subEvent is the array of all subEvents:
+        const { subEvent, ...storeSuperEventItemDataReduced } = storeSuperEventItem.data;
+        // Here subEvent is an individual subEvent object from the array of all subEvents. It doesn't clash
+        // with the previous definition of subEvent, which is discarded in this loop:
         for (const subEvent of storeSuperEventItem.data.subEvent) {
           const subEventId = subEvent.id || subEvent['@id'];
           storeSubEvent.items[subEventId] = {
-            data: Object.assign({}, subEvent, { superEvent: Object.assign({}, newStoreSuperEventItem) })
+            id: subEventId,
+            // These should technically be here too, but leave out to save memory as not currently needed:
+            // modified: null,
+            // kind: null,
+            // state: 'updated',
+            data: subEvent,
           };
+          storeSubEvent.items[subEventId].data[link] = storeSuperEventItemDataReduced;
         }
       }
     }
+
     setStoreItemDataType(storeSubEvent);
-    link = 'superEvent';
+
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
   }
@@ -239,7 +253,7 @@ function setStoreDataQualityItems() {
     Object.keys(storeSubEvent.items).length > 0 &&
     link
   ) {
-    console.log('3');
+    console.log('DQ case 3');
 
     storeCombinedItems = [];
 
@@ -270,23 +284,42 @@ function setStoreDataQualityItems() {
     storeSubEvent &&
     Object.keys(storeSubEvent.items).length > 0
   ){
-    console.log('4');
+    console.log('DQ case 4');
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
-    console.warn('No combined store, data quality from storeSubEvent only');
+    console.warn('Data quality from storeSubEvent only');
     cp.empty();
   }
   else if (
     storeSuperEvent &&
     Object.keys(storeSuperEvent.items).length > 0
   ){
-    console.log('5');
+    console.log('DQ case 5');
     storeDataQuality.items = Object.values(storeSuperEvent.items);
     storeDataQuality.eventType = storeSuperEvent.eventType;
-    console.warn('No combined store, data quality from storeSuperEvent only');
+    console.warn('Data quality from storeSuperEvent only');
+    cp.empty();
+  }
+  else if (
+    storeIngressOrder1 &&
+    Object.keys(storeIngressOrder1.items).length > 0
+  ){
+    console.log('DQ case 6');
+    storeDataQuality.items = Object.values(storeIngressOrder1.items);
+    console.warn('Data quality from storeIngressOrder1 only');
+    cp.empty();
+  }
+  else if (
+    storeIngressOrder2 &&
+    Object.keys(storeIngressOrder2.items).length > 0
+  ){
+    console.log('DQ case 7');
+    storeDataQuality.items = Object.values(storeIngressOrder2.items);
+    console.warn('Data quality from storeIngressOrder2 only');
     cp.empty();
   }
   else {
+    console.log('DQ case 8');
     storeDataQuality.items = [];
     console.warn('No data for metrics');
     cp.empty();
@@ -315,9 +348,10 @@ function setStoreDataQualityItemFlags() {
 
   const dateNow = new Date().setHours(0, 0, 0, 0);
 
-  let urls = {};
   let parents = {};
-  let parentUrls = {};
+  let itemUrlsItemIdxs = {};
+  let parentIdsItemIdxs = {};
+  let parentUrlsParentIdxs = {};
 
   // -------------------------------------------------------------------------------------------------
 
@@ -422,10 +456,10 @@ function setStoreDataQualityItemFlags() {
     // URL info
 
     if (item.data && item.data.url && typeof item.data.url === 'string') {
-      if (!urls.hasOwnProperty(item.data.url)) {
-        urls[item.data.url] = [];
+      if (!itemUrlsItemIdxs.hasOwnProperty(item.data.url)) {
+        itemUrlsItemIdxs[item.data.url] = [];
       }
-      urls[item.data.url].push(itemIdx);
+      itemUrlsItemIdxs[item.data.url].push(itemIdx);
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -437,9 +471,9 @@ function setStoreDataQualityItemFlags() {
       if (parentId) {
         if (!parents.hasOwnProperty(parentId)) {
           parents[parentId] = item.data[link];
-          parents[parentId].itemIdxs = [];
+          parentIdsItemIdxs[parentId] = [];
         }
-        parents[parentId].itemIdxs.push(itemIdx);
+        parentIdsItemIdxs[parentId].push(itemIdx);
       }
       item.DQ_validParent = parentId !== null;
     }
@@ -455,7 +489,7 @@ function setStoreDataQualityItemFlags() {
   // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
   // truly be the case and needs to be investigated.
 
-  for (const itemIdxs of Object.values(urls)) {
+  for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
     if (itemIdxs.length === 1) {
       storeDataQuality.items[itemIdxs[0]].DQ_validUrl = true;
       storeSummary.DQ_validSessionUrl++;
@@ -470,20 +504,18 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  parents = Object.values(parents);
-
-  for (const [parentIdx, parent] of parents.entries()) {
+  for (const [parentIdx, parent] of Object.values(parents).entries()) {
     if (parent.url && typeof parent.url === 'string') {
-      if (!parentUrls.hasOwnProperty(parent.url)) {
-        parentUrls[parent.url] = [];
+      if (!parentUrlsParentIdxs.hasOwnProperty(parent.url)) {
+        parentUrlsParentIdxs[parent.url] = [];
       }
-      parentUrls[parent.url].push(parentIdx);
+      parentUrlsParentIdxs[parent.url].push(parentIdx);
     }
   }
 
-  for (const parentIdxs of Object.values(parentUrls)) {
+  for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
     if (parentIdxs.length === 1) {
-      for (const itemIdx of parents[parentIdxs[0]].itemIdxs) {
+      for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
         storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
         storeSummary.DQ_validSeriesUrl++;
       }
@@ -496,13 +528,14 @@ function setStoreDataQualityItemFlags() {
     }
   }
 
-  storeSummary.numParent = parents.length;
+  storeSummary.numParent = Object.keys(parents).length;
 
   // -------------------------------------------------------------------------------------------------
 
-  urls = {};
   parents = {};
-  parentUrls = {};
+  itemUrlsItemIdxs = {};
+  parentIdsItemIdxs = {};
+  parentUrlsParentIdxs = {};
 
   // -------------------------------------------------------------------------------------------------
 
@@ -687,7 +720,7 @@ function postDataQuality() {
           }
         }
 
-        // Don't pull urls for images, just top level organisation urls:
+        // Don't pull URLs for images, just top level organisation URLs:
         const topUrl = organizer.url || null;
         if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
           storeDataQuality.filteredItemsUniqueOrganizers[organizerName]['url'].add(topUrl.trim());
@@ -722,7 +755,7 @@ function postDataQuality() {
           }
         }
 
-        // Don't pull urls for images, just top level location urls:
+        // Don't pull URLs for images, just top level location URLs:
         const topUrl = location.url || null;
         if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
           storeDataQuality.filteredItemsUniqueLocations[locationName]['url'].add(topUrl.trim());
