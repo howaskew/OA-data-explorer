@@ -332,14 +332,14 @@ function setStoreDataQualityItemFlags() {
 
   let storeSummary = {
     id: storeIngressOrder1.firstPage,
+    dateUpdated: 0,
     numParent: 0,
     numChild: storeDataQuality.items.length,
     DQ_validActivity: 0,
     DQ_validGeo: 0,
     DQ_validDate: 0,
-    DQ_validSeriesUrl: 0,
-    DQ_validSessionUrl: 0,
-    dateUpdated: 0
+    DQ_validParentUrl: 0,
+    DQ_validChildUrl: 0,
   };
 
   let dqp = $("#DQProgress");
@@ -491,14 +491,14 @@ function setStoreDataQualityItemFlags() {
 
   for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
     if (itemIdxs.length === 1) {
-      storeDataQuality.items[itemIdxs[0]].DQ_validUrl = true;
-      storeSummary.DQ_validSessionUrl++;
+      storeDataQuality.items[itemIdxs[0]].DQ_validChildUrl = true;
+      storeSummary.DQ_validChildUrl++;
     }
   }
 
   for (const item of storeDataQuality.items) {
-    if (!item.hasOwnProperty('DQ_validUrl')) {
-      item.DQ_validUrl = false;
+    if (!item.hasOwnProperty('DQ_validChildUrl')) {
+      item.DQ_validChildUrl = false;
     }
   }
 
@@ -517,7 +517,7 @@ function setStoreDataQualityItemFlags() {
     if (parentIdxs.length === 1) {
       for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
         storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
-        storeSummary.DQ_validSeriesUrl++;
+        storeSummary.DQ_validParentUrl++;
       }
     }
   }
@@ -619,7 +619,7 @@ function postDataQuality() {
   let numFilteredItemsWithValidDescription = 0;
   let numFilteredItemsWithValidGeo = 0;
   let numFilteredItemsWithValidDate = 0;
-  let numFilteredItemsWithValidUrl = 0;
+  let numFilteredItemsWithValidChildUrl = 0;
   let numFilteredItemsWithValidParentUrl = 0;
 
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
@@ -679,7 +679,7 @@ function postDataQuality() {
 
     let itemMatchesDQUrlFilter =
       !filters.DQ_filterUrls ||
-      (filters.DQ_filterUrls && !item.DQ_validUrl);
+      (filters.DQ_filterUrls && !item.DQ_validChildUrl);
 
     if (
       itemMatchesOrganizer &&
@@ -834,8 +834,8 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validUrl) {
-        numFilteredItemsWithValidUrl++;
+      if (item.DQ_validChildUrl) {
+        numFilteredItemsWithValidChildUrl++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -982,9 +982,9 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid URLs: ${numFilteredItemsWithValidUrl}`);
+  console.log(`Number of items with valid URLs: ${numFilteredItemsWithValidChildUrl}`);
 
-  const percent4_a = (numFilteredItemsWithValidUrl / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent4_a = (numFilteredItemsWithValidChildUrl / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded4_a = percent4_a.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------

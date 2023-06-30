@@ -154,8 +154,8 @@ async function createTableIfNotExists() {
           DQ_validActivity INTEGER,
           DQ_validGeo INTEGER,
           DQ_validDate INTEGER,
-          DQ_validSeriesUrl INTEGER,
-          DQ_validSessionUrl INTEGER,
+          DQ_validParentUrl INTEGER,
+          DQ_validChildUrl INTEGER,
           dateUpdated INTEGER
         );
       `;
@@ -180,8 +180,8 @@ async function createTableIfNotExists() {
       //   DQ_validActivity INTEGER,
       //    DQ_validGeo INTEGER,
       //    DQ_validDate INTEGER,
-      //    DQ_validSeriesUrl INTEGER,
-      //    DQ_validSessionUrl INTEGER,
+      //    DQ_validParentUrl INTEGER,
+      //    DQ_validChildUrl INTEGER,
       //    dateUpdated INTEGER
       //  );
       //`;
@@ -212,8 +212,8 @@ app.post('/api/insert', async (req, res) => {
 
     // Assuming the client sends the name and email in the request body
     const { id, numParent, numChild, DQ_validActivity,
-      DQ_validGeo, DQ_validDate, DQ_validSeriesUrl,
-      DQ_validSessionUrl, dateUpdated } = req.body;
+      DQ_validGeo, DQ_validDate, DQ_validParentUrl,
+      DQ_validChildUrl, dateUpdated } = req.body;
 
     // Validate and sanitize the input
     // Implement appropriate validation logic based on your requirements
@@ -221,21 +221,21 @@ app.post('/api/insert', async (req, res) => {
     // Insert data into the database using a parameterized query
     const insertQuery = `
     INSERT INTO openactivedq (id, numparent, numchild, dq_validactivity,dq_validgeo, dq_validdate,
-      dq_validseriesurl, dq_validsessionurl,dateupdated)
+      dq_validparenturl, dq_validchildurl,dateupdated)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (id)
     DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild,
     dq_validactivity = EXCLUDED.dq_validactivity,
     dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate,
-    dq_validseriesurl = EXCLUDED.dq_validseriesurl,
-    dq_validsessionurl = EXCLUDED.dq_validsessionurl,
+    dq_validparenturl = EXCLUDED.dq_validparenturl,
+    dq_validchildurl = EXCLUDED.dq_validchildurl,
     dateupdated = EXCLUDED.dateupdated
 
-    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validseriesurl, dq_validsessionurl, dateupdated;
+    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validparenturl, dq_validchildurl, dateupdated;
     `;
 
     const values = [id, numParent, numChild, DQ_validActivity,
-      DQ_validGeo, DQ_validDate, DQ_validSeriesUrl, DQ_validSessionUrl, dateUpdated];
+      DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated];
     const result = await client.query(insertQuery, values);
 
     // Send the inserted data back to the client as a response
