@@ -56,26 +56,19 @@ let storeCombinedItems; // This is present only if we have valid storeSuperEvent
 let storeSuperEvent;
 let storeSubEvent;
 
-let superEventContentTypes = ['SessionSeries', 'FacilityUse', 'IndividualFacilityUse'];
-let subEventContentTypes = ['ScheduledSession', 'ScheduledSessions', 'sessions', 'Slot', 'Slot for FacilityUse', 'Event', 'OnDemandEvent'];
+const superEventContentTypesSeries = ['SessionSeries'];
+const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
+const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility);
+const subEventContentTypesSession = ['ScheduledSession', 'ScheduledSessions', 'sessions'];
+const subEventContentTypesSlot = ['Slot', 'Slot for FacilityUse'];
+const subEventContentTypesEvent = ['Event', 'OnDemandEvent'];
+const subEventContentTypes = Array.prototype.concat(subEventContentTypesSession, subEventContentTypesSlot, subEventContentTypesEvent);
 
-let sessionSeriesUrlParts = [
+const seriesUrlParts = [
   'session-series',
   'sessionseries',
 ];
-let scheduledSessionUrlParts = [
-  'scheduled-sessions',
-  'scheduledsessions',
-  'scheduled-session',
-  'scheduledsession',
-];
-let facilityUseUrlParts = [
-  'facility-uses',
-  'facilityuses',
-  'facility-use',
-  'facilityuse',
-];
-let individualFacilityUseUrlParts = [
+const facilityUrlParts = [
   'individual-facility-uses',
   'individual-facilityuses',
   'individualfacility-uses',
@@ -84,11 +77,22 @@ let individualFacilityUseUrlParts = [
   'individual-facilityuse',
   'individualfacility-use',
   'individualfacilityuse',
+  'facility-uses',
+  'facilityuses',
+  'facility-use',
+  'facilityuse',
 ];
-let slotUrlParts = [
+const sessionUrlParts = [
+  'scheduled-sessions',
+  'scheduledsessions',
+  'scheduled-session',
+  'scheduledsession',
+];
+const slotUrlParts = [
   'slots',
   'slot',
-  'facility-use-slots'
+  'facility-use-slots',
+  'facility-use-slot'
 ];
 
 let storeIngressOrder1FirstPageFromUser;
@@ -528,25 +532,20 @@ async function setStoreIngressOrder1FirstPage() {
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreIngressOrder2FirstPage() {
-  switch (storeIngressOrder1.feedType) {
-    case 'SessionSeries':
-      await setStoreIngressOrder2FirstPageHelper(sessionSeriesUrlParts, scheduledSessionUrlParts);
-      break;
-    case 'ScheduledSession':
-      await setStoreIngressOrder2FirstPageHelper(scheduledSessionUrlParts, sessionSeriesUrlParts);
-      break;
-    case 'FacilityUse':
-      await setStoreIngressOrder2FirstPageHelper(facilityUseUrlParts, slotUrlParts);
-      break;
-    case 'IndividualFacilityUse':
-      await setStoreIngressOrder2FirstPageHelper(individualFacilityUseUrlParts, slotUrlParts);
-      break;
-    case 'Slot':
-      await setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUseUrlParts.concat(individualFacilityUseUrlParts));
-      break;
-    default:
-      storeIngressOrder2.firstPage = null;
-      break;
+  if (superEventContentTypesSeries.includes(storeIngressOrder1.feedType)) {
+    await setStoreIngressOrder2FirstPageHelper(seriesUrlParts, sessionUrlParts);
+  }
+  else if (subEventContentTypesSession.includes(storeIngressOrder1.feedType)) {
+    await setStoreIngressOrder2FirstPageHelper(sessionUrlParts, seriesUrlParts);
+  }
+  else if (superEventContentTypesFacility.includes(storeIngressOrder1.feedType)) {
+    await setStoreIngressOrder2FirstPageHelper(facilityUrlParts, slotUrlParts);
+  }
+  else if (subEventContentTypesSlot.includes(storeIngressOrder1.feedType)) {
+    await setStoreIngressOrder2FirstPageHelper(slotUrlParts, facilityUrlParts);
+  }
+  else {
+    storeIngressOrder2.firstPage = null;
   }
 }
 
@@ -592,17 +591,14 @@ async function setStoreFeedType(store) {
     return;
   }
   if (storeIngressOrder1FirstPageFromUser) {
-    if (sessionSeriesUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+    if (seriesUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
       store.feedType = 'SessionSeries';
     }
-    else if (scheduledSessionUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+    else if (sessionUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
       store.feedType = 'ScheduledSession';
     }
-    else if (facilityUseUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
+    else if (facilityUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
       store.feedType = 'FacilityUse';
-    }
-    else if (individualFacilityUseUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
-      store.feedType = 'IndividualFacilityUse';
     }
     else if (slotUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
       store.feedType = 'Slot';
@@ -612,7 +608,7 @@ async function setStoreFeedType(store) {
     }
   }
   else {
-    store.feedType = feeds[store.firstPage].hasOwnProperty('type') ? feeds[store.firstPage].type : null;
+    store.feedType = feeds[store.firstPage].type || null;
   }
 }
 

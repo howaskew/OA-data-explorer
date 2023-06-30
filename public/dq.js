@@ -105,78 +105,99 @@ function postResults(item) {
 
 function setStoreSuperEventAndStoreSubEvent() {
 
-  if (superEventContentTypes.includes(storeIngressOrder1.feedType)) {
-    storeSuperEvent = storeIngressOrder1;
-    storeSubEvent = storeIngressOrder2;
-    type = 'feedType';
+  storeSuperEvent = null;
+  storeSubEvent = null;
+  type = null;
+
+  breakpoint:
+  for (const store of [storeIngressOrder1, storeIngressOrder2]) {
+    for (const typeTemp of ['feedType', 'itemDataType']) {
+      if (superEventContentTypes.includes(store[typeTemp])) {
+        if (store.ingressOrder === 1) {
+          storeSuperEvent = storeIngressOrder1;
+          storeSubEvent = storeIngressOrder2;
+        }
+        else if (store.ingressOrder === 2) {
+          storeSuperEvent = storeIngressOrder2;
+          storeSubEvent = storeIngressOrder1;
+        }
+      }
+      else if (subEventContentTypes.includes(store[typeTemp])) {
+        if (store.ingressOrder === 1) {
+          storeSubEvent = storeIngressOrder1;
+          storeSuperEvent = storeIngressOrder2;
+        }
+        else if (store.ingressOrder === 2) {
+          storeSubEvent = storeIngressOrder2;
+          storeSuperEvent = storeIngressOrder1;
+        }
+      }
+      if (storeSuperEvent && storeSubEvent) {
+        type = typeTemp;
+        break breakpoint;
+      }
+    }
   }
-  else if (subEventContentTypes.includes(storeIngressOrder1.feedType)) {
-    storeSubEvent = storeIngressOrder1;
-    storeSuperEvent = storeIngressOrder2;
-    type = 'feedType';
+
+  if (
+    !storeSuperEvent &&
+    !storeSubEvent &&
+    !type
+  ) {
+    console.error('Unknown content type, can\'t determine storeSuperEvent or storeSubEvent, can\'t continue');
   }
-  else if (superEventContentTypes.includes(storeIngressOrder1.itemDataType)) {
-    storeSuperEvent = storeIngressOrder1;
-    storeSubEvent = storeIngressOrder2;
-    type = 'itemDataType';
-  }
-  else if (subEventContentTypes.includes(storeIngressOrder1.itemDataType)) {
-    storeSubEvent = storeIngressOrder1;
-    storeSuperEvent = storeIngressOrder2;
-    type = 'itemDataType';
+  else if (storeIngressOrder1[type] === storeIngressOrder2[type]) {
+    console.error(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t continue`);
+    storeSuperEvent = null;
+    storeSubEvent = null;
   }
   else {
-    type = null;
-    console.error('Unknown storeIngressOrder1 content type, can\'t determine whether super-event or sub-event, can\'t continue');
-  }
 
-  if (type) {
-    if (storeIngressOrder1[type] === storeIngressOrder2[type]) {
-      console.error(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t continue`);
-      storeSuperEvent = null;
-      storeSubEvent = null;
+    if (
+      type === 'feedType' &&
+      subEventContentTypes.includes(storeSuperEvent.itemDataType)
+    ) {
+      // storeSuperEvent is actually a subEvent feed but was initially misjudged, due to feedType being
+      // misleading and assessed before itemDataType
+      // e.g. BwD
+      console.log('1');
+      cp.text('Unpacking data feed - subEvent feed with embedded superEvent data');
+
+      if (storeSuperEvent.ingressOrder === 1) {
+        storeSuperEvent = storeIngressOrder2;
+        storeSubEvent = storeIngressOrder1;
+      }
+      else if (storeSuperEvent.ingressOrder === 2) {
+        storeSuperEvent = storeIngressOrder1;
+        storeSubEvent = storeIngressOrder2;
+      }
+      type = 'itemDataType';
+    }
+
+    storeSuperEvent.eventType = 'superEvent';
+    storeSubEvent.eventType = 'subEvent';
+
+    if (subEventContentTypesSession.includes(storeSubEvent[type])) {
+      link = 'superEvent';
+    }
+    else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
+      link = 'facilityUse';
     }
     else {
-
-      if (subEventContentTypes.includes(storeSuperEvent.itemDataType)) {
-        // This is actually a subEvent feed but was initially labelled as a superEvent feed, due to feedType
-        // being assessed before itemDataType
-        // e.g. BwD
-        console.log('1');
-        cp.text('Unpacking data feed - subEvent feed with embedded superEvent data');
-
-        storeSubEvent = storeSuperEvent;
-        storeSuperEvent = storeSubEvent.ingressOrder === 1 ? storeIngressOrder2 : storeIngressOrder1;
-        type = 'itemDataType';
-      }
-
-      storeSuperEvent.eventType = 'superEvent';
-      storeSubEvent.eventType = 'subEvent';
-
-      switch (storeSubEvent[type]) {
-        case 'ScheduledSession':
-          link = 'superEvent';
-          break;
-        case 'Slot':
-          link = 'facilityUse';
-          break;
-        default:
-          link = null;
-          console.warn('No feed linking variable, can\'t create combined store');
-          break;
-      }
-
-      console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
-      console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
-      console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
-      console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
-
-      console.log(`Number of storeSubEvent items: ${Object.keys(storeSubEvent.items).length}`);
-      console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
-      console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
-      console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
-
+      link = null;
+      console.warn('No feed linking variable, can\'t create combined store');
     }
+
+    console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
+    console.log(`storeSuperEvent feed type: ${storeSuperEvent.feedType}`);
+    console.log(`storeSuperEvent item kind: ${storeSuperEvent.itemKind}`);
+    console.log(`storeSuperEvent item data type: ${storeSuperEvent.itemDataType}`);
+
+    console.log(`Number of storeSubEvent items: ${Object.keys(storeSubEvent.items).length}`);
+    console.log(`storeSubEvent feed type: ${storeSubEvent.feedType}`);
+    console.log(`storeSubEvent item kind: ${storeSubEvent.itemKind}`);
+    console.log(`storeSubEvent item data type: ${storeSubEvent.itemDataType}`);
+
   }
 
 }
@@ -487,8 +508,8 @@ function setStoreDataQualityItemFlags() {
 
   // Write feed level data to database
 
-  console.log(storeSummary);
-  //console.log(storeDataQuality);
+  // console.log(storeSummary);
+  // console.log(storeDataQuality);
 
   (async () => {
     try {
