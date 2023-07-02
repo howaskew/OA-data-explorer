@@ -220,22 +220,22 @@ app.post('/api/insert', async (req, res) => {
 
     // Insert data into the database using a parameterized query
     const insertQuery = `
-    INSERT INTO openactivedq (id, numparent, numchild, dq_validactivity,dq_validgeo, dq_validdate,
-      dq_validparenturl, dq_validchildurl,dateupdated)
+    INSERT INTO openactivedq (id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (id)
-    DO UPDATE SET numparent = EXCLUDED.numparent, numchild = EXCLUDED.numchild,
-    dq_validactivity = EXCLUDED.dq_validactivity,
-    dq_validgeo = EXCLUDED.dq_validgeo, dq_validdate = EXCLUDED.dq_validdate,
-    dq_validparenturl = EXCLUDED.dq_validparenturl,
-    dq_validchildurl = EXCLUDED.dq_validchildurl,
-    dateupdated = EXCLUDED.dateupdated
+    DO UPDATE SET numParent = EXCLUDED.numParent,
+    numChild = EXCLUDED.numChild,
+    DQ_validActivity = EXCLUDED.DQ_validActivity,
+    DQ_validGeo = EXCLUDED.DQ_validGeo,
+    DQ_validDate = EXCLUDED.DQ_validDate,
+    DQ_validParentUrl = EXCLUDED.DQ_validParentUrl,
+    DQ_validChildUrl = EXCLUDED.DQ_validChildUrl,
+    dateUpdated = EXCLUDED.dateUpdated
 
-    RETURNING id, numparent, numchild, dq_validactivity, dq_validgeo, dq_validdate, dq_validparenturl, dq_validchildurl, dateupdated;
+    RETURNING id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated;
     `;
 
-    const values = [id, numParent, numChild, DQ_validActivity,
-      DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated];
+    const values = [id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated];
     const result = await client.query(insertQuery, values);
 
     // Send the inserted data back to the client as a response
@@ -251,9 +251,9 @@ app.post('/api/insert', async (req, res) => {
 app.get('/sum', async (req, res) => {
   try {
     const sumQuery = `
-      SELECT SUM(numparent) AS sumParent,
-      SUM(numchild) AS sumChild,
-      SUM(numchild) AS sumChild,
+      SELECT SUM(numParent) AS sumParent,
+      SUM(numChild) AS sumChild,
+      SUM(numChild) AS sumChild,
       SUM(DQ_validActivity) AS sumDQ_validActivity
       FROM openactivedq;
     `;
