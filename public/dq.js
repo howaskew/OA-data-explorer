@@ -1019,6 +1019,7 @@ function postDataQuality() {
     spark6Count = storeDataQuality.numFilteredItems;
     setSpark1SeriesName();
     setSpark6SeriesName();
+    setSpark1SeriesNameAndSpark6SeriesName();
   }
   else if (storeDataQuality.eventType === 'superEvent') {
     spark1Count = storeDataQuality.numFilteredItems;
@@ -1073,38 +1074,40 @@ function postDataQuality() {
     }
   }
 
-  // At this point, we should have non-empty settings for both spark1SeriesName and spark6SeriesName.
-  // It may however be possible for one of these to include 'Parent'/'Child' and the other one to be
-  // more specific. If this is so, we can use knowledge of the latter to adjust the former:
-  if (
-    (spark1SeriesName.includes('Parent') || spark1SeriesName.includes('Child')) &&
-    (!spark6SeriesName.includes('Parent') && !spark6SeriesName.includes('Child'))
-  ) {
-    if (spark6SeriesName.includes('Scheduled session')) {
-      spark1SeriesName = 'Session series';
+  function setSpark1SeriesNameAndSpark6SeriesName() {
+    // At this point, we should have non-empty settings for both spark1SeriesName and spark6SeriesName.
+    // It may however be possible for one of these to include 'Parent'/'Child' and the other one to be
+    // more specific. If this is so, we can use knowledge of the latter to adjust the former:
+    if (
+      (spark1SeriesName.includes('Parent') || spark1SeriesName.includes('Child')) &&
+      (!spark6SeriesName.includes('Parent') && !spark6SeriesName.includes('Child'))
+    ) {
+      if (spark6SeriesName.includes('Scheduled session')) {
+        spark1SeriesName = 'Session series';
+      }
+      else if (spark6SeriesName.includes('Slot')) {
+        spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
+      }
+      // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series' or 'Course', so we leave the parent label as 'Parent':
+      // else if (spark6SeriesName.includes('Event')) {
+      // }
     }
-    else if (spark6SeriesName.includes('Slot')) {
-      spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
-    }
-    // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series' or 'Course', so we leave the parent label as 'Parent':
-    // else if (spark6SeriesName.includes('Event')) {
-    // }
-  }
-  else if (
-    (spark6SeriesName.includes('Parent') || spark6SeriesName.includes('Child')) &&
-    (!spark1SeriesName.includes('Parent') && !spark1SeriesName.includes('Child'))
-  ) {
-    if (spark1SeriesName.includes('Session series')) {
-      spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else if (spark1SeriesName.includes('Facility use')) {
-      spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else if (spark1SeriesName.includes('Event series')) {
-      spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else if (spark1SeriesName.includes('Course')) {
-      spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+    else if (
+      (spark6SeriesName.includes('Parent') || spark6SeriesName.includes('Child')) &&
+      (!spark1SeriesName.includes('Parent') && !spark1SeriesName.includes('Child'))
+    ) {
+      if (spark1SeriesName.includes('Session series')) {
+        spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
+      }
+      else if (spark1SeriesName.includes('Facility use')) {
+        spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
+      }
+      else if (spark1SeriesName.includes('Event series')) {
+        spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+      }
+      else if (spark1SeriesName.includes('Course')) {
+        spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+      }
     }
   }
 
