@@ -58,7 +58,8 @@ let storeSubEvent;
 
 const superEventContentTypesSeries = ['SessionSeries'];
 const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
-const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility);
+const superEventContentTypesCourse = ['CourseInstance'];
+const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility, superEventContentTypesCourse);
 const subEventContentTypesSession = ['ScheduledSession', 'ScheduledSessions', 'sessions'];
 const subEventContentTypesSlot = ['Slot', 'Slot for FacilityUse'];
 const subEventContentTypesEvent = ['Event', 'OnDemandEvent'];
@@ -92,7 +93,9 @@ const slotUrlParts = [
   'slots',
   'slot',
   'facility-use-slots',
-  'facility-use-slot'
+  'facility-use-slot',
+  'facility-uses/events',
+  'facility-uses/event',
 ];
 
 let storeIngressOrder1FirstPageFromUser;
@@ -957,7 +960,11 @@ function setJSONTab(itemId, switchTab) {
   ) {
     const storeSubEventItem = storeSubEvent.items[itemId];
     const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
-    const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem => String(storeSuperEventItem.id).split('/').at(-1) === storeSuperEventItemId);
+    const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem =>
+      String(storeSuperEventItem.id).split('/').at(-1) === storeSuperEventItemId ||
+      String(storeSuperEventItem.data.id).split('/').at(-1) === storeSuperEventItemId || // BwD facilityUse/slot
+      String(storeSuperEventItem.data['@id']).split('/').at(-1) === storeSuperEventItemId
+    );
 
     if (storeSuperEventItem) {
       document.getElementById('json-tab-1').innerHTML = `
