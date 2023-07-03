@@ -330,9 +330,9 @@ function setStoreDataQualityItems() {
 
 function setStoreDataQualityItemFlags() {
 
-  let storeSummary = {
+  storeDataQuality.dqFlags = new Object();
+  storeDataQuality.dqSummary = {
     id: storeIngressOrder1.firstPage,
-    dateUpdated: 0,
     numParent: 0,
     numChild: storeDataQuality.items.length,
     DQ_validActivity: 0,
@@ -340,7 +340,8 @@ function setStoreDataQualityItemFlags() {
     DQ_validDate: 0,
     DQ_validParentUrl: 0,
     DQ_validChildUrl: 0,
-  };
+    dateUpdated: 0,
+  }; // The order of keys here may be important for the PostgreSQL database, see '/api/insert' in app.js
 
   let dqp = $("#DQProgress");
 
@@ -357,11 +358,24 @@ function setStoreDataQualityItemFlags() {
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
+    storeDataQuality.dqFlags[item.id] = {
+      DQ_validOrganizer: false,
+      DQ_validLocation: false,
+      DQ_validActivity: false,
+      DQ_validName: false,
+      DQ_validDescription: false,
+      DQ_validGeo: false,
+      DQ_validDate: false,
+      DQ_validParent: false,
+      DQ_validChildUrl: false,
+      DQ_validParentUrl: false,
+    };
+
     // Organizer info
 
     const organizer = resolveProperty(item, 'organizer');
 
-    item.DQ_validOrganizer =
+    storeDataQuality.dqFlags[item.id].DQ_validOrganizer =
       typeof organizer === 'object' &&
       !Array.isArray(organizer) &&
       organizer !== null &&
@@ -374,7 +388,7 @@ function setStoreDataQualityItemFlags() {
 
     const location = resolveProperty(item, 'location');
 
-    item.DQ_validLocation =
+    storeDataQuality.dqFlags[item.id].DQ_validLocation =
       typeof location === 'object' &&
       !Array.isArray(location) &&
       location !== null &&
@@ -388,7 +402,7 @@ function setStoreDataQualityItemFlags() {
     // An item may be associated with many activities, but here we only care if there is at least one:
     const activities = resolveProperty(item, 'activity');
 
-    item.DQ_validActivity =
+    storeDataQuality.dqFlags[item.id].DQ_validActivity =
       Array.isArray(activities) &&
       activities
         .map(activity => activity['id'] || activity['@id'])
@@ -397,8 +411,8 @@ function setStoreDataQualityItemFlags() {
         .filter(prefLabel => prefLabel)
         .length > 0;
 
-    if (item.DQ_validActivity) {
-      storeSummary.DQ_validActivity++;
+    if (storeDataQuality.dqFlags[item.id].DQ_validActivity) {
+      storeDataQuality.dqSummary.DQ_validActivity++;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -407,7 +421,7 @@ function setStoreDataQualityItemFlags() {
 
     const name = getProperty(item, 'name');
 
-    item.DQ_validName =
+    storeDataQuality.dqFlags[item.id].DQ_validName =
       typeof name === 'string' &&
       name.trim().length > 0;
 
@@ -417,7 +431,7 @@ function setStoreDataQualityItemFlags() {
 
     const description = getProperty(item, 'description');
 
-    item.DQ_validDescription =
+    storeDataQuality.dqFlags[item.id].DQ_validDescription =
       typeof description === 'string' &&
       description.trim().length > 0;
 
@@ -429,12 +443,12 @@ function setStoreDataQualityItemFlags() {
     const latitude = getProperty(item, 'latitude');
     const longitude = getProperty(item, 'longitude');
 
-    item.DQ_validGeo =
+    storeDataQuality.dqFlags[item.id].DQ_validGeo =
       (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
       (typeof latitude === 'number' && typeof longitude === 'number');
 
-    if (item.DQ_validGeo) {
-      storeSummary.DQ_validGeo++;
+    if (storeDataQuality.dqFlags[item.id].DQ_validGeo) {
+      storeDataQuality.dqSummary.DQ_validGeo++;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -443,12 +457,12 @@ function setStoreDataQualityItemFlags() {
 
     const date = new Date(item.data.startDate);
 
-    item.DQ_validDate =
+    storeDataQuality.dqFlags[item.id].DQ_validDate =
       !isNaN(date) &&
       date >= dateNow;
 
-    if (item.DQ_validDate) {
-      storeSummary.DQ_validDate++;
+    if (storeDataQuality.dqFlags[item.id].DQ_validDate) {
+      storeDataQuality.dqSummary.DQ_validDate++;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -475,7 +489,7 @@ function setStoreDataQualityItemFlags() {
         }
         parentIdsItemIdxs[parentId].push(itemIdx);
       }
-      item.DQ_validParent = parentId !== null;
+      storeDataQuality.dqFlags[item.id].DQ_validParent = parentId !== null;
     }
 
     // -------------------------------------------------------------------------------------------------
@@ -491,14 +505,8 @@ function setStoreDataQualityItemFlags() {
 
   for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
     if (itemIdxs.length === 1) {
-      storeDataQuality.items[itemIdxs[0]].DQ_validChildUrl = true;
-      storeSummary.DQ_validChildUrl++;
-    }
-  }
-
-  for (const item of storeDataQuality.items) {
-    if (!item.hasOwnProperty('DQ_validChildUrl')) {
-      item.DQ_validChildUrl = false;
+      Object.values(storeDataQuality.dqFlags)[itemIdxs[0]].DQ_validChildUrl = true;
+      storeDataQuality.dqSummary.DQ_validChildUrl++;
     }
   }
 
@@ -516,19 +524,13 @@ function setStoreDataQualityItemFlags() {
   for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
     if (parentIdxs.length === 1) {
       for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
-        storeDataQuality.items[itemIdx].DQ_validParentUrl = true;
-        storeSummary.DQ_validParentUrl++;
+        Object.values(storeDataQuality.dqFlags)[itemIdx].DQ_validParentUrl = true;
+        storeDataQuality.dqSummary.DQ_validParentUrl++;
       }
     }
   }
 
-  for (const item of storeDataQuality.items) {
-    if (!item.hasOwnProperty('DQ_validParentUrl')) {
-      item.DQ_validParentUrl = false;
-    }
-  }
-
-  storeSummary.numParent = Object.keys(parents).length;
+  storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
 
   // -------------------------------------------------------------------------------------------------
 
@@ -541,7 +543,7 @@ function setStoreDataQualityItemFlags() {
 
   // Write feed level data to database
 
-  // console.log(storeSummary);
+  // console.log(storeDataQuality.dqSummary);
   // console.log(storeDataQuality);
 
   (async () => {
@@ -551,7 +553,7 @@ function setStoreDataQualityItemFlags() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(storeSummary)
+        body: JSON.stringify(storeDataQuality.dqSummary)
       });
 
       if (response.ok) {
@@ -631,19 +633,19 @@ function postDataQuality() {
     let itemMatchesOrganizer =
       !filters.organizer
         ? true
-        : item.DQ_validOrganizer &&
+        : storeDataQuality.dqFlags[item.id].DQ_validOrganizer &&
         resolveProperty(item, 'organizer').name === filters.organizer;
 
     let itemMatchesLocation =
       !filters.location
         ? true
-        : item.DQ_validLocation &&
+        : storeDataQuality.dqFlags[item.id].DQ_validLocation &&
         resolveProperty(item, 'location').name === filters.location;
 
     let itemMatchesActivity =
       !filters.relevantActivitySet
         ? true
-        : item.DQ_validActivity &&
+        : storeDataQuality.dqFlags[item.id].DQ_validActivity &&
         (resolveProperty(item, 'activity') || [])
           .filter(activity => filters.relevantActivitySet.has(activity['id'] || activity['@id'] || 'NONE'))
           .length > 0;
@@ -667,19 +669,19 @@ function postDataQuality() {
 
     let itemMatchesDQActivityFilter =
       !filters.DQ_filterActivities ||
-      (filters.DQ_filterActivities && !item.DQ_validActivity);
+      (filters.DQ_filterActivities && !storeDataQuality.dqFlags[item.id].DQ_validActivity);
 
     let itemMatchesDQGeoFilter =
       !filters.DQ_filterGeos ||
-      (filters.DQ_filterGeos && !item.DQ_validGeo);
+      (filters.DQ_filterGeos && !storeDataQuality.dqFlags[item.id].DQ_validGeo);
 
     let itemMatchesDQDateFilter =
       !filters.DQ_filterDates ||
-      (filters.DQ_filterDates && !item.DQ_validDate);
+      (filters.DQ_filterDates && !storeDataQuality.dqFlags[item.id].DQ_validDate);
 
     let itemMatchesDQUrlFilter =
       !filters.DQ_filterUrls ||
-      (filters.DQ_filterUrls && !item.DQ_validChildUrl);
+      (filters.DQ_filterUrls && !storeDataQuality.dqFlags[item.id].DQ_validChildUrl);
 
     if (
       itemMatchesOrganizer &&
@@ -697,7 +699,7 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validOrganizer) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validOrganizer) {
         let organizer = resolveProperty(item, 'organizer');
         let organizerName = organizer.name.trim();
         if (!storeDataQuality.filteredItemsUniqueOrganizers.hasOwnProperty(organizerName)) {
@@ -729,7 +731,7 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validLocation) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validLocation) {
         let location = resolveProperty(item, 'location');
         let locationName = location.name.trim();
         if (!storeDataQuality.filteredItemsUniqueLocations.hasOwnProperty(locationName)) {
@@ -773,7 +775,7 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validActivity) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validActivity) {
         let activities = resolveProperty(item, 'activity');
         let itemUniqueActivityIds = new Set();
 
@@ -798,25 +800,25 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validName) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validName) {
         numFilteredItemsWithValidName++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validDescription) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validDescription) {
         numFilteredItemsWithValidDescription++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validGeo) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validGeo) {
         numFilteredItemsWithValidGeo++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validDate) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validDate) {
         numFilteredItemsWithValidDate++;
         const date = new Date(item.data.startDate);
         const dateString = date.toISOString().slice(0, 10); // 'YYYY-MM-DD'
@@ -825,7 +827,7 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validParent) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validParent) {
         let parentId = item.data[link].id || item.data[link]['@id'] || item.data[link].identifier || null;
         if (parentId) {
           storeDataQuality.filteredItemsUniqueParentIds.add(parentId);
@@ -834,13 +836,13 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validChildUrl) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validChildUrl) {
         numFilteredItemsWithValidChildUrl++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      if (item.DQ_validParentUrl) {
+      if (storeDataQuality.dqFlags[item.id].DQ_validParentUrl) {
         numFilteredItemsWithValidParentUrl++;
       }
 

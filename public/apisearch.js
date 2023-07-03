@@ -181,13 +181,6 @@ function clearStore(store) {
   store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
-  store.numFilteredItems = 0;
-  store.showMap = null;
-  store.filteredItemsUniqueOrganizers = null;
-  store.filteredItemsUniqueLocations = null;
-  store.filteredItemsUniqueActivityIds = null;
-  store.filteredItemsUniqueParentIds = null;
-  store.filteredItemsUniqueDates = null;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1531,7 +1524,8 @@ async function runForm(pageNumber) {
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
-    console.log(`numParent: ${response.sum1} numChild: ${response.sum2}`);
+    console.log(`numParent: ${response.sum1}`);
+    console.log(`numChild: ${response.sum2}`);
   })
     .fail(function (error) {
       console.error('Error retrieving sum values:', error);
