@@ -299,17 +299,6 @@ function setStoreDataQualityItems() {
     console.warn('DQ case 4: Data quality from storeSubEvent only');
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
-    if (!storeSuperEvent[type]) {
-      if (subEventContentTypesSession.includes(storeSubEvent[type])) {
-        storeSuperEvent[type] = 'SessionSeries';
-      }
-      else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
-        storeSuperEvent[type] = 'FacilityUse';
-      }
-      else if (subEventContentTypesEvent.includes(storeSubEvent[type])) {
-        storeSuperEvent[type] = 'CourseInstance'; // This is intended to pair with storeSubEvent content type of 'Event' ... may not be general though
-      }
-    }
     cp.empty();
   }
   else if (
@@ -319,17 +308,6 @@ function setStoreDataQualityItems() {
     console.warn('DQ case 5: Data quality from storeSuperEvent only');
     storeDataQuality.items = Object.values(storeSuperEvent.items);
     storeDataQuality.eventType = storeSuperEvent.eventType;
-    if (!storeSubEvent[type]) {
-      if (superEventContentTypesSeries.includes(storeSuperEvent[type])) {
-        storeSubEvent[type] = 'ScheduledSession';
-      }
-      else if (superEventContentTypesFacility.includes(storeSuperEvent[type])) {
-        storeSubEvent[type] = 'Slot';
-      }
-      else if (superEventContentTypesCourse.includes(storeSuperEvent[type])) {
-        storeSubEvent[type] = 'Event';
-      }
-    }
     cp.empty();
   }
   else if (
@@ -587,9 +565,9 @@ function setStoreDataQualityItemFlags() {
 
       if (response.ok) {
         const insertedData = await response.json();
-        console.log('Data inserted successfully:', insertedData);
+        console.log('Success inserting DQ summary into database:', insertedData);
       } else {
-        console.error('Error inserting data:', response.statusText);
+        console.error('Error inserting DQ summary into database:', response.statusText);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -1057,22 +1035,31 @@ function postDataQuality() {
 
   function setSpark1SeriesName() {
     if (superEventContentTypesSeries.includes(storeSuperEvent[type])) {
-      spark1SeriesName = 'Series';
+      spark1SeriesName = 'Session series';
     }
     else if (superEventContentTypesFacility.includes(storeSuperEvent[type])) {
       spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
+    }
+    else if (superEventContentTypesEvent.includes(storeSuperEvent[type])) {
+      spark1SeriesName = 'Event series';
     }
     else if (superEventContentTypesCourse.includes(storeSuperEvent[type])) {
       spark1SeriesName = 'Course' + ((spark1Count !== 1) ? 's' : '');
     }
     else {
-      console.error('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
+      if (storeDataQuality.eventType === 'subEvent') {
+        spark1SeriesName = 'Parent' + ((spark1Count !== 1) ? 's' : '');
+      }
+      else if (storeDataQuality.eventType === 'superEvent') {
+        spark1SeriesName = 'Child' + ((spark1Count !== 1) ? 'ren' : '');
+      }
+      console.warn('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
     }
   }
 
   function setSpark6SeriesName() {
     if (subEventContentTypesSession.includes(storeSubEvent[type])) {
-      spark6SeriesName = 'Session' + ((spark6Count !== 1) ? 's' : '');
+      spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
     }
     else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
       spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
@@ -1081,7 +1068,43 @@ function postDataQuality() {
       spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
     }
     else {
-      console.error('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
+      spark6SeriesName = 'Child' + ((spark6Count !== 1) ? 'ren' : '');
+      console.warn('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
+    }
+  }
+
+  // At this point, we should have non-empty settings for both spark1SeriesName and spark6SeriesName.
+  // It may however be possible for one of these to include 'Parent'/'Child' and the other one to be
+  // more specific. If this is so, we can use knowledge of the latter to adjust the former:
+  if (
+    (spark1SeriesName.includes('Parent') || spark1SeriesName.includes('Child')) &&
+    (!spark6SeriesName.includes('Parent') && !spark6SeriesName.includes('Child'))
+  ) {
+    if (spark6SeriesName.includes('Scheduled session')) {
+      spark1SeriesName = 'Session series';
+    }
+    else if (spark6SeriesName.includes('Slot')) {
+      spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
+    }
+    // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series' or 'Course', so we leave the parent label as 'Parent':
+    // else if (spark6SeriesName.includes('Event')) {
+    // }
+  }
+  else if (
+    (spark6SeriesName.includes('Parent') || spark6SeriesName.includes('Child')) &&
+    (!spark1SeriesName.includes('Parent') && !spark1SeriesName.includes('Child'))
+  ) {
+    if (spark1SeriesName.includes('Session series')) {
+      spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
+    }
+    else if (spark1SeriesName.includes('Facility use')) {
+      spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
+    }
+    else if (spark1SeriesName.includes('Event series')) {
+      spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+    }
+    else if (spark1SeriesName.includes('Course')) {
+      spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
     }
   }
 

@@ -58,8 +58,9 @@ let storeSubEvent;
 
 const superEventContentTypesSeries = ['SessionSeries'];
 const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
+const superEventContentTypesEvent = ['EventSeries'];
 const superEventContentTypesCourse = ['CourseInstance'];
-const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility, superEventContentTypesCourse);
+const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility, superEventContentTypesEvent, superEventContentTypesCourse);
 const subEventContentTypesSession = ['ScheduledSession', 'ScheduledSessions', 'sessions'];
 const subEventContentTypesSlot = ['Slot', 'Slot for FacilityUse'];
 const subEventContentTypesEvent = ['Event', 'OnDemandEvent'];
