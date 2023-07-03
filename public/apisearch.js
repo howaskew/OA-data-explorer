@@ -58,10 +58,10 @@ let storeSubEvent;
 
 const superEventContentTypesSeries = ['SessionSeries'];
 const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
-const superEventContentTypesEvent = ['EventSeries'];
+const superEventContentTypesEvent = ['EventSeries', 'HeadlineEvent'];
 const superEventContentTypesCourse = ['CourseInstance'];
 const superEventContentTypes = Array.prototype.concat(superEventContentTypesSeries, superEventContentTypesFacility, superEventContentTypesEvent, superEventContentTypesCourse);
-const subEventContentTypesSession = ['ScheduledSession', 'ScheduledSessions', 'sessions'];
+const subEventContentTypesSession = ['ScheduledSession', 'ScheduledSessions', 'session', 'sessions'];
 const subEventContentTypesSlot = ['Slot', 'Slot for FacilityUse'];
 const subEventContentTypesEvent = ['Event', 'OnDemandEvent'];
 const subEventContentTypes = Array.prototype.concat(subEventContentTypesSession, subEventContentTypesSlot, subEventContentTypesEvent);
@@ -425,10 +425,10 @@ function setStoreItems(url, store) {
             store.itemKind !== store.itemDataType
           ) {
             console.warn(
-              `Mismatched content types:\n` +
-              `  feedType: ${store.feedType}\n` +
-              `  itemKind: ${store.itemKind}\n` +
-              `  itemDataType: ${store.itemDataType}`
+              `storeIngressOrder${store.ingressOrder} mismatched content types:\n` +
+              `\tfeedType: ${store.feedType}\n` +
+              `\titemKind: ${store.itemKind}\n` +
+              `\titemDataType: ${store.itemDataType}`
             );
           }
 
@@ -630,6 +630,7 @@ function setStoreItemKind(store) {
       break;
     default:
       store.itemKind = 'mixed';
+      console.warn(`storeIngressOrder${store.ingressOrder} mixed item kinds: [${uniqueItemKinds}]`);
       break;
   }
 }
@@ -660,6 +661,7 @@ function setStoreItemDataType(store) {
       break;
     default:
       store.itemDataType = 'mixed';
+      console.warn(`storeIngressOrder${store.ingressOrder} mixed item data types: [${uniqueItemDataTypes}]`);
       break;
   }
 }

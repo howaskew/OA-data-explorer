@@ -111,7 +111,9 @@ function setStoreSuperEventAndStoreSubEvent() {
 
   breakpoint:
   for (const store of [storeIngressOrder1, storeIngressOrder2]) {
-    for (const typeTemp of ['feedType', 'itemDataType']) {
+    // The order of this loop is important, it is in order of precedence for identifying the nature of
+    // a feed based on the various labels it has:
+    for (const typeTemp of ['feedType', 'itemDataType', 'itemKind']) {
       if (superEventContentTypes.includes(store[typeTemp])) {
         if (store.ingressOrder === 1) {
           storeSuperEvent = storeIngressOrder1;
@@ -180,7 +182,10 @@ function setStoreSuperEventAndStoreSubEvent() {
     storeSuperEvent.eventType = 'superEvent';
     storeSubEvent.eventType = 'subEvent';
 
-    if (subEventContentTypesSession.includes(storeSubEvent[type])) {
+    if (
+      subEventContentTypesSession.includes(storeSubEvent[type]) ||
+      subEventContentTypesEvent.includes(storeSubEvent[type])
+    ) {
       link = 'superEvent';
     }
     else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
@@ -188,7 +193,7 @@ function setStoreSuperEventAndStoreSubEvent() {
     }
     else {
       link = null;
-      console.warn('No feed linking variable, can\'t create combined store');
+      console.warn('No feed linking variable, can\'t seek parents');
     }
 
     console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
@@ -216,6 +221,7 @@ function setStoreDataQualityItems() {
       .length > 0 &&
     Object.keys(storeSubEvent.items).length === 0
   ) {
+    // e.g. British Triathlon
     // e.g. SportSuite (SessionSeries)
     // e.g. Trafford (CourseInstance)
     console.warn('DQ case 2: superEvent feed with embedded subEvent data');
@@ -231,7 +237,7 @@ function setStoreDataQualityItems() {
         // Here subEvent is an individual subEvent object from the array of all subEvents. It doesn't clash
         // with the previous definition of subEvent, which is discarded in this loop:
         for (const subEvent of storeSuperEventItem.data.subEvent) {
-          const subEventId = subEvent.id || subEvent['@id'];
+          const subEventId = subEvent.id || subEvent['@id'] || subEvent.identifier;
           storeSubEvent.items[subEventId] = {
             id: subEventId,
             // These should technically be here too, but leave out to save memory as not currently needed:
@@ -1041,8 +1047,11 @@ function postDataQuality() {
     else if (superEventContentTypesFacility.includes(storeSuperEvent[type])) {
       spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
     }
-    else if (superEventContentTypesEvent.includes(storeSuperEvent[type])) {
+    else if (storeSuperEvent[type] === 'EventSeries') {
       spark1SeriesName = 'Event series';
+    }
+    else if (storeSuperEvent[type] === 'HeadlineEvent') {
+      spark1SeriesName = 'Headline event' + ((spark1Count !== 1) ? 's' : '');
     }
     else if (superEventContentTypesCourse.includes(storeSuperEvent[type])) {
       spark1SeriesName = 'Course' + ((spark1Count !== 1) ? 's' : '');
@@ -1088,7 +1097,8 @@ function postDataQuality() {
       else if (spark6SeriesName.includes('Slot')) {
         spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
       }
-      // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series' or 'Course', so we leave the parent label as 'Parent':
+      // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series',
+      // 'Headline event' or 'Course', so we leave the parent label as 'Parent':
       // else if (spark6SeriesName.includes('Event')) {
       // }
     }
