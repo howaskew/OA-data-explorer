@@ -213,6 +213,9 @@ function setStoreSuperEventAndStoreSubEvent() {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItems() {
+
+  showingSample = false;
+
   if (
     storeSuperEvent &&
     storeSubEvent &&
@@ -301,7 +304,7 @@ function setStoreDataQualityItems() {
   else if (
     storeSubEvent &&
     Object.keys(storeSubEvent.items).length > 0
-  ){
+  ) {
     console.warn('DQ case 4: Data quality from storeSubEvent only');
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
@@ -310,7 +313,7 @@ function setStoreDataQualityItems() {
   else if (
     storeSuperEvent &&
     Object.keys(storeSuperEvent.items).length > 0
-  ){
+  ) {
     console.warn('DQ case 5: Data quality from storeSuperEvent only');
     storeDataQuality.items = Object.values(storeSuperEvent.items);
     storeDataQuality.eventType = storeSuperEvent.eventType;
@@ -319,7 +322,7 @@ function setStoreDataQualityItems() {
   else if (
     storeIngressOrder1 &&
     Object.keys(storeIngressOrder1.items).length > 0
-  ){
+  ) {
     console.warn('DQ case 6: Data quality from storeIngressOrder1 only');
     storeDataQuality.items = Object.values(storeIngressOrder1.items);
     cp.empty();
@@ -327,7 +330,7 @@ function setStoreDataQualityItems() {
   else if (
     storeIngressOrder2 &&
     Object.keys(storeIngressOrder2.items).length > 0
-  ){
+  ) {
     console.warn('DQ case 7: Data quality from storeIngressOrder2 only');
     storeDataQuality.items = Object.values(storeIngressOrder2.items);
     cp.empty();
@@ -356,7 +359,7 @@ function setStoreDataQualityItems() {
   const sampleSizeMax = 10;
   const sampleSize = (keys.length < sampleSizeMax) ? keys.length : sampleSizeMax;
 
-  if (sampleSize < keys.length) {
+  if (sampleSize <= keys.length) {
     while (sampledKeys.length <= sampleSize) {
       const randomIndex = Math.floor(Math.random() * keys.length);
       const randomKey = keys[randomIndex];
@@ -376,22 +379,11 @@ function setStoreDataQualityItems() {
     storeSample.items[filteredKey] = storeItemCopy;
   }
 
-  // Calculate the length of the array
-  // let length = 0;
-  // for (const key in storeSample.items) {
-  //   if (Object.prototype.hasOwnProperty.call(storeSample.items, key)) {
-  //     length++;
-  //   }
-  // }
-
-  // Bizarrely update length of array
-  // storeSample.items.length = length;
-
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreDataQualityItemFlags() {
+function setStoreDataQualityItemFlags(showingSample) {
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -420,8 +412,6 @@ function setStoreDataQualityItemFlags() {
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
-
-    console.log(item);
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -608,33 +598,33 @@ function setStoreDataQualityItemFlags() {
 
   // Write feed level data to database
 
-  // console.log(storeDataQuality.dqSummary);
-  // console.log(storeDataQuality);
+  if (showingSample !== true) {
+    // console.log(storeDataQuality.dqSummary);
+    // console.log(storeDataQuality);
 
-  (async () => {
-    try {
-      const response = await fetch('/api/insert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(storeDataQuality.dqSummary)
-      });
+    (async () => {
+      try {
+        const response = await fetch('/api/insert', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(storeDataQuality.dqSummary)
+        });
 
-      if (response.ok) {
-        const insertedData = await response.json();
-        console.log('Success inserting DQ summary into database:', insertedData);
-      } else {
-        console.error('Error inserting DQ summary into database:', response.statusText);
+        if (response.ok) {
+          const insertedData = await response.json();
+          console.log('Success inserting DQ summary into database:', insertedData);
+        } else {
+          console.error('Error inserting DQ summary into database:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
       }
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-    }
-  })();
-
+    })();
+  }
   getSummary();
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -643,14 +633,12 @@ function setStoreDataQualityItemFlags() {
 
 function postDataQuality() {
 
-  console.log(storeDataQuality);
+  console.log('postDataQuality');
 
-  document.getElementById("DQ_filterActivities").disabled = true;
-  document.getElementById("DQ_filterGeos").disabled = true;
-  document.getElementById("DQ_filterDates").disabled = true;
-  document.getElementById("DQ_filterUrls").disabled = true;
-
+  disableFilters();
+  
   clearCharts();
+
   $("#resultPanel").hide();
 
   $("#resultTab").addClass("active");
@@ -1461,7 +1449,7 @@ function postDataQuality() {
 
   chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
 
-  sleep(200).then(() => { chart2.render(); });
+  sleep(200).then(() => { chart2.render().then(() => chart2rendered = true);});
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1509,7 +1497,7 @@ function postDataQuality() {
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  sleep(400).then(() => { chart3.render(); });
+  sleep(400).then(() => { chart3.render().then(() => chart3rendered = true);});
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1557,7 +1545,7 @@ function postDataQuality() {
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  sleep(600).then(() => { chart4.render(); });
+  sleep(600).then(() => { chart4.render().then(() => chart4rendered = true);});
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1655,9 +1643,10 @@ function postDataQuality() {
   chart5a = new ApexCharts(document.querySelector("#apexchart5a"), optionsSessionUrl);
   chart5b = new ApexCharts(document.querySelector("#apexchart5b"), options_percentItemsWithUrl);
   sleep(800).then(() => {
-    chart5a.render();
-    chart5b.render();
+    chart5a.render().then(() => chart5arendered = true);
+    chart5b.render().then(() => chart5brendered = true);
   });
+  
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1786,15 +1775,12 @@ function postDataQuality() {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(1000).then(() => { chart6.render(); });
+  sleep(1000).then(() => { chart6.render().then(() => chart6rendered = true);});
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
   sleep(1400).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {
       $("#filterRows").fadeIn("slow");
     }
-    document.getElementById("DQ_filterActivities").disabled = false;
-    document.getElementById("DQ_filterGeos").disabled = false;
-    document.getElementById("DQ_filterDates").disabled = false;
-    document.getElementById("DQ_filterUrls").disabled = false;
+    enableFilters();
   });
 }
