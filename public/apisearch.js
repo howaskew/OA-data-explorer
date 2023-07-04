@@ -34,6 +34,12 @@ let chart4;
 let chart5a;
 let chart5b;
 let chart6;
+let chart2rendered = false;
+let chart3rendered = false;;
+let chart4rendered = false;;
+let chart5arendered = false;;
+let chart5brendered = false;;
+let chart6rendered = false;;
 let map;
 
 let activeJSONButton;
@@ -50,6 +56,7 @@ let storeIngressOrder2 = {
   ingressOrder: 2,
 };
 let storeDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
+let storeSample = {}; // This is used to store a small sample of data from each run to show users on arrival
 let storeCombinedItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
 
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
@@ -104,6 +111,8 @@ let type; // This may be the feedType or the itemDataType, depending on availabi
 let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
+
+let showingSample = true;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -169,6 +178,7 @@ function clearGlobals() {
 }
 
 clearGlobals();
+clearStore(storeSample);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -234,13 +244,13 @@ function clearDisplay() {
 // -------------------------------------------------------------------------------------------------
 
 function clearCharts() {
-  if (chart1) { chart1.destroy(); }
-  if (chart2) { chart2.destroy(); }
-  if (chart3) { chart3.destroy(); }
-  if (chart4) { chart4.destroy(); }
-  if (chart5a) { chart5a.destroy(); }
-  if (chart5b) { chart5b.destroy(); }
-  if (chart6) { chart6.destroy(); }
+  if (chart1) { try { chart1.destroy(); } catch { } }
+  if (chart2 & chart2rendered) { try { chart2.destroy(); } catch { } }
+  if (chart3 & chart3rendered) { try { chart3.destroy(); } catch { } }
+  if (chart4 & chart4rendered) { try { chart4.destroy(); } catch { } }
+  if (chart5a & chart5arendered) { try { chart5a.destroy(); } catch { } }
+  if (chart5b & chart5brendered) { try { chart5b.destroy(); } catch { } }
+  if (chart6 & chart6rendered) { try { chart6.destroy(); } catch { } }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -278,6 +288,22 @@ function clearCache(store) {
       .catch(error => {
         console.warn(error.message);
       });
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function showSample() {
+  console.log(Object.keys(storeSample.items).length);
+  showingSample = true;
+  if (Object.keys(storeSample.items).length > 0) {
+    $("#progress").append('<h3>Showing Sample Data</h3>');
+    $("#tabs").fadeIn("slow");
+    clearStore(storeDataQuality);
+    storeDataQuality.items = Object.values(storeSample.items);
+    console.log('sending sample data');
+    setStoreDataQualityItemFlags(showingSample);
+    postDataQuality();
   }
 }
 
@@ -393,7 +419,7 @@ function setStoreItems(url, store) {
           store.numItems < 25000
         ) {
           progress.empty();
-          progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
+          progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
           progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
           store.penultimatePage = url;
           setStoreItems(response.data.next, store);
@@ -403,7 +429,7 @@ function setStoreItems(url, store) {
             $('#record-limit').fadeIn();
           }
           progress.empty();
-          progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
+          progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
           progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
 
           if (
@@ -454,7 +480,7 @@ function setStoreItems(url, store) {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
       $('#loading-time').hide();
       progress.empty();
-      progress.append(`Reading ${store.feedType} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
+      progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
       progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
       progress.append(`API Request failed with message: ${error.message}`);
 
@@ -1329,7 +1355,7 @@ function updateParameters(parm, parmVal) {
 
 function updateProvider() {
   provider = $('#provider option:selected').val();
-  clearDisplay();
+  //clearDisplay(); 
   //Replicating setEndpoints, without the page reset
   $.getJSON('/feeds', function (data) {
     $('#endpoint').empty();
@@ -1509,7 +1535,7 @@ async function runForm(pageNumber) {
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
   clearGlobals();
-  clearDisplay();
+  //clearDisplay();  
 
   loadingStart();
 
@@ -1536,6 +1562,7 @@ function getSummary() {
   $.getJSON('/sum', function (response) {
     console.log(`numParent: ${response.sum1}`);
     console.log(`numChild: ${response.sum2}`);
+    console.log(`DQ_validActivity: ${response.sum3}`);
   })
     .fail(function (error) {
       console.error('Error retrieving sum values:', error);
@@ -1598,9 +1625,12 @@ function setPage() {
   });
 
   clearDisplay();
+  showSample();
 
   $("#clear").on("click", function () {
     clearFilters();
+    clearDisplay();
+    showSample();
     clearForm($("#endpoint").val());
   });
 

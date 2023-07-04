@@ -330,7 +330,7 @@ app.get('/sum', async (req, res) => {
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
           name: dataset.name || '',
-          type: feedInfo.name || '',
+          type: feedInfo.name || 'unknown',
           url: feedInfo.contentUrl || '',
           datasetUrl: dataset.url || '',
           discussionUrl: dataset.discussionUrl || '',
