@@ -294,9 +294,17 @@ function clearCache(store) {
 // -------------------------------------------------------------------------------------------------
 
 function showSample() {
-  console.log(Object.keys(storeSample.items).length);
+
   showingSample = true;
-  if (Object.keys(storeSample.items).length > 0) {
+
+  fetch('http://localhost:3000/api/download')
+  .then(response => response.json())
+  .then(sampleData => {
+    console.log(sampleData);
+    // Use the sampleData object as needed
+    storeSample.items = sampleData;
+    console.log(Object.keys(storeSample.items).length);
+    if (Object.keys(storeSample.items).length > 0) {
     $("#progress").append('<h3>Showing Sample Data</h3>');
     $("#tabs").fadeIn("slow");
     clearStore(storeDataQuality);
@@ -305,6 +313,12 @@ function showSample() {
     setStoreDataQualityItemFlags(showingSample);
     postDataQuality();
   }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    // Handle the error if needed
+  });
+  
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1557,6 +1571,7 @@ async function runForm(pageNumber) {
 
 // -------------------------------------------------------------------------------------------------
 
+
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
@@ -1674,7 +1689,10 @@ function setProvider() {
     const providerSums = providers.map(provider => {
       let combinedSum = 0;
       data.feeds.forEach(feed => {
-        if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
+        if (provider === 'All OpenActive Feeds' && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
+          combinedSum += feed.numparent + feed.numchild;
+        } 
+        else if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
           combinedSum += feed.numparent + feed.numchild;
         }
       });
