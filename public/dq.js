@@ -338,9 +338,8 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
-  //Store sample of data
+  // Store sample of data
 
-  const sampleSize = 10;
   const filterString = storeIngressOrder1.firstPage;
 
   // Delete existing IDs with the filter string
@@ -351,33 +350,42 @@ function setStoreDataQualityItems() {
   }
 
   // Take a sample of new items
-  const keys = Object.keys(storeDataQuality.items);
+  const keys = storeDataQuality.items.map(item => item.id);
   const sampledKeys = [];
 
-  while (sampledKeys.length < sampleSize) {
-    const randomIndex = Math.floor(Math.random() * keys.length);
-    const randomKey = keys[randomIndex];
-    if (!sampledKeys.includes(randomKey)) {
-      sampledKeys.push(randomKey);
+  const sampleSizeMax = 10;
+  const sampleSize = (keys.length < sampleSizeMax) ? keys.length : sampleSizeMax;
+
+  if (sampleSize < keys.length) {
+    while (sampledKeys.length <= sampleSize) {
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      const randomKey = keys[randomIndex];
+      if (!sampledKeys.includes(randomKey)) {
+        sampledKeys.push(randomKey);
+      }
     }
+  }
+  else {
+    sampledKeys = keys;
   }
 
   for (const key of sampledKeys) {
     const filteredKey = key + '_' + filterString;
-    let storeItemCopy = JSON.parse(JSON.stringify(storeDataQuality.items[key]));
+    let storeDataQualityItem = Object.values(storeDataQuality.items).find(storeDataQualityItem => storeDataQualityItem.id === key);
+    let storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
     storeSample.items[filteredKey] = storeItemCopy;
   }
 
   // Calculate the length of the array
-  let length = 0;
-  for (const key in storeSample.items) {
-    if (Object.prototype.hasOwnProperty.call(storeSample.items, key)) {
-      length++;
-    }
-  }
+  // let length = 0;
+  // for (const key in storeSample.items) {
+  //   if (Object.prototype.hasOwnProperty.call(storeSample.items, key)) {
+  //     length++;
+  //   }
+  // }
 
-  //Bizarrely update length of array
-  storeSample.items.length = length;
+  // Bizarrely update length of array
+  // storeSample.items.length = length;
 
 }
 

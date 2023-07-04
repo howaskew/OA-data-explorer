@@ -50,6 +50,7 @@ let storeIngressOrder2 = {
   ingressOrder: 2,
 };
 let storeDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
+let storeSample = {}; // This is used to store a small sample of data from each run to show users on arrival
 let storeCombinedItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
 
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
@@ -104,11 +105,6 @@ let type; // This may be the feedType or the itemDataType, depending on availabi
 let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
-
-//Storing a small sample of data from each run to show users on arrival
-let storeSample = {
-  items: []
-}; 
 
 // -------------------------------------------------------------------------------------------------
 
@@ -174,6 +170,7 @@ function clearGlobals() {
 }
 
 clearGlobals();
+clearStore(storeSample);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -239,23 +236,6 @@ function clearDisplay() {
 
 // -------------------------------------------------------------------------------------------------
 
-function showSample() {
-  console.log(Object.keys(storeSample.items).length);
-  if (Object.keys(storeSample.items).length >= 10) {
-  $("#progress").append('<h3>Showing Sample Data</h3>');
-  $("#filterRows").show();
-  $("#tabs").show();
-  storeDataQuality = storeSample;
-  setStoreDataQualityItemFlags();
-  postDataQuality();
-  }
-
-}
-
-
-
-// -------------------------------------------------------------------------------------------------
-
 function clearCharts() {
   if (chart1) { chart1.destroy(); }
   if (chart2) { chart2.destroy(); }
@@ -301,6 +281,21 @@ function clearCache(store) {
       .catch(error => {
         console.warn(error.message);
       });
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function showSample() {
+  console.log(Object.keys(storeSample.items).length);
+  if (Object.keys(storeSample.items).length > 0) {
+    $("#progress").append('<h3>Showing Sample Data</h3>');
+    $("#filterRows").show();
+    $("#tabs").show();
+    clearStore(storeDataQuality);
+    storeDataQuality.items = Object.values(storeSample.items);
+    setStoreDataQualityItemFlags();
+    postDataQuality();
   }
 }
 
