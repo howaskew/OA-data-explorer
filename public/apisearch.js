@@ -105,6 +105,11 @@ let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
 
+//Storing a small sample of data from each run to show users on arrival
+let storeSample = {
+  items: []
+}; 
+
 // -------------------------------------------------------------------------------------------------
 
 // Axios
@@ -229,7 +234,25 @@ function clearDisplay() {
   $("#tabs").hide();
   clearCharts();
   clearTabs();
+  showSample();
 }
+
+// -------------------------------------------------------------------------------------------------
+
+function showSample() {
+  console.log(Object.keys(storeSample.items).length);
+  if (Object.keys(storeSample.items).length >= 10) {
+  $("#progress").append('<h3>Showing Sample Data</h3>');
+  $("#filterRows").show();
+  $("#tabs").show();
+  storeDataQuality = storeSample;
+  setStoreDataQualityItemFlags();
+  postDataQuality();
+  }
+
+}
+
+
 
 // -------------------------------------------------------------------------------------------------
 

@@ -337,6 +337,48 @@ function setStoreDataQualityItems() {
     storeDataQuality.items = [];
     cp.empty();
   }
+
+  //Store sample of data
+
+  const sampleSize = 10;
+  const filterString = storeIngressOrder1.firstPage;
+
+  // Delete existing IDs with the filter string
+  for (const key in storeSample.items) {
+    if (key.includes(filterString)) {
+      delete storeSample.items[key];
+    }
+  }
+
+  // Take a sample of new items
+  const keys = Object.keys(storeDataQuality.items);
+  const sampledKeys = [];
+
+  while (sampledKeys.length < sampleSize) {
+    const randomIndex = Math.floor(Math.random() * keys.length);
+    const randomKey = keys[randomIndex];
+    if (!sampledKeys.includes(randomKey)) {
+      sampledKeys.push(randomKey);
+    }
+  }
+
+  for (const key of sampledKeys) {
+    const filteredKey = key + '_' + filterString;
+    let storeItemCopy = JSON.parse(JSON.stringify(storeDataQuality.items[key]));
+    storeSample.items[filteredKey] = storeItemCopy;
+  }
+
+  // Calculate the length of the array
+  let length = 0;
+  for (const key in storeSample.items) {
+    if (Object.prototype.hasOwnProperty.call(storeSample.items, key)) {
+      length++;
+    }
+  }
+
+  //Bizarrely update length of array
+  storeSample.items.length = length;
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -370,6 +412,8 @@ function setStoreDataQualityItemFlags() {
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
+
+    console.log(item);
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -590,6 +634,8 @@ function setStoreDataQualityItemFlags() {
 // This calculates DQ scores for the filtered data, and shows results
 
 function postDataQuality() {
+
+  console.log(storeDataQuality);
 
   document.getElementById("DQ_filterActivities").disabled = true;
   document.getElementById("DQ_filterGeos").disabled = true;
