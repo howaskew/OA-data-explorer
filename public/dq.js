@@ -283,7 +283,7 @@ function setStoreDataQualityItems() {
   else if (
     storeSubEvent &&
     Object.keys(storeSubEvent.items).length > 0
-  ){
+  ) {
     console.log('DQ case 4');
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
@@ -293,7 +293,7 @@ function setStoreDataQualityItems() {
   else if (
     storeSuperEvent &&
     Object.keys(storeSuperEvent.items).length > 0
-  ){
+  ) {
     console.log('DQ case 5');
     storeDataQuality.items = Object.values(storeSuperEvent.items);
     storeDataQuality.eventType = storeSuperEvent.eventType;
@@ -303,7 +303,7 @@ function setStoreDataQualityItems() {
   else if (
     storeIngressOrder1 &&
     Object.keys(storeIngressOrder1.items).length > 0
-  ){
+  ) {
     console.log('DQ case 6');
     storeDataQuality.items = Object.values(storeIngressOrder1.items);
     console.warn('Data quality from storeIngressOrder1 only');
@@ -312,7 +312,7 @@ function setStoreDataQualityItems() {
   else if (
     storeIngressOrder2 &&
     Object.keys(storeIngressOrder2.items).length > 0
-  ){
+  ) {
     console.log('DQ case 7');
     storeDataQuality.items = Object.values(storeIngressOrder2.items);
     console.warn('Data quality from storeIngressOrder2 only');
@@ -324,6 +324,48 @@ function setStoreDataQualityItems() {
     console.warn('No data for metrics');
     cp.empty();
   }
+
+  //Store sample of data
+
+  const sampleSize = 10;
+  const filterString = storeIngressOrder1.firstPage;
+
+  // Delete existing IDs with the filter string
+  for (const key in storeSample.items) {
+    if (key.includes(filterString)) {
+      delete storeSample.items[key];
+    }
+  }
+
+  // Take a sample of new items
+  const keys = Object.keys(storeDataQuality.items);
+  const sampledKeys = [];
+
+  while (sampledKeys.length < sampleSize) {
+    const randomIndex = Math.floor(Math.random() * keys.length);
+    const randomKey = keys[randomIndex];
+    if (!sampledKeys.includes(randomKey)) {
+      sampledKeys.push(randomKey);
+    }
+  }
+
+  for (const key of sampledKeys) {
+    const filteredKey = key + '_' + filterString;
+    let storeItemCopy = JSON.parse(JSON.stringify(storeDataQuality.items[key]));
+    storeSample.items[filteredKey] = storeItemCopy;
+  }
+
+  // Calculate the length of the array
+  let length = 0;
+  for (const key in storeSample.items) {
+    if (Object.prototype.hasOwnProperty.call(storeSample.items, key)) {
+      length++;
+    }
+  }
+
+  //Bizarrely update length of array
+  storeSample.items.length = length;
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -357,6 +399,8 @@ function setStoreDataQualityItemFlags() {
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
+
+    console.log(item);
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -577,6 +621,8 @@ function setStoreDataQualityItemFlags() {
 // This calculates DQ scores for the filtered data, and shows results
 
 function postDataQuality() {
+
+  console.log(storeDataQuality);
 
   document.getElementById("DQ_filterActivities").disabled = true;
   document.getElementById("DQ_filterGeos").disabled = true;
