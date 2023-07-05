@@ -346,7 +346,7 @@ function setStoreDataQualityItems() {
   const maxSampleSize = 5;
   // Delete existing IDs with the filter string
   const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
-  fetch('http://localhost:3000/api/delete', {
+  fetch('/api/delete', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -384,7 +384,7 @@ function setStoreDataQualityItems() {
 
   const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(',')}`;
 
-  fetch('http://localhost:3000/api/insertsample', {
+  fetch('/api/insertsample', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
