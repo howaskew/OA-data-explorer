@@ -297,7 +297,7 @@ function showSample() {
 
   showingSample = true;
 
-  fetch('http://localhost:3000/api/download')
+  fetch('/api/download')
   .then(response => response.json())
   .then(sampleData => {
     console.log(sampleData);
