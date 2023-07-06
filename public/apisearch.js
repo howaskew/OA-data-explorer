@@ -1798,6 +1798,10 @@ function setEndpoint() {
     $('#provider').empty();
     $('#endpoint').empty();
   }
+  else if ($('#provider').val() === 'All OpenActive Feeds') {
+    $('#execute').prop('disabled', true);
+    showSample();
+  }
   else if ($('#endpoint').val()) {
     endpoint = $('#endpoint').val();
     $('#user-url').val(endpoint);
@@ -1872,5 +1876,5 @@ $(function () {
   setPage();
   setFeeds();
   clearStore(storeSample);
-  // showSample();
+  showSample();
 });
