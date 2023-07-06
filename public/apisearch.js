@@ -157,7 +157,6 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 // -------------------------------------------------------------------------------------------------
 
-
 function execute() {
   if (!loadingStarted) {
     clear();
@@ -314,7 +313,6 @@ function clearCache(store) {
 
 function showSample() {
 
-
   showingSample = true;
 
   // Make a GET request to retrieve the sum values from the server
@@ -324,20 +322,19 @@ function showSample() {
     storeSample.items = sampleData;
     console.log(Object.keys(storeSample.items).length);
     if (Object.keys(storeSample.items).length > 0) {
-      $("#progress").append('<h3>Showing Sample Data</h3>');
-      $("#tabs").fadeIn("slow");
+      $('#progress').append('<h3>Showing Sample Data</h3>');
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
-      console.log('sending sample data');
-      setStoreDataQualityItemFlags(showingSample);
+      console.log('Processing sample data');
+      setStoreDataQualityItemFlags();
       postDataQuality();
+      $('#tabs').fadeIn('slow');
     }
   })
     .catch(error => {
       console.error('Error:', error);
       // Handle the error if needed
     });
-
 
 }
 
@@ -1318,7 +1315,7 @@ $('#mapTab').on('show.bs.tab', function () {
 // -------------------------------------------------------------------------------------------------
 
 function updateScroll() {
-  const element = document.getElementById("progress");
+  const element = document.getElementById('progress');
   element.scrollTop = element.scrollHeight;
 }
 
@@ -1394,53 +1391,49 @@ function updateParameters(parm, parmVal) {
 
 // -------------------------------------------------------------------------------------------------
 
-
-//function updateProvider() {
-//  provider = $('#provider option:selected').val();
-  //clearDisplay(); 
-  //Replicating setEndpoints, without the page reset
-//  $.getJSON('/feeds', function (data) {
-//    $('#endpoint').empty();
-//    $.each(data.feeds, function (index, feed) {
-//      if (feed.publisherName === provider) {
-//        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
-//      }
-//    });
-//  })
-//    .done(function () {
-//      endpoint = $('#endpoint').val();
-//      updateEndpoint();
-//    });
-//}
-
-
+// function updateProvider() {
+//   provider = $('#provider option:selected').val();
+//   clearDisplay();
+//   // Replicating setEndpoints, without the page reset
+//   $.getJSON('/feeds', function (data) {
+//     $('#endpoint').empty();
+//     $.each(data.feeds, function (index, feed) {
+//       if (feed.publisherName === provider) {
+//         $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
+//       }
+//     });
+//   })
+//   .done(function () {
+//     endpoint = $('#endpoint').val();
+//     updateEndpoint();
+//   });
+// }
 
 // -------------------------------------------------------------------------------------------------
 
-//function updateEndpoint() {
-
-
-
-//  clearDisplay();
-//  clearFilters();
-
-//  provider = $("#provider option:selected").text();
-//  endpoint = $("#endpoint").val();
-
- // console.log('endpoint 1' + endpoint)
-
-//  updateParameters("endpoint", endpoint);
-//  clearForm(endpoint);
-
-//  if (endpoint === "") {
-//    $("#execute").prop('disabled', 'disabled');
-//  }
-//  else {
-//    $("#execute").prop('disabled', false);
-//  }
-//  $("#user-url").val(endpoint);
-
-//}
+// function updateEndpoint() {
+//
+//   clearDisplay();
+//   clearFilters();
+//
+//   provider = $("#provider option:selected").text();
+//   endpoint = $("#endpoint").val();
+//
+//   console.log('endpoint 1' + endpoint)
+//
+//   updateParameters("endpoint", endpoint);
+//   clearForm(endpoint);
+//
+//   if (endpoint === "") {
+//     $("#execute").prop('disabled', 'disabled');
+//   }
+//   else {
+//     $("#execute").prop('disabled', false);
+//   }
+//
+//   $("#user-url").val(endpoint);
+//
+// }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -1540,38 +1533,8 @@ function updateKeywords() {
 
 // -------------------------------------------------------------------------------------------------
 
-async function runForm(pageNumber) {
-
-  if (pageNumber === undefined) {
-    pageNumber = null;
-  }
-
-  let error = false;
-  if ($("#endpoint").val() === "") {
-    error = true;
-    alert("Missing Endpoint");
-  }
-  if ($("#Proximity").val() !== "") {
-    if (isNaN($("#Proximity").val())) {
-      error = true;
-      alert("Proximity must be a number");
-    }
-  }
-
-  if (error) {
-    return;
-  }
-
-  updateParameters("execute", true);
-
-  if (pageNumber !== null) {
-    updateParameters("page", pageNumber);
-  }
-
-  updateScroll();
-  $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
-
-  loadingStart();
+async function runForm() {
+  updateParameters('execute', true);
 
   await setStoreIngressOrder1FirstPage();
   await setStoreFeedType(storeIngressOrder1);
@@ -1580,6 +1543,9 @@ async function runForm(pageNumber) {
 
   if (storeIngressOrder1.firstPage) {
     console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
+    $('#progress').append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
+    updateScroll();
+    loadingStart();
     setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1);
   }
   else {
@@ -1780,11 +1746,9 @@ function setEndpoints() {
     });
   })
     .done(function () {
-
       // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
       // updateEndpoint();
       setEndpoint();
-
     });
 }
 
@@ -1801,8 +1765,6 @@ function setEndpoint() {
   else if ($('#provider').val() === 'All OpenActive Feeds') {
     $('#execute').prop('disabled', true);
     showSample();
-    //endpoint = $('#endpoint').val();
-    //$('#user-url').val(endpoint);
   }
   else if ($('#endpoint').val()) {
     endpoint = $('#endpoint').val();
