@@ -105,6 +105,8 @@ function postResults(item) {
 
 function setStoreSuperEventAndStoreSubEvent() {
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   storeSuperEvent = null;
   storeSubEvent = null;
   type = null;
@@ -213,6 +215,8 @@ function setStoreSuperEventAndStoreSubEvent() {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItems() {
+
+  if (loadingStop) {console.log('Stopping');return;}
 
   showingSample = false;
 
@@ -341,43 +345,71 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
-  // // Store sample of data
-  //
-  // const filterString = storeIngressOrder1.firstPage;
-  //
-  // // Delete existing IDs with the filter string
-  // for (const key in storeSample.items) {
-  //   if (key.includes(filterString)) {
-  //     delete storeSample.items[key];
-  //   }
-  // }
-  //
-  // // Take a sample of new items
-  // const keys = storeDataQuality.items.map(item => item.id);
-  // const sampledKeys = [];
-  //
-  // const sampleSizeMax = 10;
-  // const sampleSize = (keys.length < sampleSizeMax) ? keys.length : sampleSizeMax;
-  //
-  // if (sampleSize <= keys.length) {
-  //   while (sampledKeys.length <= sampleSize) {
-  //     const randomIndex = Math.floor(Math.random() * keys.length);
-  //     const randomKey = keys[randomIndex];
-  //     if (!sampledKeys.includes(randomKey)) {
-  //       sampledKeys.push(randomKey);
-  //     }
-  //   }
-  // }
-  // else {
-  //   sampledKeys = keys;
-  // }
-  //
-  // for (const key of sampledKeys) {
-  //   const filteredKey = key + '_' + filterString;
-  //   let storeDataQualityItem = Object.values(storeDataQuality.items).find(storeDataQualityItem => storeDataQualityItem.id === key);
-  //   let storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
-  //   storeSample.items[filteredKey] = storeItemCopy;
-  // }
+
+  // Store sample of data 
+  const filterString = storeIngressOrder1.firstPage;
+  const maxSampleSize = 5;
+  const keys = storeDataQuality.items.map(item => item.id);
+
+  if (keys.length > 0) {
+    // Delete existing IDs with the filter string
+    const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
+    fetch('/api/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ deleteQuery }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        // Handle the server response if needed
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Handle the error if needed
+      });
+    // Take random sample
+    const keys = storeDataQuality.items.map(item => item.id);
+    const sampleSize = Math.min(keys.length, maxSampleSize);
+    const sampledKeys = sampleSize < keys.length
+      ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
+      : keys;
+
+    const insertQueryParts = [];
+    const values = [];
+
+    for (let i = 0; i < sampledKeys.length; i++) {
+      const key = sampledKeys[i];
+      const filteredKey = `${key}_${filterString}`;
+      const storeDataQualityItem = storeDataQuality.items.find(item => item.id === key);
+      const storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
+
+      insertQueryParts.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
+      values.push(filteredKey, storeItemCopy);
+    }
+
+    const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(', ')}`;
+
+    fetch('/api/insertsample', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ insertQuery, values }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        // Handle the server response if needed
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Handle the error if needed
+      });
+  }
+
 
 }
 
@@ -412,6 +444,8 @@ function setStoreDataQualityItemFlags() {
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
+
+    if (loadingStop) {console.log('Stopping');return;}
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -554,6 +588,8 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
   // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
   // truly be the case and needs to be investigated.
@@ -596,6 +632,8 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   // Write feed level data to database
 
   if (showingSample !== true) {
@@ -633,7 +671,7 @@ function setStoreDataQualityItemFlags() {
 
 function postDataQuality() {
 
-  console.log('postDataQuality');
+  if (loadingStop) {console.log('Stopping');return;}
 
   disableFilters();
 
@@ -682,6 +720,8 @@ function postDataQuality() {
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
   for (const item of storeDataQuality.items) {
+
+    if (loadingStop) {console.log('Stopping');return;}
 
     // Filters
 
@@ -1056,6 +1096,9 @@ function postDataQuality() {
   // OUTPUT THE METRICS TO THE HTML...
 
   // -------------------------------------------------------------------------------------------------
+
+  if (loadingStop) {console.log('Stopping');return;}
+
 
   let spark1Count;
   let spark6Count;
@@ -1449,7 +1492,7 @@ function postDataQuality() {
 
   chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
 
-  sleep(200).then(() => { chart2.render().then(() => chart2rendered = true);});
+  sleep(200).then(() => { chart2.render().then(() => chart2rendered = true); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1497,7 +1540,7 @@ function postDataQuality() {
   }
 
   chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  sleep(400).then(() => { chart3.render().then(() => chart3rendered = true);});
+  sleep(400).then(() => { chart3.render().then(() => chart3rendered = true); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1545,7 +1588,7 @@ function postDataQuality() {
   }
 
   chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  sleep(600).then(() => { chart4.render().then(() => chart4rendered = true);});
+  sleep(600).then(() => { chart4.render().then(() => chart4rendered = true); });
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1775,7 +1818,7 @@ function postDataQuality() {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(1000).then(() => { chart6.render().then(() => chart6rendered = true);});
+  sleep(1000).then(() => { chart6.render().then(() => chart6rendered = true); });
   sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
   sleep(1400).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {

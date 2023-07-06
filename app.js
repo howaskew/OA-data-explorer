@@ -7,8 +7,6 @@ const { Parser } = require('htmlparser2');
 const sleep = require('util').promisify(setTimeout);
 require('dotenv').config(); // Load environment variables from .env
 
-
-
 const port = normalizePort(process.env.PORT || '3000');
 
 function extractJSONLDfromHTML(url, html) {
@@ -146,7 +144,7 @@ async function createTableIfNotExists() {
     const tableExists = rows[0].exists;
 
     if (!tableExists) {
-      const createTableQuery = `
+      const createTableQuery1 = `
         CREATE TABLE openactivedq (
           id VARCHAR(255) PRIMARY KEY,
           numParent INTEGER,
@@ -160,37 +158,57 @@ async function createTableIfNotExists() {
         );
       `;
 
-      await client.query(createTableQuery);
+      await client.query(createTableQuery1);
 
-      console.log('Table created successfully!');
+      const createTableQuery2 = `
+      CREATE TABLE openactivesample (
+        id VARCHAR(255) PRIMARY KEY,
+        data JSONB
+      );
+    `;
+
+      await client.query(createTableQuery2);
+
+      console.log('Tables created successfully!');
     } else {
       console.log('Table already exists.');
 
       //During development, may be convenient to recreate the database (when adding fields etc)
 
-      //const deleteTableQuery = 'DROP TABLE openactivedq';
-
-      //client.query(deleteTableQuery);
-
-      //const createTableQuery = `
-      //  CREATE TABLE openactivedq (
-      //    id VARCHAR(255) PRIMARY KEY,
-      //    numParent INTEGER,
-      //    numChild INTEGER,
-      //   DQ_validActivity INTEGER,
-      //    DQ_validGeo INTEGER,
-      //    DQ_validDate INTEGER,
-      //    DQ_validParentUrl INTEGER,
-      //    DQ_validChildUrl INTEGER,
-      //    dateUpdated INTEGER
-      //  );
+      // const deleteTablesQuery = `
+      // DROP TABLE IF EXISTS openactivedq;
+      // DROP TABLE IF EXISTS openactivesample;
       //`;
 
-      //await client.query(createTableQuery);
-
-      //console.log('Table recreated successfully!');
+      // client.query(deleteTablesQuery);
 
 
+      //      const createTableQuery1 = `
+      //     CREATE TABLE openactivedq (
+      //      id VARCHAR(255) PRIMARY KEY,
+      //     numParent INTEGER,
+      //    numChild INTEGER,
+      //   DQ_validActivity INTEGER,
+      //  DQ_validGeo INTEGER,
+      // DQ_validDate INTEGER,
+      //DQ_validParentUrl INTEGER,
+      //DQ_validChildUrl INTEGER,
+      //dateUpdated INTEGER
+      //);
+      //`;
+
+      //await client.query(createTableQuery1);
+
+      //const createTableQuery2 = `
+      //CREATE TABLE openactivesample (
+      // id VARCHAR(255) PRIMARY KEY,
+      //data JSONB
+      //);
+      //`;
+
+      //  await client.query(createTableQuery2);
+
+      //      console.log('Tables recreated');
 
     }
 
@@ -246,27 +264,85 @@ app.post('/api/insert', async (req, res) => {
   }
 });
 
-
 // Define a route handler to retrieve the sum values
 app.get('/sum', async (req, res) => {
+
   try {
     const sumQuery = `
       SELECT SUM(numParent) AS sumParent,
-      SUM(numChild) AS sumChild,
       SUM(numChild) AS sumChild,
       SUM(DQ_validActivity) AS sumDQ_validActivity
       FROM openactivedq;
     `;
     const result = await client.query(sumQuery);
-    const sum1 = result.rows[0].sumParent;
-    const sum2 = result.rows[0].sumChild;
-    const sum3 = result.rows[0].sumDQ_validActivity
+
+    if (result.rows.length === 0) {
+      console.log('No data found in the result.');
+      return res.status(404).json({ error: 'No data found' });
+    }
+
+    const sum1 = Number(result.rows[0].sumparent);
+    const sum2 = Number(result.rows[0].sumchild);
+    const sum3 = Number(result.rows[0].sumdq_validactivity);
+
     res.json({ sum1, sum2, sum3 });
   } catch (error) {
     console.error('Error executing the sum query:', error);
     res.status(500).json({ error: 'An error occurred' });
   }
 });
+
+// Route to handle the delete query to remove any existing sample data for a feed
+app.post('/api/delete', async (req, res) => {
+  const { deleteQuery } = req.body;
+
+  try {
+    await client.query(deleteQuery);
+    res.status(200).json({ message: 'Deletion successful.' });
+  } catch (error) {
+    console.error('Error executing delete query:', error);
+    res.status(500).json({ error: 'An error occurred while executing delete query.' });
+  }
+});
+
+// Route to handle the insert query to add to sample
+app.post('/api/insertsample', async (req, res) => {
+  const { insertQuery, values } = req.body;
+
+  try {
+    await client.query(insertQuery, values);
+    res.status(200).json({ message: 'Insertion successful.' });
+  } catch (error) {
+    console.error('Error executing insert query:', error);
+    res.status(500).json({ error: 'An error occurred while executing insert query.' });
+  }
+});
+
+// Route to handle the insert query to add to sample
+
+app.get('/api/download', (req, res) => {
+  const downloadQuery = 'SELECT * FROM openactivesample';
+
+  client.query(downloadQuery)
+    .then(result => {
+      const rows = result.rows;
+      const sampleData = {};
+
+      rows.forEach(row => {
+        const { id, data } = row;
+        sampleData[id] = data;
+      });
+
+      res.json(sampleData);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Failed to download sample data' });
+    });
+});
+
+
+
 
 // app.js resumes...
 
@@ -343,6 +419,20 @@ app.get('/sum', async (req, res) => {
           return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
         });
 
+      // Hard-coded placeholder feed for totals and samples
+      const myFeed = {
+        name: 'All OpenActive Feeds',
+        type: 'Mixed',
+        url: '',
+        datasetUrl: '',
+        discussionUrl: '',
+        licenseUrl: '',
+        publisherName: 'All OpenActive Feeds',
+      };
+
+      // Append the hard-coded feed to the front of the feeds list
+      feeds.unshift(myFeed);
+
       //console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
       console.log('Got feeds, now reading data');
 
@@ -389,7 +479,7 @@ app.get('/sum', async (req, res) => {
     console.error(error.stack);
     process.exit(1);
   }
-}) ();
+})();
 
 app.get('/feeds', function (req, res) {
   res.send({ "feeds": feeds });

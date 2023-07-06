@@ -12,6 +12,7 @@ const retryCountdownMax = 5;
 let loadingTimeout;
 let loadingStarted;
 let loadingDone;
+let loadingStop;
 
 let filters;
 let coverage;
@@ -156,6 +157,7 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 // -------------------------------------------------------------------------------------------------
 
+
 function execute() {
   if (!loadingStarted) {
     clear();
@@ -253,6 +255,7 @@ function clearGlobals() {
   loadingTimeout = null;
   loadingStarted = null;
   loadingDone = false;
+  loadingStop = null;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
   clearStore(storeDataQuality);
@@ -311,19 +314,32 @@ function clearCache(store) {
 // -------------------------------------------------------------------------------------------------
 
 function showSample() {
-  console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
+
+
   showingSample = true;
-  if (Object.keys(storeSample.items).length > 0) {
-    $("#progress").append('<h3>Showing Sample Data</h3>');
 
-    clearStore(storeDataQuality);
-    storeDataQuality.items = Object.values(storeSample.items);
-    setStoreDataQualityItemFlags();
-    postDataQuality();
+  // Make a GET request to retrieve the sum values from the server
+  $.getJSON('/api/download', function (sampleData) {
+    console.log(sampleData);
+    // Use the sampleData object as needed
+    storeSample.items = sampleData;
+    console.log(Object.keys(storeSample.items).length);
+    if (Object.keys(storeSample.items).length > 0) {
+      $("#progress").append('<h3>Showing Sample Data</h3>');
+      $("#tabs").fadeIn("slow");
+      clearStore(storeDataQuality);
+      storeDataQuality.items = Object.values(storeSample.items);
+      console.log('sending sample data');
+      setStoreDataQualityItemFlags(showingSample);
+      postDataQuality();
+    }
+  })
+    .catch(error => {
+      console.error('Error:', error);
+      // Handle the error if needed
+    });
 
-    $("#tabs").fadeIn("slow");
-    console.log('Showing sample data');
-  }
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -375,6 +391,8 @@ function disableFilters() {
 //Note the displaying of results happens in dq.js now, to improve filtering
 
 function setStoreItems(url, store) {
+
+  if (loadingStop) {console.log('Stopping');return;}
 
   let results = $("#results");
   progress = $("#progress");
@@ -438,17 +456,6 @@ function setStoreItems(url, store) {
             delete store.urls[item.id];
           }
         }
-
-        // DT: What were these for? Not used anywhere.
-        // let firstPage = "";
-        // if (page.first === true) {
-        //   firstPage = "disabled='disabled'";
-        // }
-        //
-        // let lastPage = "";
-        // if (page.last === true) {
-        //   lastPage = "disabled='disabled'";
-        // }
 
         const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
         if (
@@ -1388,6 +1395,68 @@ function updateParameters(parm, parmVal) {
 
 // -------------------------------------------------------------------------------------------------
 
+
+//function updateProvider() {
+//  provider = $('#provider option:selected').val();
+  //clearDisplay(); 
+  //Replicating setEndpoints, without the page reset
+//  $.getJSON('/feeds', function (data) {
+//    $('#endpoint').empty();
+//    $.each(data.feeds, function (index, feed) {
+//      if (feed.publisherName === provider) {
+//        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
+//      }
+//    });
+//  })
+//    .done(function () {
+//      endpoint = $('#endpoint').val();
+//      updateEndpoint();
+//    });
+//}
+
+
+
+// -------------------------------------------------------------------------------------------------
+
+//function updateEndpoint() {
+
+
+
+//  clearDisplay();
+//  clearFilters();
+
+//  provider = $("#provider option:selected").text();
+//  endpoint = $("#endpoint").val();
+
+ // console.log('endpoint 1' + endpoint)
+
+//  updateParameters("endpoint", endpoint);
+//  clearForm(endpoint);
+
+//  if (endpoint === "") {
+//    $("#execute").prop('disabled', 'disabled');
+//  }
+//  else {
+//    $("#execute").prop('disabled', false);
+//  }
+//  $("#user-url").val(endpoint);
+
+//}
+
+// -------------------------------------------------------------------------------------------------
+
+//function updateEndpointUpdate() {
+//  if (endpoint !== "") {
+//    $("#execute").prop('disabled', false);
+//  }
+//  if (endpoint === "") {
+//    $("#execute").prop('disabled', 'disabled');
+//  }
+//}
+
+// -------------------------------------------------------------------------------------------------
+
+
 function updateDQ_filterActivities() {
   filters.DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
   postDataQuality();
@@ -1521,6 +1590,7 @@ async function runForm(pageNumber) {
 
 // -------------------------------------------------------------------------------------------------
 
+
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
@@ -1560,9 +1630,11 @@ function setPage() {
   });
 
   $("#execute").on("click", function () {
+    loadingStop = null;
     execute();
   });
   $("#clear").on("click", function () {
+    loadingStop = true;
     clear();
   });
 
@@ -1603,6 +1675,8 @@ function setPage() {
   $("#Keywords").on("change", function () {
     updateKeywords();
   });
+
+
 
   // if (getUrlParameter("endpoint") !== undefined) {
   //   $("#endpoint").val(getUrlParameter("endpoint"));
@@ -1648,6 +1722,7 @@ function setFeeds() {
       // console.warn(`${luxon.DateTime.now()} setFeeds: end`);
       setProviders();
     });
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1662,7 +1737,10 @@ function setProviders() {
     const providerSums = providers.map(provider => {
       let combinedSum = 0;
       data.feeds.forEach(feed => {
-        if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
+        if (provider === 'All OpenActive Feeds' && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
+          combinedSum += feed.numparent + feed.numchild;
+        }
+        else if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
           combinedSum += feed.numparent + feed.numchild;
         }
       });
@@ -1702,9 +1780,11 @@ function setEndpoints() {
     });
   })
     .done(function () {
+
       // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
       // updateEndpoint();
       setEndpoint();
+
     });
 }
 
