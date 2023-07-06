@@ -15,6 +15,7 @@ const retryCountdownMax = 5;
 let loadingTimeout;
 let loadingStarted;
 let loadingDone;
+let loadingStop;
 
 let filters;
 let coverage;
@@ -166,6 +167,7 @@ function clearGlobals() {
   loadingTimeout = null;
   loadingStarted = null;
   loadingDone = false;
+  loadingStop = null;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
   clearStore(storeDataQuality);
@@ -245,12 +247,12 @@ function clearDisplay() {
 
 function clearCharts() {
   if (chart1) { try { chart1.destroy(); } catch { } }
-  if (chart2 & chart2rendered) { try { chart2.destroy(); } catch { } }
-  if (chart3 & chart3rendered) { try { chart3.destroy(); } catch { } }
-  if (chart4 & chart4rendered) { try { chart4.destroy(); } catch { } }
-  if (chart5a & chart5arendered) { try { chart5a.destroy(); } catch { } }
-  if (chart5b & chart5brendered) { try { chart5b.destroy(); } catch { } }
-  if (chart6 & chart6rendered) { try { chart6.destroy(); } catch { } }
+  if (chart2 && chart2rendered) { try { chart2.destroy(); } catch { } }
+  if (chart3 && chart3rendered) { try { chart3.destroy(); } catch { } }
+  if (chart4 && chart4rendered) { try { chart4.destroy(); } catch { } }
+  if (chart5a && chart5arendered) { try { chart5a.destroy(); } catch { } }
+  if (chart5b && chart5brendered) { try { chart5b.destroy(); } catch { } }
+  if (chart6 && chart6rendered) { try { chart6.destroy(); } catch { } }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -297,28 +299,27 @@ function showSample() {
 
   showingSample = true;
 
-  fetch('/api/download')
-  .then(response => response.json())
-  .then(sampleData => {
+  // Make a GET request to retrieve the sum values from the server
+  $.getJSON('/api/download', function (sampleData) {
     console.log(sampleData);
     // Use the sampleData object as needed
     storeSample.items = sampleData;
     console.log(Object.keys(storeSample.items).length);
     if (Object.keys(storeSample.items).length > 0) {
-    $("#progress").append('<h3>Showing Sample Data</h3>');
-    $("#tabs").fadeIn("slow");
-    clearStore(storeDataQuality);
-    storeDataQuality.items = Object.values(storeSample.items);
-    console.log('sending sample data');
-    setStoreDataQualityItemFlags(showingSample);
-    postDataQuality();
-  }
+      $("#progress").append('<h3>Showing Sample Data</h3>');
+      $("#tabs").fadeIn("slow");
+      clearStore(storeDataQuality);
+      storeDataQuality.items = Object.values(storeSample.items);
+      console.log('sending sample data');
+      setStoreDataQualityItemFlags(showingSample);
+      postDataQuality();
+    }
   })
-  .catch(error => {
-    console.error('Error:', error);
-    // Handle the error if needed
-  });
-  
+    .catch(error => {
+      console.error('Error:', error);
+      // Handle the error if needed
+    });
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -352,6 +353,8 @@ function getFilters() {
 //Note the displaying of results happens in dq.js now, to improve filtering
 
 function setStoreItems(url, store) {
+
+  if (loadingStop) {console.log('Stopping');return;}
 
   let results = $("#results");
   progress = $("#progress");
@@ -415,17 +418,6 @@ function setStoreItems(url, store) {
             delete store.urls[item.id];
           }
         }
-
-        // DT: What were these for? Not used anywhere.
-        // let firstPage = "";
-        // if (page.first === true) {
-        //   firstPage = "disabled='disabled'";
-        // }
-        //
-        // let lastPage = "";
-        // if (page.last === true) {
-        //   lastPage = "disabled='disabled'";
-        // }
 
         const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
         if (
@@ -1405,15 +1397,25 @@ function enableFilters() {
 
 function updateEndpoint() {
 
+
+
   clearDisplay();
   clearFilters();
 
   provider = $("#provider option:selected").text();
   endpoint = $("#endpoint").val();
 
+  console.log('endpoint 1' + endpoint)
+
   updateParameters("endpoint", endpoint);
   clearForm(endpoint);
 
+  if (endpoint === "") {
+    $("#execute").prop('disabled', 'disabled');
+  }
+  else {
+    $("#execute").prop('disabled', false);
+  }
   $("#user-url").val(endpoint);
 
 }
@@ -1425,9 +1427,7 @@ function updateEndpointUpdate() {
     $("#execute").prop('disabled', false);
   }
   if (endpoint === "") {
-    $("#Vocabulary").prop('disabled', true);
-    $("#TaxonomyTerm").prop('disabled', true);
-    $("#execute").prop('disabled', false);
+    $("#execute").prop('disabled', 'disabled');
   }
 }
 
@@ -1643,14 +1643,15 @@ function setPage() {
   showSample();
 
   $("#clear").on("click", function () {
+    loadingStop = true;
     clearFilters();
     clearDisplay();
-    showSample();
     clearForm($("#endpoint").val());
   });
 
   $("#execute").on("click", function () {
     if (!loadingStarted) {
+      loadingStop = null;
       runForm();
     }
   });
@@ -1691,7 +1692,7 @@ function setProvider() {
       data.feeds.forEach(feed => {
         if (provider === 'All OpenActive Feeds' && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
           combinedSum += feed.numparent + feed.numchild;
-        } 
+        }
         else if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
           combinedSum += feed.numparent + feed.numchild;
         }
@@ -1730,9 +1731,15 @@ function setEndpoints() {
     });
   })
     .done(function () {
-      updateParameters('endpoint', $('#endpoint').val());
+      if ($('#endpoint').val() === "") {
+        $("#execute").prop('disabled', 'disabled');
+      }
+      else {
+        updateParameters('endpoint', $('#endpoint').val());
+        $("#execute").prop('disabled', false);
+      }
       setPage();
-      $('#user-url').val($('#endpoint').val());
+      $('#user-url').val($('#endpoint').val()); // why set this after setPage()?
     });
 }
 

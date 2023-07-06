@@ -105,6 +105,8 @@ function postResults(item) {
 
 function setStoreSuperEventAndStoreSubEvent() {
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   storeSuperEvent = null;
   storeSubEvent = null;
   type = null;
@@ -213,6 +215,8 @@ function setStoreSuperEventAndStoreSubEvent() {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItems() {
+
+  if (loadingStop) {console.log('Stopping');return;}
 
   showingSample = false;
 
@@ -344,63 +348,66 @@ function setStoreDataQualityItems() {
   // Store sample of data 
   const filterString = storeIngressOrder1.firstPage;
   const maxSampleSize = 5;
-  // Delete existing IDs with the filter string
-  const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
-  fetch('/api/delete', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ deleteQuery }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      console.log(data);
-      // Handle the server response if needed
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      // Handle the error if needed
-    });
-  // Take random sample
   const keys = storeDataQuality.items.map(item => item.id);
-  const sampleSize = Math.min(keys.length, maxSampleSize);
-  const sampledKeys = sampleSize < keys.length
-    ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
-    : keys;
 
-  const insertQueryParts = [];
-  const values = [];
-
-  for (let i = 0; i < sampledKeys.length; i++) {
-    const key = sampledKeys[i];
-    const filteredKey = `${key}_${filterString}`;
-    const storeDataQualityItem = storeDataQuality.items.find(item => item.id === key);
-    const storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
-
-    insertQueryParts.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
-    values.push(filteredKey, storeItemCopy);
-  }
-
-  const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(',')}`;
-
-  fetch('/api/insertsample', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ insertQuery, values }),
-  })
-    .then(response => response.json())
-    .then(data => {
-      console.log(data);
-      // Handle the server response if needed
+  if (keys.length > 0) {
+    // Delete existing IDs with the filter string
+    const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
+    fetch('/api/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ deleteQuery }),
     })
-    .catch(error => {
-      console.error('Error:', error);
-      // Handle the error if needed
-    });
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        // Handle the server response if needed
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Handle the error if needed
+      });
+    // Take random sample
+    const keys = storeDataQuality.items.map(item => item.id);
+    const sampleSize = Math.min(keys.length, maxSampleSize);
+    const sampledKeys = sampleSize < keys.length
+      ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
+      : keys;
 
+    const insertQueryParts = [];
+    const values = [];
+
+    for (let i = 0; i < sampledKeys.length; i++) {
+      const key = sampledKeys[i];
+      const filteredKey = `${key}_${filterString}`;
+      const storeDataQualityItem = storeDataQuality.items.find(item => item.id === key);
+      const storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
+
+      insertQueryParts.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
+      values.push(filteredKey, storeItemCopy);
+    }
+
+    const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(', ')}`;
+
+    fetch('/api/insertsample', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ insertQuery, values }),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log(data);
+        // Handle the server response if needed
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Handle the error if needed
+      });
+  }
 
 }
 
@@ -435,6 +442,8 @@ function setStoreDataQualityItemFlags(showingSample) {
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
+
+    if (loadingStop) {console.log('Stopping');return;}
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -577,6 +586,8 @@ function setStoreDataQualityItemFlags(showingSample) {
 
   // -------------------------------------------------------------------------------------------------
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
   // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
   // truly be the case and needs to be investigated.
@@ -619,6 +630,8 @@ function setStoreDataQualityItemFlags(showingSample) {
 
   // -------------------------------------------------------------------------------------------------
 
+  if (loadingStop) {console.log('Stopping');return;}
+
   // Write feed level data to database
 
   if (showingSample !== true) {
@@ -656,7 +669,7 @@ function setStoreDataQualityItemFlags(showingSample) {
 
 function postDataQuality() {
 
-  console.log('postDataQuality');
+  if (loadingStop) {console.log('Stopping');return;}
 
   disableFilters();
 
@@ -705,6 +718,8 @@ function postDataQuality() {
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
   for (const item of storeDataQuality.items) {
+
+    if (loadingStop) {console.log('Stopping');return;}
 
     // Filters
 
@@ -1079,6 +1094,9 @@ function postDataQuality() {
   // OUTPUT THE METRICS TO THE HTML...
 
   // -------------------------------------------------------------------------------------------------
+
+  if (loadingStop) {console.log('Stopping');return;}
+
 
   let spark1Count;
   let spark6Count;
