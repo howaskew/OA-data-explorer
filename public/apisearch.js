@@ -1,6 +1,3 @@
-let endpoint;
-let provider;
-
 let scheme_1 = null;
 let scheme_2 = null;
 
@@ -107,7 +104,7 @@ const slotUrlParts = [
   'facility-uses/event',
 ];
 
-let storeIngressOrder1FirstPageFromUser;
+let storeIngressOrder1FirstPageFromUser = null;
 let type; // This may be the feedType or the itemDataType, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
 
@@ -160,48 +157,83 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 // -------------------------------------------------------------------------------------------------
 
-function clearGlobals() {
-  organizerListRefresh = 0;
-  activityListRefresh = 0;
-  locationListRefresh = 0;
-  loadingTimeout = null;
-  loadingStarted = null;
-  loadingDone = false;
-  loadingStop = null;
-  clearStore(storeIngressOrder1);
-  clearStore(storeIngressOrder2);
-  clearStore(storeDataQuality);
-  storeCombinedItems = [];
-  storeSuperEvent = null;
-  storeSubEvent = null;
-  storeIngressOrder1FirstPageFromUser = null;
-  type = null;
-  link = null;
-}
 
-clearGlobals();
-clearStore(storeSample);
+function execute() {
+  if (!loadingStarted) {
+    clear();
+    runForm();
+  }
+}
 
 // -------------------------------------------------------------------------------------------------
 
-function clearStore(store) {
-  store.timeHarvestStart = luxon.DateTime.now();
-  store.urls = {};
-  store.items = {};
-  store.feedType = null; // From the dataset page, not the RPDE feed
-  store.itemKind = null; // From the RPDE feed
-  store.itemDataType = null; // From the RPDE feed
-  store.eventType = null; // Either 'superEvent' or 'subEvent'
-  store.firstPage = null;
-  store.penultimatePage = null;
-  store.lastPage = null;
-  store.numPages = 0;
-  store.numItems = 0;
+function clear() {
+  // console.warn(`${luxon.DateTime.now()} clear`);
+  // console.error(`$('#provider').val(): ${$('#provider').val()}`);
+  // console.error(`$('#endpoint').val(): ${$('#endpoint').val()}`);
+  // console.error(`storeIngressOrder1FirstPageFromUser: ${storeIngressOrder1FirstPageFromUser}`);
+  // console.error(`endpoint: ${$('#endpoint').val() || storeIngressOrder1FirstPageFromUser}`);
+  $('#execute').prop('disabled', true);
+  clearForm();
+  clearDisplay();
+  clearFilters();
+  clearGlobals();
+  // showSample();
+  $('#execute').prop('disabled', false);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearForm() {
+  let endpoint = $('#endpoint').val() || storeIngressOrder1FirstPageFromUser;
+  if (endpoint) {
+    window.history.replaceState('', '', `${window.location.href.split('?')[0]}?endpoint=${endpoint}`);
+  }
+  else {
+    window.location.search = '';
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearDisplay() {
+  // console.warn(`${luxon.DateTime.now()} clearDisplay`);
+  $("#progress").empty();
+  $("#filterRows").hide();
+  $("#tabs").hide();
+  clearCharts();
+  clearTabs();
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearCharts() {
+  // console.warn(`${luxon.DateTime.now()} clearCharts`);
+  if (chart1) { try { chart1.destroy(); } catch { } }
+  if (chart2 && chart2rendered) { try { chart2.destroy(); } catch { } }
+  if (chart3 && chart3rendered) { try { chart3.destroy(); } catch { } }
+  if (chart4 && chart4rendered) { try { chart4.destroy(); } catch { } }
+  if (chart5a && chart5arendered) { try { chart5a.destroy(); } catch { } }
+  if (chart5b && chart5brendered) { try { chart5b.destroy(); } catch { } }
+  if (chart6 && chart6rendered) { try { chart6.destroy(); } catch { } }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clearTabs() {
+  // console.warn(`${luxon.DateTime.now()} clearTabs`);
+  $("#results").empty();
+  $("#json").empty();
+  $("#api").empty();
+  $("#organizer").empty();
+  $("#location").empty();
+  $("#map").empty();
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function clearFilters() {
+  // console.warn(`${luxon.DateTime.now()} clearFilters`);
   $("#DQ_filterDates").prop("checked", false);
   $("#DQ_filterActivities").prop("checked", false);
   $("#DQ_filterGeos").prop("checked", false);
@@ -215,55 +247,41 @@ function clearFilters() {
 
 // -------------------------------------------------------------------------------------------------
 
-function clearURLParameters(endpoint) {
-  let tempArray = window.location.href.split("?");
-  let baseURL = tempArray[0];
-  return baseURL + "?endpoint=" + endpoint;
+function clearGlobals() {
+  // console.warn(`${luxon.DateTime.now()} clearGlobals`);
+  organizerListRefresh = 0;
+  activityListRefresh = 0;
+  locationListRefresh = 0;
+  loadingTimeout = null;
+  loadingStarted = null;
+  loadingDone = false;
+  loadingStop = null;
+  clearStore(storeIngressOrder1);
+  clearStore(storeIngressOrder2);
+  clearStore(storeDataQuality);
+  storeCombinedItems = [];
+  storeSuperEvent = null;
+  storeSubEvent = null;
+  type = null;
+  link = null;
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function clearForm(endpoint) {
-  if (endpoint) {
-    window.history.replaceState('', '', window.location.href.split("?")[0] + "?endpoint=" + endpoint);
-  }
-  else {
-    window.location.search = "";
-  }
-  clearDisplay();
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearDisplay() {
-  $("#progress").empty();
-  $("#filterRows").hide();
-  $("#tabs").hide();
-  clearCharts();
-  clearTabs();
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearCharts() {
-  if (chart1) { try { chart1.destroy(); } catch { } }
-  if (chart2 && chart2rendered) { try { chart2.destroy(); } catch { } }
-  if (chart3 && chart3rendered) { try { chart3.destroy(); } catch { } }
-  if (chart4 && chart4rendered) { try { chart4.destroy(); } catch { } }
-  if (chart5a && chart5arendered) { try { chart5a.destroy(); } catch { } }
-  if (chart5b && chart5brendered) { try { chart5b.destroy(); } catch { } }
-  if (chart6 && chart6rendered) { try { chart6.destroy(); } catch { } }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function clearTabs() {
-  $("#results").empty();
-  $("#json").empty();
-  $("#api").empty();
-  $("#organizer").empty();
-  $("#location").empty();
-  $("#map").empty();
+function clearStore(store) {
+  // console.warn(`${luxon.DateTime.now()} clearStore`);
+  store.timeHarvestStart = luxon.DateTime.now();
+  store.urls = {};
+  store.items = {};
+  store.feedType = null; // From the dataset page, not the RPDE feed
+  store.itemKind = null; // From the RPDE feed
+  store.itemDataType = null; // From the RPDE feed
+  store.eventType = null; // Either 'superEvent' or 'subEvent'
+  store.firstPage = null;
+  store.penultimatePage = null;
+  store.lastPage = null;
+  store.numPages = 0;
+  store.numItems = 0;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -297,6 +315,7 @@ function clearCache(store) {
 
 function showSample() {
 
+
   showingSample = true;
 
   // Make a GET request to retrieve the sum values from the server
@@ -319,6 +338,7 @@ function showSample() {
       console.error('Error:', error);
       // Handle the error if needed
     });
+
 
 }
 
@@ -345,6 +365,24 @@ function getFilters() {
     relevantActivitySet: getRelevantActivitySet($('#activity-list-selected').val()),
   }
   return filters;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function enableFilters() {
+  document.getElementById("DQ_filterActivities").disabled = false;
+  document.getElementById("DQ_filterGeos").disabled = false;
+  document.getElementById("DQ_filterDates").disabled = false;
+  document.getElementById("DQ_filterUrls").disabled = false;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function disableFilters() {
+  document.getElementById("DQ_filterActivities").disabled = true;
+  document.getElementById("DQ_filterGeos").disabled = true;
+  document.getElementById("DQ_filterDates").disabled = true;
+  document.getElementById("DQ_filterUrls").disabled = true;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -554,7 +592,7 @@ async function setStoreIngressOrder1FirstPage() {
       });
   }
   else {
-    storeIngressOrder1.firstPage = $("#endpoint").val();
+    storeIngressOrder1.firstPage = $('#endpoint').val();
   }
 }
 
@@ -701,8 +739,8 @@ function setStoreItemDataType(store) {
 // -------------------------------------------------------------------------------------------------
 
 function loadingStart() {
-  $("#tabs").hide();
   $("#record-limit").hide();
+  $("#tabs").hide();
   if (loadingTimeout) {
     clearTimeout(loadingTimeout);
   }
@@ -737,11 +775,9 @@ function loadingComplete() {
   setStoreSuperEventAndStoreSubEvent();
   setStoreDataQualityItems();
   setStoreDataQualityItemFlags();
-  //console.log(storeDataQuality);
+  postDataQuality();
 
   $("#tabs").fadeIn("slow");
-
-  postDataQuality();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1359,79 +1395,67 @@ function updateParameters(parm, parmVal) {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateProvider() {
-  provider = $('#provider option:selected').val();
+
+//function updateProvider() {
+//  provider = $('#provider option:selected').val();
   //clearDisplay(); 
   //Replicating setEndpoints, without the page reset
-  $.getJSON('/feeds', function (data) {
-    $('#endpoint').empty();
-    $.each(data.feeds, function (index, feed) {
-      if (feed.publisherName === provider) {
-        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
-      }
-    });
-  })
-    .done(function () {
-      endpoint = $('#endpoint').val();
-      updateEndpoint();
-    });
-}
+//  $.getJSON('/feeds', function (data) {
+//    $('#endpoint').empty();
+//    $.each(data.feeds, function (index, feed) {
+//      if (feed.publisherName === provider) {
+//        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
+//      }
+//    });
+//  })
+//    .done(function () {
+//      endpoint = $('#endpoint').val();
+//      updateEndpoint();
+//    });
+//}
+
+
 
 // -------------------------------------------------------------------------------------------------
 
-function disableFilters() {
-  document.getElementById("DQ_filterActivities").disabled = true;
-  document.getElementById("DQ_filterGeos").disabled = true;
-  document.getElementById("DQ_filterDates").disabled = true;
-  document.getElementById("DQ_filterUrls").disabled = true;
-}
-
-function enableFilters() {
-  document.getElementById("DQ_filterActivities").disabled = false;
-  document.getElementById("DQ_filterGeos").disabled = false;
-  document.getElementById("DQ_filterDates").disabled = false;
-  document.getElementById("DQ_filterUrls").disabled = false;
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function updateEndpoint() {
+//function updateEndpoint() {
 
 
 
-  clearDisplay();
-  clearFilters();
+//  clearDisplay();
+//  clearFilters();
 
-  provider = $("#provider option:selected").text();
-  endpoint = $("#endpoint").val();
+//  provider = $("#provider option:selected").text();
+//  endpoint = $("#endpoint").val();
 
-  console.log('endpoint 1' + endpoint)
+ // console.log('endpoint 1' + endpoint)
 
-  updateParameters("endpoint", endpoint);
-  clearForm(endpoint);
+//  updateParameters("endpoint", endpoint);
+//  clearForm(endpoint);
 
-  if (endpoint === "") {
-    $("#execute").prop('disabled', 'disabled');
-  }
-  else {
-    $("#execute").prop('disabled', false);
-  }
-  $("#user-url").val(endpoint);
+//  if (endpoint === "") {
+//    $("#execute").prop('disabled', 'disabled');
+//  }
+//  else {
+//    $("#execute").prop('disabled', false);
+//  }
+//  $("#user-url").val(endpoint);
 
-}
+//}
 
 // -------------------------------------------------------------------------------------------------
 
-function updateEndpointUpdate() {
-  if (endpoint !== "") {
-    $("#execute").prop('disabled', false);
-  }
-  if (endpoint === "") {
-    $("#execute").prop('disabled', 'disabled');
-  }
-}
+//function updateEndpointUpdate() {
+//  if (endpoint !== "") {
+//    $("#execute").prop('disabled', false);
+//  }
+//  if (endpoint === "") {
+//    $("#execute").prop('disabled', 'disabled');
+//  }
+//}
 
 // -------------------------------------------------------------------------------------------------
+
 
 function updateDQ_filterActivities() {
   filters.DQ_filterActivities = $("#DQ_filterActivities").prop("checked");
@@ -1548,12 +1572,7 @@ async function runForm(pageNumber) {
   updateScroll();
   $("#progress").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
 
-  clearGlobals();
-  //clearDisplay();  
-
   loadingStart();
-
-  storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
 
   await setStoreIngressOrder1FirstPage();
   await setStoreFeedType(storeIngressOrder1);
@@ -1586,21 +1605,39 @@ function getSummary() {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function setPage() {
+  // console.warn(`${luxon.DateTime.now()} setPage: start`);
 
   $("#provider").on("change", function () {
-    updateProvider();
-  });
+    // console.error(`${luxon.DateTime.now()} change #provider`);
+    setEndpoints();
+  })
   $("#endpoint").on("change", function () {
-    updateEndpoint();
+    // console.error(`${luxon.DateTime.now()} change #endpoint`);
+    // updateEndpoint();
+    setEndpoint();
   });
   $("#user-url").on("change", function () {
-    $("#endpoint").empty();
-    $("#provider").empty();
-    updateParameters("endpoint", $("#user-url").val());
-    clearForm($("#user-url").val());
+    // console.error(`${luxon.DateTime.now()} change #user-url`);
+    storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
+    // if (storeIngressOrder1FirstPageFromUser) {
+    //   updateUserUrl();
+    // }
+    // else if (!$('#endpoint').val()) {
+    //   setProviders();
+    // }
+    setEndpoint();
   });
+
+  $("#execute").on("click", function () {
+    loadingStop = null;
+    execute();
+  });
+  $("#clear").on("click", function () {
+    loadingStop = true;
+    clear();
+  });
+
   $("#DQ_filterActivities").on("change", function () {
     updateDQ_filterActivities();
   });
@@ -1639,49 +1676,59 @@ function setPage() {
     updateKeywords();
   });
 
-  clearDisplay();
-  showSample();
 
-  $("#clear").on("click", function () {
-    loadingStop = true;
-    clearFilters();
-    clearDisplay();
-    clearForm($("#endpoint").val());
-  });
 
-  $("#execute").on("click", function () {
-    if (!loadingStarted) {
-      loadingStop = null;
-      runForm();
-    }
-  });
+  // if (getUrlParameter("endpoint") !== undefined) {
+  //   $("#endpoint").val(getUrlParameter("endpoint"));
+  //   $.getJSON("/feeds", function (data) {
+  //     $.each(data.feeds, function (index, feed) {
+  //       if (feed.url === $("#endpoint option:selected").val()) {
+  //         // config = feed; //Config was used in OpenReferral - but not now?
+  //       }
+  //     });
+  //   })
+  //     .done(function () {
+  //       if (($('#endpoint').val() || $('#user-url').val()) !== '') {
+  //         $("#execute").prop('disabled', false);
+  //       }
+  //       else {
+  //         $("#Vocabulary").prop('disabled', true);
+  //         $("#TaxonomyTerm").prop('disabled', true);
+  //         $("#execute").prop('disabled', false);
+  //       }
+  //       if (getUrlParameter("execute") === 'true' && loadingStarted !== 'true') {
+  //         runForm();
+  //       }
+  //     });
+  // }
+  // else {
+  //   //updateParameters("endpoint", $("#endpoint").val());
+  //   //setEndpoints();
+  // }
 
-  if (getUrlParameter("endpoint") !== undefined) {
-    $("#endpoint").val(getUrlParameter("endpoint"));
-    $.getJSON("/feeds", function (data) {
-      $.each(data.feeds, function (index, feed) {
-        if (feed.url === $("#endpoint option:selected").val()) {
-          // config = feed; //Config was used in OpenReferral - but not now?
-        }
-      });
-    })
-      .done(function () {
-        updateEndpointUpdate();
-        if (getUrlParameter("execute") === "true" && loadingStarted !== 'true') {
-          runForm();
-        }
-      });
-  }
-  else {
-    //updateParameters("endpoint", $("#endpoint").val());
-    //setEndpoints();
-  }
+  // console.warn(`${luxon.DateTime.now()} setPage: end`);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setProvider() {
+function setFeeds() {
+  // console.warn(`${luxon.DateTime.now()} setFeeds: start`);
+  $.getJSON('/feeds', function (data) {
+    $.each(data.feeds, function (index, feed) {
+      feeds[feed.url] = feed;
+    });
+  })
+    .done(function () {
+      // console.warn(`${luxon.DateTime.now()} setFeeds: end`);
+      setProviders();
+    });
 
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setProviders() {
+  // console.warn(`${luxon.DateTime.now()} setProviders: start`);
   $.getJSON('/feeds', function (data) {
     $('#provider').empty();
     // Extract unique providers
@@ -1715,33 +1762,82 @@ function setProvider() {
     });
   })
     .done(function () {
+      // console.warn(`${luxon.DateTime.now()} setProviders: end`);
       setEndpoints();
     });
 }
 
+// -------------------------------------------------------------------------------------------------
+
 function setEndpoints() {
-  provider = $('#provider option:selected').val();
+  // console.warn(`${luxon.DateTime.now()} setEndpoints: start`);
   $.getJSON('/feeds', function (data) {
     $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
-      feeds[feed.url] = feed;
-      if (feed.publisherName === provider) {
+      if (feed.publisherName === $('#provider option:selected').val()) {
         $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
       }
     });
   })
     .done(function () {
-      if ($('#endpoint').val() === "") {
-        $("#execute").prop('disabled', 'disabled');
-      }
-      else {
-        updateParameters('endpoint', $('#endpoint').val());
-        $("#execute").prop('disabled', false);
-      }
-      setPage();
-      $('#user-url').val($('#endpoint').val()); // why set this after setPage()?
+
+      // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
+      // updateEndpoint();
+      setEndpoint();
+
     });
 }
+
+// -------------------------------------------------------------------------------------------------
+
+function setEndpoint() {
+  // console.warn(`${luxon.DateTime.now()} setEndpoint: start`);
+  let endpoint;
+  if (storeIngressOrder1FirstPageFromUser) {
+    endpoint = storeIngressOrder1FirstPageFromUser;
+    $('#provider').empty();
+    $('#endpoint').empty();
+  }
+  else if ($('#endpoint').val()) {
+    endpoint = $('#endpoint').val();
+    $('#user-url').val(endpoint);
+  }
+  else {
+    // We don't have a user-URL or a menu-URL if we previously had a user-URL (which removed the menu-URLS)
+    // that was then removed itself i.e. completely deleted, or changed into one of the menu-URLs which
+    // are regarded as invalid user-URLs. In this case, we need to reset the provider and endpoint menus,
+    // which will then re-trigger this function too:
+    setProviders();
+  }
+  if (endpoint) {
+    updateParameters('endpoint', endpoint);
+    clear();
+  }
+  // console.warn(`${luxon.DateTime.now()} setEndpoint: end`);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// function updateEndpoint() {
+//   console.warn(`${luxon.DateTime.now()} updateEndpoint: start`);
+//   let endpoint = $('#endpoint').val();
+//   $('#user-url').val(endpoint);
+//   updateParameters('endpoint', endpoint);
+//   clear();
+//   console.warn(`${luxon.DateTime.now()} updateEndpoint: end`);
+// }
+
+// -------------------------------------------------------------------------------------------------
+
+// function updateUserUrl() {
+//   console.warn(`${luxon.DateTime.now()} updateUserUrl: start`);
+//   let endpoint = storeIngressOrder1FirstPageFromUser;
+//   $('#provider').empty();
+//   $('#endpoint').empty();
+//   updateParameters('endpoint', endpoint);
+//   clear();
+//   console.warn(`${luxon.DateTime.now()} updateUserUrl: end`);
+// }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -1758,17 +1854,23 @@ $(function () {
   });
 });
 
+// -------------------------------------------------------------------------------------------------
+
 $(function () {
   // Note: this file should be copied to your server on a nightly cron and served from there
   $.getJSON('https://openactive.io/facility-types/facility-types.jsonld', function (data) {
     // Use SKOS.js to read the file (https://www.openactive.io/skos.js/)
     scheme_2 = new skos.ConceptScheme(data);
-
   });
 });
 
 // -------------------------------------------------------------------------------------------------
 
 $(function () {
-  setProvider();
+  console.warn(`${luxon.DateTime.now()} Reload: start`);
+  $('#execute').prop('disabled', true);
+  setPage();
+  setFeeds();
+  clearStore(storeSample);
+  // showSample();
 });

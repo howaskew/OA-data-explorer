@@ -345,6 +345,7 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
+
   // Store sample of data 
   const filterString = storeIngressOrder1.firstPage;
   const maxSampleSize = 5;
@@ -409,11 +410,12 @@ function setStoreDataQualityItems() {
       });
   }
 
+
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreDataQualityItemFlags(showingSample) {
+function setStoreDataQualityItemFlags() {
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
