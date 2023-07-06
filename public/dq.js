@@ -341,49 +341,49 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
-  // Store sample of data
-
-  const filterString = storeIngressOrder1.firstPage;
-
-  // Delete existing IDs with the filter string
-  for (const key in storeSample.items) {
-    if (key.includes(filterString)) {
-      delete storeSample.items[key];
-    }
-  }
-
-  // Take a sample of new items
-  const keys = storeDataQuality.items.map(item => item.id);
-  const sampledKeys = [];
-
-  const sampleSizeMax = 10;
-  const sampleSize = (keys.length < sampleSizeMax) ? keys.length : sampleSizeMax;
-
-  if (sampleSize <= keys.length) {
-    while (sampledKeys.length <= sampleSize) {
-      const randomIndex = Math.floor(Math.random() * keys.length);
-      const randomKey = keys[randomIndex];
-      if (!sampledKeys.includes(randomKey)) {
-        sampledKeys.push(randomKey);
-      }
-    }
-  }
-  else {
-    sampledKeys = keys;
-  }
-
-  for (const key of sampledKeys) {
-    const filteredKey = key + '_' + filterString;
-    let storeDataQualityItem = Object.values(storeDataQuality.items).find(storeDataQualityItem => storeDataQualityItem.id === key);
-    let storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
-    storeSample.items[filteredKey] = storeItemCopy;
-  }
+  // // Store sample of data
+  //
+  // const filterString = storeIngressOrder1.firstPage;
+  //
+  // // Delete existing IDs with the filter string
+  // for (const key in storeSample.items) {
+  //   if (key.includes(filterString)) {
+  //     delete storeSample.items[key];
+  //   }
+  // }
+  //
+  // // Take a sample of new items
+  // const keys = storeDataQuality.items.map(item => item.id);
+  // const sampledKeys = [];
+  //
+  // const sampleSizeMax = 10;
+  // const sampleSize = (keys.length < sampleSizeMax) ? keys.length : sampleSizeMax;
+  //
+  // if (sampleSize <= keys.length) {
+  //   while (sampledKeys.length <= sampleSize) {
+  //     const randomIndex = Math.floor(Math.random() * keys.length);
+  //     const randomKey = keys[randomIndex];
+  //     if (!sampledKeys.includes(randomKey)) {
+  //       sampledKeys.push(randomKey);
+  //     }
+  //   }
+  // }
+  // else {
+  //   sampledKeys = keys;
+  // }
+  //
+  // for (const key of sampledKeys) {
+  //   const filteredKey = key + '_' + filterString;
+  //   let storeDataQualityItem = Object.values(storeDataQuality.items).find(storeDataQualityItem => storeDataQualityItem.id === key);
+  //   let storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
+  //   storeSample.items[filteredKey] = storeItemCopy;
+  // }
 
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setStoreDataQualityItemFlags(showingSample) {
+function setStoreDataQualityItemFlags() {
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -636,7 +636,7 @@ function postDataQuality() {
   console.log('postDataQuality');
 
   disableFilters();
-  
+
   clearCharts();
 
   $("#resultPanel").hide();
@@ -1646,7 +1646,7 @@ function postDataQuality() {
     chart5a.render().then(() => chart5arendered = true);
     chart5b.render().then(() => chart5brendered = true);
   });
-  
+
 
   // -------------------------------------------------------------------------------------------------
 
