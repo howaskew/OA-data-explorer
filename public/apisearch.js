@@ -255,7 +255,6 @@ function clearGlobals() {
   loadingTimeout = null;
   loadingStarted = null;
   loadingDone = false;
-  loadingStop = null;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
   clearStore(storeDataQuality);
@@ -1876,5 +1875,4 @@ $(function () {
   setPage();
   setFeeds();
   clearStore(storeSample);
-  showSample();
 });
