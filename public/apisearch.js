@@ -1801,8 +1801,8 @@ function setEndpoint() {
   else if ($('#provider').val() === 'All OpenActive Feeds') {
     $('#execute').prop('disabled', true);
     showSample();
-    endpoint = $('#endpoint').val();
-    $('#user-url').val(endpoint);
+    //endpoint = $('#endpoint').val();
+    //$('#user-url').val(endpoint);
   }
   else if ($('#endpoint').val()) {
     endpoint = $('#endpoint').val();
