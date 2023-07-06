@@ -254,7 +254,7 @@ function clearGlobals() {
   locationListRefresh = 0;
   loadingTimeout = null;
   loadingStarted = null;
-  loadingDone = false;
+  loadingDone = true;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
   clearStore(storeDataQuality);
@@ -1634,6 +1634,7 @@ function setPage() {
   });
   $("#clear").on("click", function () {
     loadingStop = true;
+
     clear();
   });
 
@@ -1800,6 +1801,8 @@ function setEndpoint() {
   else if ($('#provider').val() === 'All OpenActive Feeds') {
     $('#execute').prop('disabled', true);
     showSample();
+    endpoint = $('#endpoint').val();
+    $('#user-url').val(endpoint);
   }
   else if ($('#endpoint').val()) {
     endpoint = $('#endpoint').val();
