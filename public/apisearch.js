@@ -105,6 +105,7 @@ const slotUrlParts = [
 ];
 
 let storeIngressOrder1FirstPageFromUser = null;
+let endpoint = undefined;
 let type; // This may be the feedType or the itemDataType, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
 
@@ -158,6 +159,7 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 // -------------------------------------------------------------------------------------------------
 
 function execute() {
+  loadingStop = false;
   if (!loadingStarted) {
     clear();
     runForm();
@@ -168,24 +170,30 @@ function execute() {
 
 function clear() {
   // console.warn(`${luxon.DateTime.now()} clear`);
+  // console.error(`storeIngressOrder1FirstPageFromUser: ${storeIngressOrder1FirstPageFromUser}`);
   // console.error(`$('#provider').val(): ${$('#provider').val()}`);
   // console.error(`$('#endpoint').val(): ${$('#endpoint').val()}`);
-  // console.error(`storeIngressOrder1FirstPageFromUser: ${storeIngressOrder1FirstPageFromUser}`);
-  // console.error(`endpoint: ${$('#endpoint').val() || storeIngressOrder1FirstPageFromUser}`);
+  // console.error(`endpoint: ${endpoint}`);
+  loadingStop = true;
   $('#execute').prop('disabled', true);
+  $('#clear').prop('disabled', true);
   clearForm();
   clearDisplay();
   clearFilters();
   clearGlobals();
-  // showSample();
-  $('#execute').prop('disabled', false);
+  if (endpoint) {
+    $('#execute').prop('disabled', false);
+    $('#clear').prop('disabled', false);
+  }
+  else {
+    showSample();
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function clearForm() {
-  let endpoint = $('#endpoint').val() || storeIngressOrder1FirstPageFromUser;
-  if (endpoint) {
+  if (endpoint !== undefined) {
     window.history.replaceState('', '', `${window.location.href.split('?')[0]}?endpoint=${endpoint}`);
   }
   else {
@@ -254,6 +262,7 @@ function clearGlobals() {
   loadingTimeout = null;
   loadingStarted = null;
   loadingDone = true;
+  loadingStop = false;
   clearStore(storeIngressOrder1);
   clearStore(storeIngressOrder2);
   clearStore(storeDataQuality);
@@ -312,15 +321,13 @@ function clearCache(store) {
 // -------------------------------------------------------------------------------------------------
 
 function showSample() {
-
   showingSample = true;
-
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
     console.log(sampleData);
     // Use the sampleData object as needed
     storeSample.items = sampleData;
-    console.log(Object.keys(storeSample.items).length);
+    console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
       $('#progress').append('<h3>Showing Sample Data</h3>');
       clearStore(storeDataQuality);
@@ -335,7 +342,6 @@ function showSample() {
       console.error('Error:', error);
       // Handle the error if needed
     });
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1555,7 +1561,6 @@ async function runForm() {
 
 // -------------------------------------------------------------------------------------------------
 
-
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
@@ -1595,12 +1600,9 @@ function setPage() {
   });
 
   $("#execute").on("click", function () {
-    loadingStop = null;
     execute();
   });
   $("#clear").on("click", function () {
-    loadingStop = true;
-
     clear();
   });
 
@@ -1641,8 +1643,6 @@ function setPage() {
   $("#Keywords").on("change", function () {
     updateKeywords();
   });
-
-
 
   // if (getUrlParameter("endpoint") !== undefined) {
   //   $("#endpoint").val(getUrlParameter("endpoint"));
@@ -1718,6 +1718,7 @@ function setProviders() {
         return a.provider.localeCompare(b.provider);
       }
       return b.sum - a.sum;
+      // return a.provider.localeCompare(b.provider);
     });
     // Output the sorted providers to HTML
     providerSums.forEach(providerSum => {
@@ -1756,19 +1757,24 @@ function setEndpoints() {
 
 function setEndpoint() {
   // console.warn(`${luxon.DateTime.now()} setEndpoint: start`);
-  let endpoint;
+  endpoint = undefined;
+
   if (storeIngressOrder1FirstPageFromUser) {
     endpoint = storeIngressOrder1FirstPageFromUser;
     $('#provider').empty();
     $('#endpoint').empty();
   }
   else if ($('#provider').val() === 'All OpenActive Feeds') {
-    $('#execute').prop('disabled', true);
-    showSample();
+    endpoint = null;
   }
   else if ($('#endpoint').val()) {
     endpoint = $('#endpoint').val();
+  }
+
+  if (endpoint !== undefined) {
     $('#user-url').val(endpoint);
+    updateParameters('endpoint', endpoint);
+    clear();
   }
   else {
     // We don't have a user-URL or a menu-URL if we previously had a user-URL (which removed the menu-URLS)
@@ -1777,10 +1783,6 @@ function setEndpoint() {
     // which will then re-trigger this function too:
     setProviders();
   }
-  if (endpoint) {
-    updateParameters('endpoint', endpoint);
-    clear();
-  }
   // console.warn(`${luxon.DateTime.now()} setEndpoint: end`);
 }
 
@@ -1788,7 +1790,7 @@ function setEndpoint() {
 
 // function updateEndpoint() {
 //   console.warn(`${luxon.DateTime.now()} updateEndpoint: start`);
-//   let endpoint = $('#endpoint').val();
+//   endpoint = $('#endpoint').val();
 //   $('#user-url').val(endpoint);
 //   updateParameters('endpoint', endpoint);
 //   clear();
@@ -1799,7 +1801,7 @@ function setEndpoint() {
 
 // function updateUserUrl() {
 //   console.warn(`${luxon.DateTime.now()} updateUserUrl: start`);
-//   let endpoint = storeIngressOrder1FirstPageFromUser;
+//   endpoint = storeIngressOrder1FirstPageFromUser;
 //   $('#provider').empty();
 //   $('#endpoint').empty();
 //   updateParameters('endpoint', endpoint);
