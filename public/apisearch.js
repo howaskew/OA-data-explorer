@@ -10,9 +10,9 @@ const retryCountMax = 3;
 const retryCountdownMax = 5;
 
 let loadingTimeout;
-let loadingStarted;
-let loadingDone;
-let loadingStop;
+let inProgress;
+let stopTriggered;
+let showingSample;
 
 let filters;
 let coverage;
@@ -33,11 +33,11 @@ let chart5a;
 let chart5b;
 let chart6;
 let chart2rendered = false;
-let chart3rendered = false;;
-let chart4rendered = false;;
-let chart5arendered = false;;
-let chart5brendered = false;;
-let chart6rendered = false;;
+let chart3rendered = false;
+let chart4rendered = false;
+let chart5arendered = false;
+let chart5brendered = false;
+let chart6rendered = false;
 let map;
 
 let activeJSONButton;
@@ -47,14 +47,10 @@ const inactiveJSONButtonColor = 'DarkGray';
 let feeds = {};
 let providers = {};
 
-let storeIngressOrder1 = {
-  ingressOrder: 1,
-};
-let storeIngressOrder2 = {
-  ingressOrder: 2,
-};
-let storeDataQuality = {}; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
-let storeSample = {}; // This is used to store a small sample of data from each run to show users on arrival
+let storeIngressOrder1;
+let storeIngressOrder2;
+let storeDataQuality; // This is used to store the results of DQ tests for filtering, regardless of whether or not we have a combined store from multiple feeds
+let storeSample; // This is used to store a small sample of data from each run to show users on arrival
 let storeCombinedItems; // This is present only if we have valid storeSuperEvent, storeSubEvent and link between them
 
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
@@ -104,14 +100,12 @@ const slotUrlParts = [
   'facility-uses/event',
 ];
 
-let storeIngressOrder1FirstPageFromUser = null;
-let endpoint = undefined;
-let type; // This may be the feedType or the itemDataType, depending on availability
+let storeIngressOrder1FirstPageFromUser = null; // Don't add this to clearGlobals(), let it be exclusively controlled by $('#user-url').on('change', ()=>{}).
+let endpoint = undefined; // This is null for the case of showing all OpenActive feeds, so undefined is useful and distinct. Don't add this to clearGlobals(), let it be exclusively controlled by setEndpoint().
+let type; // This may be the feedType, itemDataType or itemKind, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
 
 let cp = $("#combineProgress");
-
-let showingSample = true;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -158,45 +152,133 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 // -------------------------------------------------------------------------------------------------
 
-function execute() {
-  loadingStop = false;
-  if (!loadingStarted) {
-    clear();
-    runForm();
+async function execute() {
+  if (!inProgress) {
+    updateParameters('execute', true); // DT: Is this necessary?
+    clear(true);
+    inProgress = true; // Here this must come after clear()
+
+    await setStoreIngressOrder1FirstPage();
+    await setStoreFeedType(storeIngressOrder1);
+    await setStoreIngressOrder2FirstPage();
+    await setStoreFeedType(storeIngressOrder2);
+
+    if (storeIngressOrder1.firstPage) {
+      console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
+      loadingStart();
+    }
+    else {
+      console.error('No valid first page for storeIngressOrder1, can\'t begin');
+      inProgress = false;
+      $('#execute').prop('disabled', false);
+    }
   }
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function clear() {
+function loadingStart() {
+  updateScroll();
+
+  $('#progress').append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
+
+  clearTimeout(loadingTimeout);
+  loadingTimeout = setTimeout(
+    () => {
+      if (inProgress && !stopTriggered) {
+        $('#loading-time').fadeIn();
+      }
+    },
+    5000
+  );
+
+  try {
+    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1);
+  }
+  catch (error) {
+    console.error(error.message);
+    stop();
+    return;
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function loadingComplete() {
+  clearTimeout(loadingTimeout);
+
+  $('#loading-time').hide();
+  $('#progress').append('<div id="DQProgress"</div>');
+
+  let funcs = [
+    setStoreSuperEventAndStoreSubEvent,
+    setStoreDataQualityItems,
+    setStoreDataQualityItemFlags,
+    postDataQuality,
+  ];
+
+  for (const func of funcs) {
+    try {
+      func();
+    }
+    catch (error) {
+      console.error(error.message);
+      stop();
+      return;
+    }
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function stop() {
+  clearTimeout(loadingTimeout);
+  inProgress = false; // Here this must come before clear()
+  clear();
+  console.warn('Stopped');
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function clear(execute=false) {
   // console.warn(`${luxon.DateTime.now()} clear`);
-  // console.error(`storeIngressOrder1FirstPageFromUser: ${storeIngressOrder1FirstPageFromUser}`);
-  // console.error(`$('#provider').val(): ${$('#provider').val()}`);
-  // console.error(`$('#endpoint').val(): ${$('#endpoint').val()}`);
-  // console.error(`endpoint: ${endpoint}`);
-  loadingStop = true;
   $('#execute').prop('disabled', true);
   $('#clear').prop('disabled', true);
-  clearForm();
-  clearDisplay();
-  clearFilters();
-  clearGlobals();
-  if (endpoint) {
-    $('#execute').prop('disabled', false);
-    $('#clear').prop('disabled', false);
+  if (!inProgress) {
+    clearForm();
+    clearDisplay();
+    clearFilters();
+    clearGlobals();
+    // Here we only allow for non-undefined and non-null endpoints, coming from the cases of a user-URL
+    // or a menu-URL, and not including the case of showing all OpenActive feeds which gives a null endpoint:
+    if (endpoint) {
+      $('#execute').prop('disabled', execute);
+      $('#clear').prop('disabled', false);
+    }
+    else {
+      showSample();
+    }
   }
   else {
-    showSample();
+    stopTriggered = true;
+    $('#progress').append('<div id="stopping"></div>');
+    $('#stopping').append('<p>Stopping ...</p>');
+    $('#stopping').append('<img src="images/ajax-loader.gif" alt="Stopping ...">');
   }
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function clearForm() {
+  // Here we allow for the case of showing all OpenActive feeds which gives a null endpoint:
   if (endpoint !== undefined) {
     window.history.replaceState('', '', `${window.location.href.split('?')[0]}?endpoint=${endpoint}`);
   }
   else {
+    // We shouldn't actually have a case when we're here from the endpoint being undefined. If we do, then
+    // the following command will cause a refresh of the window and therefore the variables too. However,
+    // if the condition that led to the endpoint being undefined was in the initial page setup, then we
+    // will return here, refresh, and continue as such indefinitely. Check setEndpoint() for issues.
     window.location.search = '';
   }
 }
@@ -205,9 +287,11 @@ function clearForm() {
 
 function clearDisplay() {
   // console.warn(`${luxon.DateTime.now()} clearDisplay`);
-  $("#progress").empty();
-  $("#filterRows").hide();
-  $("#tabs").hide();
+  $('#progress').empty();
+  $('#loading-time').hide();
+  $('#record-limit').hide();
+  $('#filterRows').hide();
+  $('#tabs').hide();
   clearCharts();
   clearTabs();
 }
@@ -260,17 +344,26 @@ function clearGlobals() {
   activityListRefresh = 0;
   locationListRefresh = 0;
   loadingTimeout = null;
-  loadingStarted = null;
-  loadingDone = true;
-  loadingStop = false;
-  clearStore(storeIngressOrder1);
-  clearStore(storeIngressOrder2);
-  clearStore(storeDataQuality);
+  inProgress = false;
+  stopTriggered = false;
+  showingSample = false;
+  storeIngressOrder1 = {
+    ingressOrder: 1,
+  };
+  storeIngressOrder2 = {
+    ingressOrder: 2,
+  };
+  storeDataQuality = {};
+  storeSample = {};
   storeCombinedItems = [];
   storeSuperEvent = null;
   storeSubEvent = null;
   type = null;
   link = null;
+  clearStore(storeIngressOrder1);
+  clearStore(storeIngressOrder2);
+  clearStore(storeDataQuality);
+  clearStore(storeSample);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -313,7 +406,7 @@ function clearCache(store) {
         console.log(response.data);
       })
       .catch(error => {
-        console.warn(error.message);
+        console.error(error.message);
       });
   }
 }
@@ -321,7 +414,6 @@ function clearCache(store) {
 // -------------------------------------------------------------------------------------------------
 
 function showSample() {
-  showingSample = true;
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
     console.log(sampleData);
@@ -330,16 +422,16 @@ function showSample() {
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
       $('#progress').append('<h3>Showing Sample Data</h3>');
+      showingSample = true;
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
       console.log('Processing sample data');
       setStoreDataQualityItemFlags();
       postDataQuality();
-      $('#tabs').fadeIn('slow');
     }
   })
     .catch(error => {
-      console.error('Error:', error);
+      console.error('Error from sample:', error);
       // Handle the error if needed
     });
 }
@@ -394,7 +486,7 @@ function disableFilters() {
 
 function setStoreItems(url, store) {
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   let results = $("#results");
   progress = $("#progress");
@@ -468,7 +560,14 @@ function setStoreItems(url, store) {
           progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
           progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
           store.penultimatePage = url;
-          setStoreItems(response.data.next, store);
+          try {
+            setStoreItems(response.data.next, store);
+          }
+          catch (error) {
+            console.error(error.message);
+            stop();
+            return;
+          }
         }
         else {
           if (store.numItems === 25000) {
@@ -511,7 +610,14 @@ function setStoreItems(url, store) {
             storeIngressOrder2.firstPage
           ) {
             console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
-            setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
+            try {
+              setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
+            }
+            catch (error) {
+              console.error(error.message);
+              stop();
+              return;
+            }
           }
           else {
             progress.append('<div id="combineProgress"></div>');
@@ -539,9 +645,15 @@ function setStoreItems(url, store) {
 
         $('.show-error').on('click', function () {
           retryCount++;
-          setStoreItems(url, store);
+          try {
+            setStoreItems(url, store);
+          }
+          catch (error) {
+            console.error(error.message);
+            stop();
+            return;
+          }
         });
-
       }
     });
 
@@ -558,7 +670,14 @@ function retryRequest(url, store) {
     countdown--;
     if (countdown < 1) {
       clearInterval(countdownInterval);
-      setStoreItems(url, store);
+      try {
+        setStoreItems(url, store);
+      }
+      catch (error) {
+        console.error(error.message);
+        stop();
+        return;
+      }
     }
   }, 1000);
 }
@@ -584,6 +703,7 @@ function resolveDate(item, prop) {
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreIngressOrder1FirstPage() {
+  // console.warn(`${luxon.DateTime.now()} setStoreIngressOrder1FirstPage`);
   if (storeIngressOrder1FirstPageFromUser) {
     await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
       .then(response => {
@@ -601,6 +721,7 @@ async function setStoreIngressOrder1FirstPage() {
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreIngressOrder2FirstPage() {
+  // console.warn(`${luxon.DateTime.now()} setStoreIngressOrder2FirstPage`);
   if (superEventContentTypesSeries.includes(storeIngressOrder1.feedType)) {
     await setStoreIngressOrder2FirstPageHelper(seriesUrlParts, sessionUrlParts);
   }
@@ -621,6 +742,7 @@ async function setStoreIngressOrder2FirstPage() {
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2UrlParts) {
+  // console.warn(`${luxon.DateTime.now()} setStoreIngressOrder2FirstPageHelper`);
   for (const feedType1UrlPart of feedType1UrlParts) {
     if (storeIngressOrder1.firstPage.includes(feedType1UrlPart)) {
       for (const feedType2UrlPart of feedType2UrlParts) {
@@ -655,6 +777,7 @@ async function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreFeedType(store) {
+  // console.warn(`${luxon.DateTime.now()} setStoreFeedType`);
   if (!store.firstPage) {
     store.feedType = null;
     return;
@@ -736,50 +859,6 @@ function setStoreItemDataType(store) {
       console.warn(`storeIngressOrder${store.ingressOrder} mixed item data types: [${uniqueItemDataTypes}]`);
       break;
   }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function loadingStart() {
-  $("#record-limit").hide();
-  $("#tabs").hide();
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-  }
-  loadingTimeout = setTimeout(loadingTakingTime, 5000);
-  loadingStarted = true;
-  loadingDone = false;
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function loadingTakingTime() {
-  if (!loadingDone) {
-    $("#loading-time").fadeIn();
-  }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-function loadingComplete() {
-
-  loadingStarted = null;
-  loadingDone = true;
-
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-    loadingTimeout = null;
-  }
-
-  $("#loading-time").hide();
-  progress.append(`<div id='DQProgress'</div>`);
-
-  setStoreSuperEventAndStoreSubEvent();
-  setStoreDataQualityItems();
-  setStoreDataQualityItemFlags();
-  postDataQuality();
-
-  $("#tabs").fadeIn("slow");
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1539,28 +1618,6 @@ function updateKeywords() {
 
 // -------------------------------------------------------------------------------------------------
 
-async function runForm() {
-  updateParameters('execute', true);
-
-  await setStoreIngressOrder1FirstPage();
-  await setStoreFeedType(storeIngressOrder1);
-  await setStoreIngressOrder2FirstPage();
-  await setStoreFeedType(storeIngressOrder2);
-
-  if (storeIngressOrder1.firstPage) {
-    console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
-    $('#progress').append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
-    updateScroll();
-    loadingStart();
-    setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1);
-  }
-  else {
-    console.error('No valid first page for storeIngressOrder1, can\'t begin');
-  }
-}
-
-// -------------------------------------------------------------------------------------------------
-
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
@@ -1579,16 +1636,16 @@ function setPage() {
   // console.warn(`${luxon.DateTime.now()} setPage: start`);
 
   $("#provider").on("change", function () {
-    // console.error(`${luxon.DateTime.now()} change #provider`);
+    // console.warn(`${luxon.DateTime.now()} change #provider`);
     setEndpoints();
   })
   $("#endpoint").on("change", function () {
-    // console.error(`${luxon.DateTime.now()} change #endpoint`);
+    // console.warn(`${luxon.DateTime.now()} change #endpoint`);
     // updateEndpoint();
     setEndpoint();
   });
   $("#user-url").on("change", function () {
-    // console.error(`${luxon.DateTime.now()} change #user-url`);
+    // console.warn(`${luxon.DateTime.now()} change #user-url`);
     storeIngressOrder1FirstPageFromUser = !($("#user-url").val().trim() in feeds) ? $("#user-url").val().trim() : null;
     // if (storeIngressOrder1FirstPageFromUser) {
     //   updateUserUrl();
@@ -1662,7 +1719,7 @@ function setPage() {
   //         $("#TaxonomyTerm").prop('disabled', true);
   //         $("#execute").prop('disabled', false);
   //       }
-  //       if (getUrlParameter("execute") === 'true' && loadingStarted !== 'true') {
+  //       if (getUrlParameter("execute") === 'true' && inProgress !== true) {
   //         runForm();
   //       }
   //     });
@@ -1839,7 +1896,7 @@ $(function () {
 $(function () {
   console.warn(`${luxon.DateTime.now()} Reload: start`);
   $('#execute').prop('disabled', true);
+  $('#clear').prop('disabled', true);
   setPage();
   setFeeds();
-  clearStore(storeSample);
 });

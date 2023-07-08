@@ -104,8 +104,9 @@ function postResults(item) {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreSuperEventAndStoreSubEvent() {
+  // console.warn(`${luxon.DateTime.now()} setStoreSuperEventAndStoreSubEvent`);
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   storeSuperEvent = null;
   storeSubEvent = null;
@@ -215,8 +216,9 @@ function setStoreSuperEventAndStoreSubEvent() {
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItems() {
+  // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItems`);
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   showingSample = false;
 
@@ -238,6 +240,7 @@ function setStoreDataQualityItems() {
     link = 'superEvent';
 
     for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
+      if (stopTriggered) {throw new Error('Stop triggered');}
       if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
         // Here subEvent is the array of all subEvents:
         const { subEvent, ...storeSuperEventItemDataReduced } = storeSuperEventItem.data;
@@ -279,6 +282,7 @@ function setStoreDataQualityItems() {
     storeCombinedItems = [];
 
     for (const [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
+      if (stopTriggered) {throw new Error('Stop triggered');}
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
         const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem =>
@@ -345,8 +349,9 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
-  // Store sample of data 
+  // Store sample of data
   const filterString = storeIngressOrder1.firstPage;
   const maxSampleSize = 5;
   const keys = storeDataQuality.items.map(item => item.id);
@@ -410,12 +415,14 @@ function setStoreDataQualityItems() {
       });
   }
 
-
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function setStoreDataQualityItemFlags() {
+  // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItemFlags`);
+
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -445,7 +452,7 @@ function setStoreDataQualityItemFlags() {
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
-    if (loadingStop) {console.log('Stopping');return;}
+    if (stopTriggered) {throw new Error('Stop triggered');}
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -588,7 +595,7 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
   // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
@@ -632,11 +639,11 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   // Write feed level data to database
 
-  if (showingSample !== true) {
+  if (!showingSample) {
     // console.log(storeDataQuality.dqSummary);
     // console.log(storeDataQuality);
 
@@ -662,7 +669,9 @@ function setStoreDataQualityItemFlags() {
       }
     })();
   }
+
   getSummary();
+
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -670,11 +679,11 @@ function setStoreDataQualityItemFlags() {
 // This calculates DQ scores for the filtered data, and shows results
 
 function postDataQuality() {
+  // console.warn(`${luxon.DateTime.now()} postDataQuality`);
 
-  if (loadingStop) {console.log('Stopping');return;}
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   disableFilters();
-
   clearCharts();
 
   $("#resultPanel").hide();
@@ -721,7 +730,7 @@ function postDataQuality() {
 
   for (const item of storeDataQuality.items) {
 
-    if (loadingStop) {console.log('Stopping');return;}
+    if (stopTriggered) {throw new Error('Stop triggered');}
 
     // Filters
 
@@ -961,6 +970,8 @@ function postDataQuality() {
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
+  if (stopTriggered) {throw new Error('Stop triggered');}
+
   if (storeDataQuality.numFilteredItems === 0) {
     results.empty();
     results.append(
@@ -1097,8 +1108,7 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (loadingStop) {console.log('Stopping');return;}
-
+  if (stopTriggered) {throw new Error('Stop triggered');}
 
   let spark1Count;
   let spark6Count;
@@ -1148,7 +1158,7 @@ function postDataQuality() {
       else if (storeDataQuality.eventType === 'superEvent') {
         spark1SeriesName = 'Child' + ((spark1Count !== 1) ? 'ren' : '');
       }
-      console.warn('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
+      console.warn('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
     }
   }
 
@@ -1164,7 +1174,7 @@ function postDataQuality() {
     }
     else {
       spark6SeriesName = 'Child' + ((spark6Count !== 1) ? 'ren' : '');
-      console.warn('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point, check the listings in the code.');
+      console.warn('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
     }
   }
 
@@ -1205,6 +1215,11 @@ function postDataQuality() {
       }
     }
   }
+
+  // -------------------------------------------------------------------------------------------------
+
+  $('#clear').prop('disabled', true);
+  $('#tabs').fadeIn('slow');
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1818,12 +1833,22 @@ function postDataQuality() {
   }
 
   chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(1000).then(() => { chart6.render().then(() => chart6rendered = true); });
-  sleep(1200).then(() => { $("#resultPanel").fadeIn("slow"); });
-  sleep(1400).then(() => {
+  sleep(1200).then(() => { chart6.render().then(() => chart6rendered = true); });
+
+  // -------------------------------------------------------------------------------------------------
+
+  sleep(1400).then(() => { $('#resultPanel').fadeIn('slow'); });
+  sleep(1600).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {
-      $("#filterRows").fadeIn("slow");
+      $('#filterRows').fadeIn('slow');
     }
     enableFilters();
   });
+  sleep(1800).then(() => {
+    inProgress = false;
+    $('#stopping').empty();
+    $('#execute').prop('disabled', endpoint === null);
+    $('#clear').prop('disabled', endpoint === null);
+  });
+
 }
