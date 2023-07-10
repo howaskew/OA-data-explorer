@@ -686,7 +686,7 @@ function postDataQuality() {
   disableFilters();
   clearCharts();
 
-  $("#resultPanel").hide();
+  $("#tabs").hide();
 
   $("#resultTab").addClass("active");
   $("#resultPanel").addClass("active");
@@ -1219,7 +1219,7 @@ function postDataQuality() {
   // -------------------------------------------------------------------------------------------------
 
   $('#clear').prop('disabled', true);
-  $('#tabs').fadeIn('slow');
+  $('#output').fadeIn('slow');
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1837,7 +1837,7 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  sleep(1400).then(() => { $('#resultPanel').fadeIn('slow'); });
+  sleep(1400).then(() => { $('#tabs').fadeIn('slow'); });
   sleep(1600).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {
       $('#filterRows').fadeIn('slow');
