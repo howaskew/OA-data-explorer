@@ -106,7 +106,7 @@ function postResults(item) {
 function setStoreSuperEventAndStoreSubEvent() {
   // console.warn(`${luxon.DateTime.now()} setStoreSuperEventAndStoreSubEvent`);
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   storeSuperEvent = null;
   storeSubEvent = null;
@@ -218,7 +218,7 @@ function setStoreSuperEventAndStoreSubEvent() {
 function setStoreDataQualityItems() {
   // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItems`);
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   showingSample = false;
 
@@ -240,7 +240,7 @@ function setStoreDataQualityItems() {
     link = 'superEvent';
 
     for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-      if (stopTriggered) {throw new Error('Stop triggered');}
+      if (stopTriggered) { throw new Error('Stop triggered'); }
       if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
         // Here subEvent is the array of all subEvents:
         const { subEvent, ...storeSuperEventItemDataReduced } = storeSuperEventItem.data;
@@ -282,7 +282,7 @@ function setStoreDataQualityItems() {
     storeCombinedItems = [];
 
     for (const [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
-      if (stopTriggered) {throw new Error('Stop triggered');}
+      if (stopTriggered) { throw new Error('Stop triggered'); }
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
         const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem =>
@@ -349,7 +349,7 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   // Store sample of data
   const filterString = storeIngressOrder1.firstPage;
@@ -422,7 +422,7 @@ function setStoreDataQualityItems() {
 function setStoreDataQualityItemFlags() {
   // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItemFlags`);
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -452,7 +452,7 @@ function setStoreDataQualityItemFlags() {
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
-    if (stopTriggered) {throw new Error('Stop triggered');}
+    if (stopTriggered) { throw new Error('Stop triggered'); }
 
     storeDataQuality.dqFlags[item.id] = {
       DQ_validOrganizer: false,
@@ -595,7 +595,7 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
   // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
@@ -639,7 +639,7 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   // Write feed level data to database
 
@@ -681,7 +681,7 @@ function setStoreDataQualityItemFlags() {
 function postDataQuality() {
   // console.warn(`${luxon.DateTime.now()} postDataQuality`);
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   disableFilters();
   clearCharts();
@@ -730,7 +730,7 @@ function postDataQuality() {
 
   for (const item of storeDataQuality.items) {
 
-    if (stopTriggered) {throw new Error('Stop triggered');}
+    if (stopTriggered) { throw new Error('Stop triggered'); }
 
     // Filters
 
@@ -970,7 +970,7 @@ function postDataQuality() {
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   if (storeDataQuality.numFilteredItems === 0) {
     results.empty();
@@ -1108,423 +1108,317 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
-  let spark1Count;
-  let spark6Count;
-  let spark1SeriesName = '';
-  let spark6SeriesName = '';
+  if (!showingSample) {
+    let spark1Count;
+    let spark6Count;
+    let spark1SeriesName = '';
+    let spark6SeriesName = '';
 
-  if (storeDataQuality.eventType === 'subEvent') {
-    spark1Count = storeDataQuality.filteredItemsUniqueParentIds.size;
-    spark6Count = storeDataQuality.numFilteredItems;
-    setSpark1SeriesName();
-    setSpark6SeriesName();
-    setSpark1SeriesNameAndSpark6SeriesName();
-  }
-  else if (storeDataQuality.eventType === 'superEvent') {
-    spark1Count = storeDataQuality.numFilteredItems;
-    spark6Count = storeDataQuality.filteredItemsUniqueParentIds.size;
-    setSpark1SeriesName();
-    spark6SeriesName = 'Parent' + ((spark6Count !== 1) ? 's' : '');
-  }
-  else {
-    spark1Count = storeDataQuality.filteredItemsUniqueParentIds.size;
-    spark6Count = storeDataQuality.numFilteredItems;
-    spark1SeriesName = 'Parent' + ((spark1Count !== 1) ? 's' : '');
-    spark6SeriesName = 'Child' + ((spark6Count !== 1) ? 'ren' : '');
-  }
-
-  function setSpark1SeriesName() {
-    if (superEventContentTypesSeries.includes(storeSuperEvent[type])) {
-      spark1SeriesName = 'Session series';
+    if (storeDataQuality.eventType === 'subEvent') {
+      spark1Count = storeDataQuality.filteredItemsUniqueParentIds.size;
+      spark6Count = storeDataQuality.numFilteredItems;
+      setSpark1SeriesName();
+      setSpark6SeriesName();
+      setSpark1SeriesNameAndSpark6SeriesName();
     }
-    else if (superEventContentTypesFacility.includes(storeSuperEvent[type])) {
-      spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
-    }
-    else if (storeSuperEvent[type] === 'EventSeries') {
-      spark1SeriesName = 'Event series';
-    }
-    else if (storeSuperEvent[type] === 'HeadlineEvent') {
-      spark1SeriesName = 'Headline event' + ((spark1Count !== 1) ? 's' : '');
-    }
-    else if (superEventContentTypesCourse.includes(storeSuperEvent[type])) {
-      spark1SeriesName = 'Course' + ((spark1Count !== 1) ? 's' : '');
+    else if (storeDataQuality.eventType === 'superEvent') {
+      spark1Count = storeDataQuality.numFilteredItems;
+      spark6Count = storeDataQuality.filteredItemsUniqueParentIds.size;
+      setSpark1SeriesName();
+      spark6SeriesName = 'Parent' + ((spark6Count !== 1) ? 's' : '');
     }
     else {
-      if (storeDataQuality.eventType === 'subEvent') {
-        spark1SeriesName = 'Parent' + ((spark1Count !== 1) ? 's' : '');
-      }
-      else if (storeDataQuality.eventType === 'superEvent') {
-        spark1SeriesName = 'Child' + ((spark1Count !== 1) ? 'ren' : '');
-      }
-      console.warn('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
-    }
-  }
-
-  function setSpark6SeriesName() {
-    if (subEventContentTypesSession.includes(storeSubEvent[type])) {
-      spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
-      spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else if (subEventContentTypesEvent.includes(storeSubEvent[type])) {
-      spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
-    }
-    else {
+      spark1Count = storeDataQuality.filteredItemsUniqueParentIds.size;
+      spark6Count = storeDataQuality.numFilteredItems;
+      spark1SeriesName = 'Parent' + ((spark1Count !== 1) ? 's' : '');
       spark6SeriesName = 'Child' + ((spark6Count !== 1) ? 'ren' : '');
-      console.warn('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
     }
-  }
 
-  function setSpark1SeriesNameAndSpark6SeriesName() {
-    // At this point, we should have non-empty settings for both spark1SeriesName and spark6SeriesName.
-    // It may however be possible for one of these to include 'Parent'/'Child' and the other one to be
-    // more specific. If this is so, we can use knowledge of the latter to adjust the former:
-    if (
-      (spark1SeriesName.includes('Parent') || spark1SeriesName.includes('Child')) &&
-      (!spark6SeriesName.includes('Parent') && !spark6SeriesName.includes('Child'))
-    ) {
-      if (spark6SeriesName.includes('Scheduled session')) {
+    function setSpark1SeriesName() {
+      if (superEventContentTypesSeries.includes(storeSuperEvent[type])) {
         spark1SeriesName = 'Session series';
       }
-      else if (spark6SeriesName.includes('Slot')) {
+      else if (superEventContentTypesFacility.includes(storeSuperEvent[type])) {
         spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
       }
-      // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series',
-      // 'Headline event' or 'Course', so we leave the parent label as 'Parent':
-      // else if (spark6SeriesName.includes('Event')) {
-      // }
+      else if (storeSuperEvent[type] === 'EventSeries') {
+        spark1SeriesName = 'Event series';
+      }
+      else if (storeSuperEvent[type] === 'HeadlineEvent') {
+        spark1SeriesName = 'Headline event' + ((spark1Count !== 1) ? 's' : '');
+      }
+      else if (superEventContentTypesCourse.includes(storeSuperEvent[type])) {
+        spark1SeriesName = 'Course' + ((spark1Count !== 1) ? 's' : '');
+      }
+      else {
+        if (storeDataQuality.eventType === 'subEvent') {
+          spark1SeriesName = 'Parent' + ((spark1Count !== 1) ? 's' : '');
+        }
+        else if (storeDataQuality.eventType === 'superEvent') {
+          spark1SeriesName = 'Child' + ((spark1Count !== 1) ? 'ren' : '');
+        }
+        console.warn('Unhandled storeSuperEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
+      }
     }
-    else if (
-      (spark6SeriesName.includes('Parent') || spark6SeriesName.includes('Child')) &&
-      (!spark1SeriesName.includes('Parent') && !spark1SeriesName.includes('Child'))
-    ) {
-      if (spark1SeriesName.includes('Session series')) {
+
+    function setSpark6SeriesName() {
+      if (subEventContentTypesSession.includes(storeSubEvent[type])) {
         spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
       }
-      else if (spark1SeriesName.includes('Facility use')) {
+      else if (subEventContentTypesSlot.includes(storeSubEvent[type])) {
         spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
       }
-      else if (spark1SeriesName.includes('Event series')) {
+      else if (subEventContentTypesEvent.includes(storeSubEvent[type])) {
         spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
       }
-      else if (spark1SeriesName.includes('Course')) {
-        spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+      else {
+        spark6SeriesName = 'Child' + ((spark6Count !== 1) ? 'ren' : '');
+        console.warn('Unhandled storeSubEvent content type. New content types may have been introduced but not catered for at this point in the code, check the listings elsewhere in the code.');
       }
     }
-  }
 
-  // -------------------------------------------------------------------------------------------------
-
-  $('#clear').prop('disabled', true);
-  $('#output').fadeIn('slow');
-
-  // -------------------------------------------------------------------------------------------------
-
-  // Hide y axis if no chart to display
-  let show_y_axis = false;
-
-  if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length > 0) {
-    show_y_axis = true;
-  }
-
-  // Show a message if no chart / no matching activities
-
-  let x_axis_title = {};
-
-  if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length < 1) {
-    x_axis_title = {
-      text: "No Matching Activity IDs",
-      offsetX: -5,
-      offsetY: -150,
-      style: {
-        fontSize: '20px',
-        fontWeight: 900,
-      },
+    function setSpark1SeriesNameAndSpark6SeriesName() {
+      // At this point, we should have non-empty settings for both spark1SeriesName and spark6SeriesName.
+      // It may however be possible for one of these to include 'Parent'/'Child' and the other one to be
+      // more specific. If this is so, we can use knowledge of the latter to adjust the former:
+      if (
+        (spark1SeriesName.includes('Parent') || spark1SeriesName.includes('Child')) &&
+        (!spark6SeriesName.includes('Parent') && !spark6SeriesName.includes('Child'))
+      ) {
+        if (spark6SeriesName.includes('Scheduled session')) {
+          spark1SeriesName = 'Session series';
+        }
+        else if (spark6SeriesName.includes('Slot')) {
+          spark1SeriesName = 'Facility use' + ((spark1Count !== 1) ? 's' : '');
+        }
+        // We don't actually know what to do in the child case of 'Event', as the parent could be 'Event series',
+        // 'Headline event' or 'Course', so we leave the parent label as 'Parent':
+        // else if (spark6SeriesName.includes('Event')) {
+        // }
+      }
+      else if (
+        (spark6SeriesName.includes('Parent') || spark6SeriesName.includes('Child')) &&
+        (!spark1SeriesName.includes('Parent') && !spark1SeriesName.includes('Child'))
+      ) {
+        if (spark1SeriesName.includes('Session series')) {
+          spark6SeriesName = 'Scheduled session' + ((spark6Count !== 1) ? 's' : '');
+        }
+        else if (spark1SeriesName.includes('Facility use')) {
+          spark6SeriesName = 'Slot' + ((spark6Count !== 1) ? 's' : '');
+        }
+        else if (spark1SeriesName.includes('Event series')) {
+          spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+        }
+        else if (spark1SeriesName.includes('Course')) {
+          spark6SeriesName = 'Event' + ((spark6Count !== 1) ? 's' : '');
+        }
+      }
     }
-  }
-  else {
-    x_axis_title = {
-      text: "Top Activities",
-      offsetX: -20,
-      offsetY: -8,
-      style: {
-        fontSize: '14px',
-        fontWeight: 900,
-      },
-    }
-  }
 
-  let spark1 = {
-    chart: {
-      id: 'bar1',
-      group: 'sparklines',
-      type: 'bar',
-      width: "100%",
-      height: 300,
-      toolbar: {
-        show: false
+
+    // -------------------------------------------------------------------------------------------------
+
+    $('#clear').prop('disabled', true);
+    $('#tabs').fadeIn('slow');
+
+    // -------------------------------------------------------------------------------------------------
+
+    // Hide y axis if no chart to display
+    let show_y_axis = false;
+
+    if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length > 0) {
+      show_y_axis = true;
+    }
+
+    // Show a message if no chart / no matching activities
+
+    let x_axis_title = {};
+
+    if (Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length < 1) {
+      x_axis_title = {
+        text: "No Matching Activity IDs",
+        offsetX: -5,
+        offsetY: -150,
+        style: {
+          fontSize: '20px',
+          fontWeight: 900,
+        },
+      }
+    }
+    else {
+      x_axis_title = {
+        text: "Top Activities",
+        offsetX: -20,
+        offsetY: -8,
+        style: {
+          fontSize: '14px',
+          fontWeight: 900,
+        },
+      }
+    }
+
+    let spark1 = {
+      chart: {
+        id: 'bar1',
+        group: 'sparklines',
+        type: 'bar',
+        width: "100%",
+        height: 300,
+        toolbar: {
+          show: false
+        },
+        sparkline: {
+          enabled: false,
+        },
+        //events: {
+        //  click: function (event) {
+        //    if ([...event.target.classList].includes('apexcharts-title-text')) {
+        //      alert('Title clicked')
+        //    }
+        //  }
+        //}
       },
-      sparkline: {
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          borderRadius: 4,
+        }
+      },
+      fill: {
+        opacity: 0.8,
+      },
+      series: [{
+        name: spark1SeriesName,
+        data: Array.from(topActivities.values()),
+      }],
+      dataLabels: {
         enabled: false,
       },
-      //events: {
-      //  click: function (event) {
-      //    if ([...event.target.classList].includes('apexcharts-title-text')) {
-      //      alert('Title clicked')
-      //    }
-      //  }
-      //}
-    },
-    plotOptions: {
-      bar: {
-        horizontal: true,
-        borderRadius: 4,
-      }
-    },
-    fill: {
-      opacity: 0.8,
-    },
-    series: [{
-      name: spark1SeriesName,
-      data: Array.from(topActivities.values()),
-    }],
-    dataLabels: {
-      enabled: false,
-    },
-    labels: Array.from(topActivities.keys()).map(activityId => matchToActivityList(activityId)),
-    colors: ['#71CBF2'],
-    title: {
-      text: spark1Count.toLocaleString(),
-      align: 'left',
-      offsetX: 0,
-      style: {
-        fontSize: '30px',
-        cssClass: 'apexcharts-yaxis-title'
-      }
-    },
-    subtitle: {
-      text: spark1SeriesName,
-      align: 'left',
-      offsetY: 40,
-      style: {
-        fontSize: '18px',
-        cssClass: 'apexcharts-yaxis-title'
-      }
-    },
-    grid: {
-      show: false,
-      padding: {
-        left: 0,
-        right: 0,
-        top: -35,
-        bottom: 0,
-      }
-    },
-    xaxis: {
-      floating: false,
-      labels: {
-        show: false,
-      },
-      title: x_axis_title,
-      tooltip: {
-        enabled: false
-      },
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false,
-      }
-    },
-    yaxis: {
-      show: show_y_axis,
-      showForNullSeries: false,
-      labels: {
-        show: true,
+      labels: Array.from(topActivities.keys()).map(activityId => matchToActivityList(activityId)),
+      colors: ['#71CBF2'],
+      title: {
+        text: spark1Count.toLocaleString(),
         align: 'left',
-        minWidth: 0,
-        maxWidth: 90,
-        offsetX: 12,
-        offsetY: 6,
-        formatter: function (value) {
-          let label = value.toString().trim();
-          let words = label.split(" ");
-          let lines = [];
-          let line = "";
-          for (let i = 0; i < words.length; i++) {
-            let testLine = line + words[i];
-            if (testLine.length > 10) { // Replace 10 with your desired line length
-              lines.push(line.trim());
-              line = words[i] + " ";
-            } else {
-              line = testLine + " ";
-            }
-          }
-          lines.push(line.trim());
-          //console.log(lines);
-          return lines;
+        offsetX: 0,
+        style: {
+          fontSize: '30px',
+          cssClass: 'apexcharts-yaxis-title'
         }
       },
-      floating: false, //true takes y axis out of plot space
-      axisBorder: {
+      subtitle: {
+        text: spark1SeriesName,
+        align: 'left',
+        offsetY: 40,
+        style: {
+          fontSize: '18px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      },
+      grid: {
         show: false,
-      },
-      axisTicks: {
-        show: false
-      }
-    },
-    tooltip: {
-      marker: {
-        show: false
-      },
-      //custom: function({series, seriesIndex, dataPointIndex, w}) {
-      //  return '<div class="arrow_box">' +
-      //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
-      //    '</div>'
-      //},
-      y: {
-        formatter: function (val) {
-          return val.toLocaleString();
+        padding: {
+          left: 0,
+          right: 0,
+          top: -35,
+          bottom: 0,
         }
       },
-    },
-
-  }
-
-  chart1 = new ApexCharts(document.querySelector("#apexchart1"), spark1);
-  chart1.render();
-
-  // -------------------------------------------------------------------------------------------------
-
-  let filter_chart = {
-    chart: {
-      type: 'radialBar',
-    },
-    title: {
-      text: "Filter Active",
-      align: 'center',
-      margin: 0,
-      offsetX: 0,
-      offsetY: 70,
-      style: {
-        fontSize: '30px',
-        fontWeight: 'bold',
-        color: '#2196F3'
-      },
-    },
-    series: [],
-    labels: [''],
-    plotOptions: {
-      radialBar: {
-        hollow: {
-          margin: 15,
-          size: "65%"
-        },
-        dataLabels: {
+      xaxis: {
+        floating: false,
+        labels: {
           show: false,
         },
-      }
-    }
-  }
-
-  let options_percentItemsWithActivity = {};
-
-  if (filters.DQ_filterActivities !== true) {
-
-    options_percentItemsWithActivity = {
-      chart: {
-        height: 300,
-        type: 'radialBar',
-        events: {
-          click: function (event, chartContext, config) {
-            //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
-            //alert('Chart clicked');
-            console.log(event);
-            console.log(chartContext);
-            console.log(config);
-          }
+        title: x_axis_title,
+        tooltip: {
+          enabled: false
+        },
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false,
         }
       },
-      fill: {
-        colors: ['#A7ABDA'],
-      },
-      //fill: {
-      //  colors: [function({ value, seriesIndex, w }) {
-      //    if(value < 55) {
-      //        return '#7E36AF'
-      //    } else if (value >= 55 && value < 80) {
-      //        return '#164666'
-      //    } else {
-      //        return '#D9534F'
-      //    }
-      //  }]
-      //},
-      series: [rounded3_a, rounded3_b, rounded3_c],
-      labels: ['Have activity IDs', 'Have names', 'Have descriptions'],
-      plotOptions: {
-        radialBar: {
-          hollow: {
-            margin: 15,
-            size: "65%"
-          },
-          dataLabels: {
-            show: true,
-            name: {
-              offsetY: 25,
-              show: true,
-              color: "#888",
-              fontSize: "18px"
-            },
-            value: {
-              offsetY: -30,
-              color: "#111",
-              fontSize: "30px",
-              show: true
-            },
-            total: {
-              show: true,
-              label: ['Have activity IDs'],
-              color: "#888",
-              fontSize: "18px",
-              formatter: function (w) {
-                // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
-                return Math.max(rounded3_a).toFixed(1) + "%";
+      yaxis: {
+        show: show_y_axis,
+        showForNullSeries: false,
+        labels: {
+          show: true,
+          align: 'left',
+          minWidth: 0,
+          maxWidth: 90,
+          offsetX: 12,
+          offsetY: 6,
+          formatter: function (value) {
+            let label = value.toString().trim();
+            let words = label.split(" ");
+            let lines = [];
+            let line = "";
+            for (let i = 0; i < words.length; i++) {
+              let testLine = line + words[i];
+              if (testLine.length > 10) { // Replace 10 with your desired line length
+                lines.push(line.trim());
+                line = words[i] + " ";
+              } else {
+                line = testLine + " ";
               }
-            },
+            }
+            lines.push(line.trim());
+            //console.log(lines);
+            return lines;
           }
+        },
+        floating: false, //true takes y axis out of plot space
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false
         }
-      }
+      },
+      tooltip: {
+        marker: {
+          show: false
+        },
+        //custom: function({series, seriesIndex, dataPointIndex, w}) {
+        //  return '<div class="arrow_box">' +
+        //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
+        //    '</div>'
+        //},
+        y: {
+          formatter: function (val) {
+            return val.toLocaleString();
+          }
+        },
+      },
+
     }
 
-  }
+    chart1 = new ApexCharts(document.querySelector("#apexchart1"), spark1);
+    chart1.render();
 
-  else {
-    options_percentItemsWithActivity = filter_chart;
-  }
+    // -------------------------------------------------------------------------------------------------
 
-  chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
-
-  sleep(200).then(() => { chart2.render().then(() => chart2rendered = true); });
-
-  // -------------------------------------------------------------------------------------------------
-
-  let options_percentItemsWithGeo = {};
-
-  if (filters.DQ_filterGeos !== true) {
-    options_percentItemsWithGeo = {
+    let filter_chart = {
       chart: {
-        width: "100%",
-        height: 300,
         type: 'radialBar',
       },
-      fill: {
-        colors: ['#B196CB'],
+      title: {
+        text: "Filter Active",
+        align: 'center',
+        margin: 0,
+        offsetX: 0,
+        offsetY: 70,
+        style: {
+          fontSize: '30px',
+          fontWeight: 'bold',
+          color: '#2196F3'
+        },
       },
-      series: [rounded2],
-      labels: [['Have postcode', 'or coordinates']],
+      series: [],
+      labels: [''],
       plotOptions: {
         radialBar: {
           hollow: {
@@ -1532,131 +1426,194 @@ function postDataQuality() {
             size: "65%"
           },
           dataLabels: {
-            showOn: "always",
-            name: {
-              offsetY: 25,
-              show: true,
-              color: "#888",
-              fontSize: "18px"
+            show: false,
+          },
+        }
+      }
+    }
+
+    let options_percentItemsWithActivity = {};
+
+    if (filters.DQ_filterActivities !== true) {
+
+      options_percentItemsWithActivity = {
+        chart: {
+          height: 300,
+          type: 'radialBar',
+          events: {
+            click: function (event, chartContext, config) {
+              //if ([...event.target.classList].includes('#apexcharts-radialbarTrack-0')) {
+              //alert('Chart clicked');
+              console.log(event);
+              console.log(chartContext);
+              console.log(config);
+            }
+          }
+        },
+        fill: {
+          colors: ['#A7ABDA'],
+        },
+        //fill: {
+        //  colors: [function({ value, seriesIndex, w }) {
+        //    if(value < 55) {
+        //        return '#7E36AF'
+        //    } else if (value >= 55 && value < 80) {
+        //        return '#164666'
+        //    } else {
+        //        return '#D9534F'
+        //    }
+        //  }]
+        //},
+        series: [rounded3_a, rounded3_b, rounded3_c],
+        labels: ['Have activity IDs', 'Have names', 'Have descriptions'],
+        plotOptions: {
+          radialBar: {
+            hollow: {
+              margin: 15,
+              size: "65%"
             },
-            value: {
-              offsetY: -30,
-              color: "#111",
-              fontSize: "30px",
-              show: true
+            dataLabels: {
+              show: true,
+              name: {
+                offsetY: 25,
+                show: true,
+                color: "#888",
+                fontSize: "18px"
+              },
+              value: {
+                offsetY: -30,
+                color: "#111",
+                fontSize: "30px",
+                show: true
+              },
+              total: {
+                show: true,
+                label: ['Have activity IDs'],
+                color: "#888",
+                fontSize: "18px",
+                formatter: function (w) {
+                  // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+                  return Math.max(rounded3_a).toFixed(1) + "%";
+                }
+              },
+            }
+          }
+        }
+      }
+
+    }
+
+    else {
+      options_percentItemsWithActivity = filter_chart;
+    }
+
+    chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
+
+    sleep(200).then(() => { chart2.render().then(() => chart2rendered = true); });
+
+    // -------------------------------------------------------------------------------------------------
+
+    let options_percentItemsWithGeo = {};
+
+    if (filters.DQ_filterGeos !== true) {
+      options_percentItemsWithGeo = {
+        chart: {
+          width: "100%",
+          height: 300,
+          type: 'radialBar',
+        },
+        fill: {
+          colors: ['#B196CB'],
+        },
+        series: [rounded2],
+        labels: [['Have postcode', 'or coordinates']],
+        plotOptions: {
+          radialBar: {
+            hollow: {
+              margin: 15,
+              size: "65%"
+            },
+            dataLabels: {
+              showOn: "always",
+              name: {
+                offsetY: 25,
+                show: true,
+                color: "#888",
+                fontSize: "18px"
+              },
+              value: {
+                offsetY: -30,
+                color: "#111",
+                fontSize: "30px",
+                show: true
+              }
             }
           }
         }
       }
     }
-  }
-  else {
-    options_percentItemsWithGeo = filter_chart;
-  }
+    else {
+      options_percentItemsWithGeo = filter_chart;
+    }
 
-  chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
-  sleep(400).then(() => { chart3.render().then(() => chart3rendered = true); });
+    chart3 = new ApexCharts(document.querySelector("#apexchart3"), options_percentItemsWithGeo);
+    sleep(400).then(() => { chart3.render().then(() => chart3rendered = true); });
 
-  // -------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------
 
-  let options_percentItemsNowToFuture = {};
+    let options_percentItemsNowToFuture = {};
 
-  if (filters.DQ_filterDates !== true) {
-    options_percentItemsNowToFuture = {
-      chart: {
-        width: "100%",
-        height: 300,
-        type: 'radialBar',
-      },
-      fill: {
-        colors: ['#BD82BB'],
-      },
-      series: [rounded1],
-      labels: [['Have future', 'start dates']],
-      plotOptions: {
-        radialBar: {
-          hollow: {
-            margin: 15,
-            size: "65%"
-          },
-          dataLabels: {
-            showOn: "always",
-            name: {
-              offsetY: 25,
-              show: true,
-              color: "#888",
-              fontSize: "18px"
+    if (filters.DQ_filterDates !== true) {
+      options_percentItemsNowToFuture = {
+        chart: {
+          width: "100%",
+          height: 300,
+          type: 'radialBar',
+        },
+        fill: {
+          colors: ['#BD82BB'],
+        },
+        series: [rounded1],
+        labels: [['Have future', 'start dates']],
+        plotOptions: {
+          radialBar: {
+            hollow: {
+              margin: 15,
+              size: "65%"
             },
-            value: {
-              offsetY: -30,
-              color: "#111",
-              fontSize: "30px",
-              show: true
+            dataLabels: {
+              showOn: "always",
+              name: {
+                offsetY: 25,
+                show: true,
+                color: "#888",
+                fontSize: "18px"
+              },
+              value: {
+                offsetY: -30,
+                color: "#111",
+                fontSize: "30px",
+                show: true
+              }
             }
           }
         }
       }
     }
-  }
-  else {
-    options_percentItemsNowToFuture = filter_chart;
-  }
+    else {
+      options_percentItemsNowToFuture = filter_chart;
+    }
 
-  chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
-  sleep(600).then(() => { chart4.render().then(() => chart4rendered = true); });
+    chart4 = new ApexCharts(document.querySelector("#apexchart4"), options_percentItemsNowToFuture);
+    sleep(600).then(() => { chart4.render().then(() => chart4rendered = true); });
 
-  // -------------------------------------------------------------------------------------------------
+    // -------------------------------------------------------------------------------------------------
 
-  var optionsSessionUrl = {
-    chart: {
-      offsetY: 10,
-      height: 200,
-      type: 'radialBar',
-    },
-    grid: {
-      show: false,
-      padding: {
-        left: -40,
-        right: -40,
-        top: -30,
-        bottom: 0,
-      },
-    },
-    fill: {
-      colors: ['#C76DAC'],
-    },
-    series: [rounded4_a],
-    labels: ['Have URLs'],
-    plotOptions: {
-      radialBar: {
-        startAngle: -90,
-        endAngle: 90,
-        dataLabels: {
-          name: {
-            offsetY: 25,
-            show: true,
-            color: "#888",
-            fontSize: "18px"
-          },
-          value: {
-            offsetY: -20,
-            color: "#111",
-            fontSize: "30px",
-            show: true
-          }
-        }
-      }
-    },
-  }
-
-  let options_percentItemsWithUrl = {};
-
-  if (filters.DQ_filterUrls !== true) {
-    options_percentItemsWithUrl = {
+    var optionsSessionUrl = {
       chart: {
-        type: 'radialBar',
         offsetY: 10,
         height: 200,
+        type: 'radialBar',
       },
       grid: {
         show: false,
@@ -1665,13 +1622,13 @@ function postDataQuality() {
           right: -40,
           top: -30,
           bottom: 0,
-        }
+        },
       },
       fill: {
         colors: ['#C76DAC'],
       },
-      series: [rounded4_b],
-      labels: ['Have parent URLs'],
+      series: [rounded4_a],
+      labels: ['Have URLs'],
       plotOptions: {
         radialBar: {
           startAngle: -90,
@@ -1693,148 +1650,199 @@ function postDataQuality() {
         }
       },
     }
-  }
-  else {
-    options_percentItemsWithUrl = filter_chart;
-  }
 
-  chart5a = new ApexCharts(document.querySelector("#apexchart5a"), optionsSessionUrl);
-  chart5b = new ApexCharts(document.querySelector("#apexchart5b"), options_percentItemsWithUrl);
-  sleep(800).then(() => {
-    chart5a.render().then(() => chart5arendered = true);
-    chart5b.render().then(() => chart5brendered = true);
-  });
+    let options_percentItemsWithUrl = {};
 
-
-  // -------------------------------------------------------------------------------------------------
-
-  let annotation_text = {};
-  if (storeDataQuality.filteredItemsUniqueDates.size > 0) {
-    annotation_text = {
-      xaxis: [
-        {
-          x: new Date().getTime(),
-          borderColor: '#775DD0',
-          label: {
-            style: {
-              color: '#000',
-            },
-            text: 'Today'
+    if (filters.DQ_filterUrls !== true) {
+      options_percentItemsWithUrl = {
+        chart: {
+          type: 'radialBar',
+          offsetY: 10,
+          height: 200,
+        },
+        grid: {
+          show: false,
+          padding: {
+            left: -40,
+            right: -40,
+            top: -30,
+            bottom: 0,
           }
-        }
-      ]
-    };
-  }
-
-  let spark6 = {
-    chart: {
-      id: 'sparkline1',
-      group: 'sparklines',
-      type: 'area',
-      width: "100%",
-      height: 300,
-      toolbar: {
-        show: false
-      },
-      sparkline: {
-        enabled: false
-      }
-    },
-    stroke: {
-      curve: 'smooth'
-    },
-    fill: {
-      opacity: 0.8,
-    },
-    dataLabels: {
-      enabled: false
-    },
-    tooltip: {
-      marker: {
-        show: false
-      },
-      //custom: function({series, seriesIndex, dataPointIndex, w}) {
-      //  return '<div class="arrow_box">' +
-      //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
-      //    '</div>'
-      //},
-      x: {
-        format: "ddd dd MMM yyyy",
-      },
-      y: {
-        formatter: function (val) {
-          return val.toLocaleString();
-        }
-      },
-    },
-    annotations: annotation_text,
-    series: [{
-      name: spark6SeriesName,
-      data: Array.from(sortedFilteredItemsUniqueDates.values()),
-    }],
-    labels: Array.from(sortedFilteredItemsUniqueDates.keys()),
-    grid: {
-      show: false
-    },
-    yaxis: {
-      floating: false, //true takes y axis out of plot space
-      show: false,
-      min: 0,
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false
-      }
-    },
-    //MODIFY THESE OPTIONS TO OVERRIDE DEFAULT STYLING TO SHOW MIN AND MAX VALUES...
-    xaxis: {
-      type: "datetime",
-      floating: false,
-      labels: {
-        show: false,
-        rotate: 0,
-        format: "dd MMM yyyy",
-        //formatter : function (val) {
-        //  if (val === minDate | val === maxDate) {
-        //    return val
-        //  }
-        //}
-      },
-      tooltip: {
-        enabled: false
-      },
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false,
-      }
-    },
-    colors: ['#E21483'],
-    title: {
-      text: spark6Count.toLocaleString(),
-      align: 'right',
-      offsetX: 0,
-      style: {
-        fontSize: '30px',
-        cssClass: 'apexcharts-yaxis-title'
-      }
-    },
-    subtitle: {
-      text: spark6SeriesName,
-      align: 'right',
-      offsetY: 40,
-      style: {
-        fontSize: '18px',
-        cssClass: 'apexcharts-yaxis-title'
+        },
+        fill: {
+          colors: ['#C76DAC'],
+        },
+        series: [rounded4_b],
+        labels: ['Have parent URLs'],
+        plotOptions: {
+          radialBar: {
+            startAngle: -90,
+            endAngle: 90,
+            dataLabels: {
+              name: {
+                offsetY: 25,
+                show: true,
+                color: "#888",
+                fontSize: "18px"
+              },
+              value: {
+                offsetY: -20,
+                color: "#111",
+                fontSize: "30px",
+                show: true
+              }
+            }
+          }
+        },
       }
     }
+    else {
+      options_percentItemsWithUrl = filter_chart;
+    }
+
+    chart5a = new ApexCharts(document.querySelector("#apexchart5a"), optionsSessionUrl);
+    chart5b = new ApexCharts(document.querySelector("#apexchart5b"), options_percentItemsWithUrl);
+    sleep(800).then(() => {
+      chart5a.render().then(() => chart5arendered = true);
+      chart5b.render().then(() => chart5brendered = true);
+    });
+
+
+    // -------------------------------------------------------------------------------------------------
+
+    let annotation_text = {};
+    if (storeDataQuality.filteredItemsUniqueDates.size > 0) {
+      annotation_text = {
+        xaxis: [
+          {
+            x: new Date().getTime(),
+            borderColor: '#775DD0',
+            label: {
+              style: {
+                color: '#000',
+              },
+              text: 'Today'
+            }
+          }
+        ]
+      };
+    }
+
+    let spark6 = {
+      chart: {
+        id: 'sparkline1',
+        group: 'sparklines',
+        type: 'area',
+        width: "100%",
+        height: 300,
+        toolbar: {
+          show: false
+        },
+        sparkline: {
+          enabled: false
+        }
+      },
+      stroke: {
+        curve: 'smooth'
+      },
+      fill: {
+        opacity: 0.8,
+      },
+      dataLabels: {
+        enabled: false
+      },
+      tooltip: {
+        marker: {
+          show: false
+        },
+        //custom: function({series, seriesIndex, dataPointIndex, w}) {
+        //  return '<div class="arrow_box">' +
+        //   '<span>' + series[seriesIndex][dataPointIndex] + '</span>' +
+        //    '</div>'
+        //},
+        x: {
+          format: "ddd dd MMM yyyy",
+        },
+        y: {
+          formatter: function (val) {
+            return val.toLocaleString();
+          }
+        },
+      },
+      annotations: annotation_text,
+      series: [{
+        name: spark6SeriesName,
+        data: Array.from(sortedFilteredItemsUniqueDates.values()),
+      }],
+      labels: Array.from(sortedFilteredItemsUniqueDates.keys()),
+      grid: {
+        show: false
+      },
+      yaxis: {
+        floating: false, //true takes y axis out of plot space
+        show: false,
+        min: 0,
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false
+        }
+      },
+      //MODIFY THESE OPTIONS TO OVERRIDE DEFAULT STYLING TO SHOW MIN AND MAX VALUES...
+      xaxis: {
+        type: "datetime",
+        floating: false,
+        labels: {
+          show: false,
+          rotate: 0,
+          format: "dd MMM yyyy",
+          //formatter : function (val) {
+          //  if (val === minDate | val === maxDate) {
+          //    return val
+          //  }
+          //}
+        },
+        tooltip: {
+          enabled: false
+        },
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false,
+        }
+      },
+      colors: ['#E21483'],
+      title: {
+        text: spark6Count.toLocaleString(),
+        align: 'right',
+        offsetX: 0,
+        style: {
+          fontSize: '30px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      },
+      subtitle: {
+        text: spark6SeriesName,
+        align: 'right',
+        offsetY: 40,
+        style: {
+          fontSize: '18px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      }
+    }
+
+    chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
+    sleep(1200).then(() => { chart6.render().then(() => chart6rendered = true); });
+
   }
-
-  chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
-  sleep(1200).then(() => { chart6.render().then(() => chart6rendered = true); });
-
+  else {
+    // Alternative display of counts and metrics for sample data
+    $('#clear').prop('disabled', true);
+    $('#tabs').fadeIn('slow');
+  }
   // -------------------------------------------------------------------------------------------------
 
   sleep(1400).then(() => { $('#tabs').fadeIn('slow'); });
