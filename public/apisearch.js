@@ -5,7 +5,7 @@ let organizerListRefresh;
 let activityListRefresh;
 let locationListRefresh;
 
-let retryCount = 0;
+let retryCount;
 const retryCountMax = 3;
 const retryCountdownMax = 5;
 
@@ -181,10 +181,8 @@ async function execute() {
 
 function loadingStart() {
   updateScroll();
-
   $('#progress').append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
 
-  clearTimeout(loadingTimeout);
   loadingTimeout = setTimeout(
     () => {
       if (inProgress && !stopTriggered) {
@@ -208,7 +206,6 @@ function loadingStart() {
 
 function loadingComplete() {
   clearTimeout(loadingTimeout);
-
   $('#loading-time').hide();
   $('#progress').append('<div id="DQProgress"</div>');
 
@@ -263,6 +260,7 @@ function clear(execute=false) {
   else {
     stopTriggered = true;
     clearTimeout(loadingTimeout);
+    $('#loading-time').hide();
     $('#progress').append('<div id="stopping"></div>');
     $('#stopping').append('<p>Stopping ...</p>');
     $('#stopping').append('<img src="images/ajax-loader.gif" alt="Stopping ...">');
@@ -346,6 +344,7 @@ function clearGlobals() {
   organizerListRefresh = 0;
   activityListRefresh = 0;
   locationListRefresh = 0;
+  retryCount = 0;
   loadingTimeout = null;
   inProgress = false;
   stopTriggered = false;
@@ -638,6 +637,7 @@ function setStoreItems(url, store) {
       }
     }).catch(error => {
       const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
+      clearTimeout(loadingTimeout);
       $('#loading-time').hide();
       progress.empty();
       progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
@@ -648,11 +648,14 @@ function setStoreItems(url, store) {
         retryCount++;
         retryRequest(url, store);
       } else {
-        progress.append(`<div>${retryCount} retries attempted.</div>`);
+        inProgress = false;
+
+        progress.append(`<div>${retryCount} retries automatically attempted. Click to manually retry again.</div>`);
         progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
 
         $('.show-error').on('click', function () {
           retryCount++;
+          inProgress = true;
           try {
             setStoreItems(url, store);
           }
@@ -676,7 +679,7 @@ function retryRequest(url, store) {
   const countdownInterval = setInterval(() => {
     countdownElement.text(countdown);
     countdown--;
-    if (countdown < 1) {
+    if (countdown < 0) {
       clearInterval(countdownInterval);
       try {
         setStoreItems(url, store);
