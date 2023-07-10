@@ -1221,7 +1221,7 @@ function postDataQuality() {
     // -------------------------------------------------------------------------------------------------
 
     $('#clear').prop('disabled', true);
-    $('#tabs').fadeIn('slow');
+    $('#output').fadeIn('slow');
 
     // -------------------------------------------------------------------------------------------------
 
@@ -1841,7 +1841,7 @@ function postDataQuality() {
   else {
     // Alternative display of counts and metrics for sample data
     $('#clear').prop('disabled', true);
-    $('#tabs').fadeIn('slow');
+    $('#output').fadeIn('slow');
   }
   // -------------------------------------------------------------------------------------------------
 
