@@ -391,26 +391,28 @@ function clearStore(store) {
 
 function clearCache(store) {
   for (const url of [store.penultimatePage, store.lastPage]) {
-    // By default, axios serializes JavaScript objects in the body to JSON via JSON.stringify(), so we
-    // don't need to explicitly use JSON.stringify() as with the 'fetch' package. See here for details:
-    // - https://axios-http.com/docs/urlencoded
-    axios.post(
-      '/api/cache/clear',
-      {
-        url: `/fetch?url=${encodeURIComponent(url)}`,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
+    if (url) {
+      // By default, axios serializes JavaScript objects in the body to JSON via JSON.stringify(), so we
+      // don't need to explicitly use JSON.stringify() as with the 'fetch' package. See here for details:
+      // - https://axios-http.com/docs/urlencoded
+      axios.post(
+        '/api/cache/clear',
+        {
+          url: `/fetch?url=${encodeURIComponent(url)}`,
         },
-      }
-    )
-      .then(response => {
-        console.log(response.data);
-      })
-      .catch(error => {
-        console.error(error.message);
-      });
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+        .then(response => {
+          console.log(response.data);
+        })
+        .catch(error => {
+          console.error(error.message);
+        });
+    }
   }
 }
 
