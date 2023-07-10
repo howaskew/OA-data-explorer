@@ -17,7 +17,7 @@
     <title>OpenActive Data Explorer</title>
 </head>
 
-<body style="overflow: scroll">
+<body style="overflow-y: scroll">
     <!-- Header image and text -->
     <div class="container-fluid mainheading">
         <div class="flex_row">
@@ -214,18 +214,20 @@
             </div>
 
             <!-- Right column: Logs -->
-            <div class="col-md-6 col-sm-8 ">
+            <div class="col-md-6 col-sm-8">
                 <div class="flex_row top">
                     <label>Notes:</label>
                 </div>
-                <div id="loading-time" style="display: none;">
-                    <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest
-                        feeds.</h5>
-                </div>
-                <div id="record-limit" style="display: none;">
-                    <h5>Note: only the first 25,000 items (approx.) from the API are being processed.</h5>
-                </div>
-                <div id="progress" class="flex_row top">
+                <div style="height:250px; overflow-y: scroll;">
+                    <div id="loading-time" style="display: none;">
+                        <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest
+                            feeds.</h5>
+                    </div>
+                    <div id="record-limit" style="display: none;">
+                        <h5>Note: only the first 25,000 items (approx.) from the API are being processed.</h5>
+                    </div>
+                    <div id="progress" class="flex_row top">
+                    </div>
                 </div>
             </div>
 
