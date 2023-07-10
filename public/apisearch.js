@@ -421,7 +421,10 @@ function showSample() {
     storeSample.items = sampleData;
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
-      $('#progress').append('<h3>Showing Sample Data</h3>');
+      $('#progress').append('<h4>Exploring OpenActive Data</h4>');
+      $('#progress').append(`The metrics below are based on DQ analysis of ${'x'} out of ${'x'} feeds.</br>`);   
+      $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);   
+      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);   
       showingSample = true;
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
@@ -945,6 +948,9 @@ function renderOrganizerList(organizers) {
     // Update other elements when a selection is made:
     // Note that $('#organizer-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
+      if (htmlDataValue !== '') { 
+        $("#organizer-list-button").addClass("selected");
+      }
       // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
       if (htmlDataValue !== organizerListSelected) {
         console.warn(`Selected organizer for filter: ${htmlDataValue}`);
@@ -988,6 +994,9 @@ function renderActivityList(activities) {
     // Update other elements when a selection is made:
     // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
+      if (htmlDataValue !== '') { 
+        $("#activity-list-button").addClass("selected");
+      }
       // Note that htmlDataValue is the same as $('#activity-list-selected').val()
       if (htmlDataValue !== activityListSelected) {
         console.warn(`Selected activity for filter: ${htmlDataValue}`);
@@ -1041,6 +1050,9 @@ function renderLocationList(locations) {
     // Update other elements when a selection is made:
     // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
+      if (htmlDataValue !== '') { 
+        $("#location-list-button").addClass("selected");
+      }
       // Note that htmlDataValue is the same as $('#location-list-selected').val()
       if (htmlDataValue !== locationListSelected) {
         console.warn(`Selected location for filter: ${htmlDataValue}`);

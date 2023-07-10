@@ -38,6 +38,10 @@ div.col-md-2, div.col-md-6 {
   margin-left: 10px;
 }
 
+.dropdown-toggle.selected {
+  background-color: #2196F3;
+}
+
 .rowhover:hover {
   background-color: lightgrey;
 }
@@ -133,7 +137,7 @@ div.col-md-2, div.col-md-6 {
 .switch {
   position: relative;
   display: inline-block;
-  width: 60px;
+  width: 100px;
   height: 34px;
 }
 
@@ -178,9 +182,9 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  -webkit-transform: translateX(66px);
+  -ms-transform: translateX(66px);
+  transform: translateX(66px);
 }
 
 /* Rounded sliders */
