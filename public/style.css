@@ -56,7 +56,8 @@ div.col-md-2, div.col-md-6 {
 }
 
 .dropdown-toggle.selected {
-  background-color: #2196F3;
+  /* background-color: #2196F3; */
+  background-color: #009ee3;
 }
 
 .rowhover:hover {

@@ -41,8 +41,10 @@ let chart6rendered = false;
 let map;
 
 let activeJSONButton;
-const activeJSONButtonColor = 'DeepSkyBlue';
-const inactiveJSONButtonColor = 'DarkGray';
+const activeJSONButtonColor = '#009ee3';
+const inactiveJSONButtonColor = '#6c757d';
+const storeIngressOrder1ApiColor = '#009ee3';
+const storeIngressOrder2ApiColor = '#f6a635';
 
 let feeds = {};
 let providers = {};
@@ -232,7 +234,6 @@ function loadingComplete() {
 // -------------------------------------------------------------------------------------------------
 
 function stop() {
-  clearTimeout(loadingTimeout);
   inProgress = false; // Here this must come before clear()
   clear();
   console.warn('Stopped');
@@ -261,6 +262,7 @@ function clear(execute=false) {
   }
   else {
     stopTriggered = true;
+    clearTimeout(loadingTimeout);
     $('#progress').append('<div id="stopping"></div>');
     $('#stopping').append('<p>Stopping ...</p>');
     $('#stopping').append('<img src="images/ajax-loader.gif" alt="Stopping ...">');
@@ -423,9 +425,9 @@ function showSample() {
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
       $('#progress').append('<h4>Exploring OpenActive Data</h4>');
-      $('#progress').append(`The metrics below are based on DQ analysis of ${'x'} out of ${'x'} feeds.</br>`);   
-      $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);   
-      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);   
+      $('#progress').append(`The metrics below are based on DQ analysis of ${'x'} out of ${'x'} feeds.</br>`);
+      $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);
+      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);
       showingSample = true;
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
@@ -949,7 +951,7 @@ function renderOrganizerList(organizers) {
     // Update other elements when a selection is made:
     // Note that $('#organizer-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
-      if (htmlDataValue !== '') { 
+      if (htmlDataValue !== '') {
         $("#organizer-list-button").addClass("selected");
       }
       // Note that htmlDataValue is the same as $('#organizer-list-selected').val()
@@ -995,7 +997,7 @@ function renderActivityList(activities) {
     // Update other elements when a selection is made:
     // Note that $('#activity-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
-      if (htmlDataValue !== '') { 
+      if (htmlDataValue !== '') {
         $("#activity-list-button").addClass("selected");
       }
       // Note that htmlDataValue is the same as $('#activity-list-selected').val()
@@ -1051,7 +1053,7 @@ function renderLocationList(locations) {
     // Update other elements when a selection is made:
     // Note that $('#location-list-selected').val() is set automatically by HierarchySelect upon selection
     onChange: function (htmlDataValue) {
-      if (htmlDataValue !== '') { 
+      if (htmlDataValue !== '') {
         $("#location-list-button").addClass("selected");
       }
       // Note that htmlDataValue is the same as $('#location-list-selected').val()
@@ -1231,16 +1233,10 @@ function addResultsPanel() {
 // -------------------------------------------------------------------------------------------------
 
 function addApiPanel(text, storeIngressOrder) {
-  let panel = $("#api");
-  let colour = "";
-  if (storeIngressOrder === 1) {
-    colour = "lightblue";
-  }
-  else {
-    colour = "lightgray";
-  }
+  let panel = $('#api');
+  let color = (storeIngressOrder === 1) ? storeIngressOrder1ApiColor : storeIngressOrder2ApiColor;
   panel
-    .add("<div style='background-color: " + colour + "'><p class='text-wrap' style='word-wrap: break-word'>" + text + "</p></div>")
+    .add(`<div style='margin:5px; padding: 5px; background-color: ${color};'><a href=${text} target='_blank' class='text-wrap' style='word-wrap: break-word; color: white;'>${text}</a></div>`)
     .appendTo(panel);
 }
 

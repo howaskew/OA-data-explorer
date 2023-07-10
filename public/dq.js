@@ -1843,6 +1843,7 @@ function postDataQuality() {
     $('#clear').prop('disabled', true);
     $('#output').fadeIn('slow');
   }
+
   // -------------------------------------------------------------------------------------------------
 
   sleep(1400).then(() => { $('#tabs').fadeIn('slow'); });
@@ -1855,8 +1856,8 @@ function postDataQuality() {
   sleep(1800).then(() => {
     inProgress = false;
     $('#stopping').empty();
-    $('#execute').prop('disabled', endpoint === null);
-    $('#clear').prop('disabled', endpoint === null);
+    $('#execute').prop('disabled', endpoint === null); // Ensure the execute button is disabled if we are showing sample data, as no valid endpoint to run
+    $('#clear').prop('disabled', false); // Allow the clear button to be shown even if we are showing sample data, for clearing filters
   });
 
 }
