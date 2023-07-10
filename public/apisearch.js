@@ -291,6 +291,7 @@ function clearDisplay() {
   $('#loading-time').hide();
   $('#record-limit').hide();
   $('#filterRows').hide();
+  $('#output').hide();
   $('#tabs').hide();
   clearCharts();
   clearTabs();
