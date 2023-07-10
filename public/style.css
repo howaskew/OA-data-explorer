@@ -4,9 +4,26 @@
 }
 
 .mainheading {
-  margin: 5px;
+  padding-left: 2%;
+  padding-right: 2%;
+  padding-top: 10px;
   justify-content: space-evenly;
   align-items: center;
+}
+
+.controls {
+  padding-left: 2%;
+  padding-right: 2%;
+  padding-top: 10px;
+  min-height: 300px;
+  overflow-y: visible;
+}
+
+.output {
+  padding-left: 2%;
+  padding-right: 2%;
+  padding-top: 20px;
+  display: none;
 }
 
 #beta {
@@ -20,10 +37,10 @@
   margin-left: 10px;
 }
 
-#progress {
+/* #progress {
   margin-right: 10px;
   margin-left: 10px;
-}
+} */
 
 div.col-md-2, div.col-md-6 {
   margin-right: 0px;
