@@ -670,8 +670,6 @@ function setStoreDataQualityItemFlags() {
     })();
   }
 
-  getSummary();
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1840,6 +1838,162 @@ function postDataQuality() {
   }
   else {
     // Alternative display of counts and metrics for sample data
+    // Get counts
+    console.log(summary);
+
+    let sparkTotal1 = {
+      chart: {
+        id: 'bar1',
+        group: 'sparklines',
+        type: 'bar',
+        width: "100%",
+        height: 300,
+        toolbar: {
+          show: false
+        },
+        sparkline: {
+          enabled: false,
+        },
+      },
+      plotOptions: {
+      },
+      series: [],
+      dataLabels: {
+        enabled: false,
+      },
+      colors: ['#71CBF2'],
+      title: {
+        text: summary.sum1.toLocaleString(),
+        align: 'left',
+        offsetX: 0,
+        style: {
+          fontSize: '30px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      },
+      subtitle: {
+        text: ["Session Series","Facility Uses"],
+        align: 'left',
+        offsetY: 40,
+        style: {
+          fontSize: '18px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      },
+      grid: {
+        show: false,
+        padding: {
+          left: 0,
+          right: 0,
+          top: -35,
+          bottom: 0,
+        }
+      },
+      xaxis: {
+        show: false,
+        showForNullSeries: false,
+        labels : {
+          show: false
+       },
+        floating: false, //true takes y axis out of plot space
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false
+        }
+      },
+      yaxis: {
+        show: false,
+        showForNullSeries: false,
+        floating: false, //true takes y axis out of plot space
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false
+        }
+      },
+    }
+
+    chart1 = new ApexCharts(document.querySelector("#apexchart1"), sparkTotal1);
+    chart1.render();
+
+   
+    let spark6 = {
+      chart: {
+        id: 'sparkline1',
+        group: 'sparklines',
+        type: 'area',
+        width: "100%",
+        height: 300,
+        toolbar: {
+          show: false
+        },
+        sparkline: {
+          enabled: false
+        }
+      },
+      dataLabels: {
+        enabled: false
+      },
+      series: [],
+      grid: {
+        show: false
+      },
+      yaxis: {
+        floating: false, //true takes y axis out of plot space
+        show: false,
+        min: 0,
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false
+        }
+      },
+      //MODIFY THESE OPTIONS TO OVERRIDE DEFAULT STYLING TO SHOW MIN AND MAX VALUES...
+      xaxis: {
+        show: false,
+        floating: false,
+        labels: {
+          show: false,
+        },
+        tooltip: {
+          enabled: false
+        },
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false,
+        }
+      },
+      colors: ['#E21483'],
+      title: {
+        text: summary.sum2.toLocaleString(),
+        align: 'right',
+        offsetX: 0,
+        style: {
+          fontSize: '30px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      },
+      subtitle: {
+        text: ["Scheduled Sessions","Facility Use Slots","Events"],
+        align: 'right',
+        offsetY: 40,
+        style: {
+          fontSize: '18px',
+          cssClass: 'apexcharts-yaxis-title'
+        }
+      }
+    }
+
+    chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
+    chart6.render().then(() => chart6rendered = true);
+    $("#apiTab").addClass("disabled");
+    $("#apiPanel").addClass("disabled");
     $('#clear').prop('disabled', true);
     $('#output').fadeIn('slow');
   }
