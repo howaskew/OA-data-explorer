@@ -77,18 +77,21 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
     // console.log(`Making call for: ${req.url} => ${req.query.url}`);
     const page = await axios.get(req.query.url);
     res.status(200).send(page.data);
-  } catch (error) {
+  }
+  catch (error) {
     if (error.response) {
       // Request made and server responded
-      res.status(error.response.status).send(error.response.data);
-    } else if (error.request) {
-      // The request was made but no response was received
-      res.status(500).send(error.request);
-      console.log(error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error=
+      res.status(error.response.status).send(error.response.data); // This is a candidate for JSONify issues, see commented section just below ...
+    }
+    // else if (error.request) {
+    //   // The request was made but no response was received
+    //   res.status(500).send(error.request); // This line can result in a JSON.stringify issue from response.js due to circular info in error.request, ultimately kills the running server here, hence all commented out
+    //   console.log(error.request);
+    // }
+    else {
+      // Something happened in setting up the request that triggered an error
       res.status(500).send({ error: error.message });
-      console.log('Error', error.message);
+      console.log(`Error getting URL: ${req.query.url}: ${error.message}`);
     }
   }
 });
@@ -364,7 +367,7 @@ app.get('/api/download', (req, res) => {
           return await axios.get(catalogueUrl);
         }
         catch (error) {
-          console.log(`Error getting catalogue: ${catalogueUrl}`);
+          console.log(`Error getting catalogue: ${catalogueUrl}: ${error.message}`);
           return null;
         }
       })))
@@ -505,7 +508,7 @@ app.post('/api/cache/clear', (req, res) => {
 
 async function harvest(url) {
   console.log(`Prefetch: ${url}`);
-  const { data } = await axios.get(`https://localhost:${port}/fetch?url=` + encodeURIComponent(url));
+  const { data } = await axios.get(`https://localhost:${port}/fetch?url=${encodeURIComponent(url)}`);
   if (!data.next) {
     console.log(`Error prefetching: ${url}`);
   } else if (data.next !== url) {
