@@ -449,7 +449,8 @@ app.get('/api/download', (req, res) => {
         // Merge data from the table with the existing feeds array
         const rows = result.rows;
         rows.forEach((row) => {
-          const existingFeed = feeds.find((feed) => feed.url === row.id);
+          //Now only totalling for the first url in the concatenated id - this will enable accurate sum at provider level
+          const existingFeed = feeds.find((feed) => feed.url === row.id.split(' ')[0]);
           if (existingFeed) {
             // Merge properties from the database row into the existing feed object
             Object.assign(existingFeed, row);

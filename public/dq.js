@@ -352,7 +352,8 @@ function setStoreDataQualityItems() {
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
   // Store sample of data
-  const filterString = storeIngressOrder1.firstPage;
+  const sortedStringsForFilter = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
+  const filterString = sortedStringsForFilter.join(' ');
   const maxSampleSize = 5;
   const keys = storeDataQuality.items.map(item => item.id);
 
@@ -424,9 +425,12 @@ function setStoreDataQualityItemFlags() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
+  const sortedStrings = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
+  const dqID= sortedStrings.join(' ');
+
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
-    id: storeIngressOrder1.firstPage,
+    id: dqID,
     numParent: 0,
     numChild: storeDataQuality.items.length,
     DQ_validActivity: 0,
