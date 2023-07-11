@@ -172,8 +172,8 @@ async function execute() {
     }
     else {
       console.error('No valid first page for storeIngressOrder1, can\'t begin');
-      inProgress = false;
       $('#execute').prop('disabled', false);
+      inProgress = false;
     }
   }
 }
@@ -380,6 +380,7 @@ function clearStore(store) {
   store.itemKind = null; // From the RPDE feed
   store.itemDataType = null; // From the RPDE feed
   store.eventType = null; // Either 'superEvent' or 'subEvent'
+  store.firstPageOrigin = null;
   store.firstPage = null;
   store.penultimatePage = null;
   store.lastPage = null;
@@ -493,7 +494,7 @@ function disableFilters() {
 //This replaces the loadRPDE function in Nick's original visualiser adaptation
 //Note the displaying of results happens in dq.js now, to improve filtering
 
-function setStoreItems(url, store) {
+function setStoreItems(originalUrlStr, store) {
 
   if (stopTriggered) {throw new Error('Stop triggered');}
 
@@ -515,6 +516,11 @@ function setStoreItems(url, store) {
     progress = $("#progressDiv1");
   } else {
     progress = $("#progressDiv2");
+  }
+
+  let url = setUrlStr(originalUrlStr, store);
+  if (!url) {
+    throw new Error(`Invalid URL: ${originalUrlStr}`);
   }
 
   // Note that the following commented example does not work as intended, as 'url' is a special
@@ -562,6 +568,7 @@ function setStoreItems(url, store) {
 
         const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
         if (
+          originalUrlStr !== response.data.next &&
           url !== response.data.next &&
           store.numItems < 25000
         ) {
@@ -644,14 +651,15 @@ function setStoreItems(url, store) {
       progress.empty();
       progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
       progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
-      progress.append(`API Request failed with message: ${error.message}`);
+      progress.append(`API Request failed with message: ${error.message}</br>`);
+      // inProgress = false; // Don't enable this here - we must treat the auto-retries of retryRequest() as still in progress in order to get the correct behaviour from clear()
 
       if (retryCount < retryCountMax) {
         retryCount++;
         retryRequest(url, store);
-      } else {
+      }
+      else {
         inProgress = false;
-
         progress.append(`<div>${retryCount} retries automatically attempted. Click to manually retry again.</div>`);
         progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
 
@@ -693,6 +701,67 @@ function retryRequest(url, store) {
       }
     }
   }, 1000);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setUrlStr(originalUrlStr, store) {
+
+  let urlStr;
+  let urlSearchCounter = 0;
+  let urlSearchComplete = false;
+
+  while (!urlSearchComplete) {
+    if (urlSearchCounter === 0) {
+      urlStr = originalUrlStr;
+    }
+    else if (urlSearchCounter === 1) {
+      urlStr = decodeURIComponent(originalUrlStr);
+    }
+    else if (urlSearchCounter === 2) {
+      // e.g. 'https://reports.gomammoth.co.uk/api/OpenData/Leagues?afterTimestamp=0'
+      // Next URLs are like '/api/OpenData/Leagues?afterTimestamp=3879824531'
+      urlStr = store.firstPageOrigin + originalUrlStr;
+    }
+    else if (urlSearchCounter === 3) {
+      // e.g. 'https://www.goodgym.org/api/happenings'
+      // Next URLs are like '%2Fapi%2Fhappenings%3FafterTimestamp%3D2015-01-13+16%3A56%3A14+%2B0000%26afterID%3D28'
+      urlStr = store.firstPageOrigin + decodeURIComponent(originalUrlStr);
+    }
+    else {
+      urlSearchComplete = true;
+    }
+
+    if (!urlSearchComplete) {
+      let urlObj = setUrlObj(urlStr);
+      if (urlObj) {
+        // if (urlSearchCounter > 0) {
+        //   console.warn(`Invalid URL: ${originalUrlStr}\nValid modified URL: ${urlStr}`)
+        // }
+        if (originalUrlStr === store.firstPage) {
+          store.firstPageOrigin = urlObj.origin;
+        }
+        urlSearchComplete = true;
+        return urlStr;
+      }
+      urlSearchCounter++;
+    }
+  }
+
+  return null;
+
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setUrlObj(urlStr) {
+  try {
+    urlObj = new URL(urlStr);
+    return urlObj;
+  }
+  catch {
+    return null;
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1132,83 +1201,52 @@ function setJSONTab(itemId, switchTab) {
     link &&
     storeSubEvent.items.hasOwnProperty(itemId)
   ) {
-    const storeSubEventItem = storeSubEvent.items[itemId];
+    const storeSubEventItemId = itemId;
+    const storeSubEventItem = storeSubEvent.items[storeSubEventItemId];
     const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
     const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem =>
       String(storeSuperEventItem.id).split('/').at(-1) === storeSuperEventItemId ||
       String(storeSuperEventItem.data.id).split('/').at(-1) === storeSuperEventItemId || // BwD facilityUse/slot
       String(storeSuperEventItem.data['@id']).split('/').at(-1) === storeSuperEventItemId
     );
-
     if (storeSuperEventItem) {
-      document.getElementById('json-tab-1').innerHTML = `
-        <div class='flex_row'>
-            <h2 class='json-tab-heading'>${storeSuperEvent.itemDataType}</h2>
-            <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
-            <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
-        </div>
-        <pre>${JSON.stringify(storeSuperEventItem, null, 2)}</pre>`;
-      $('#json-tab-1-source').on('click', function () {
-        window.open(storeSuperEvent.urls[storeSuperEventItemId], '_blank').focus();
-      });
-      $('#json-tab-1-validate').on('click', function () {
-        openValidator(storeSuperEventItem);
-      });
+      setJSONTabSubPanel(1, storeSuperEvent, storeSuperEventItemId, storeSuperEventItem);
     }
-
     if (storeSubEventItem) {
-      document.getElementById('json-tab-2').innerHTML = `
-        <div class='flex_row'>
-            <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
-            <button id='json-tab-2-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
-            <button id='json-tab-2-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
-        </div>
-        <pre>${JSON.stringify(storeSubEventItem, null, 2)}</pre>`;
-      $('#json-tab-2-source').on('click', function () {
-        window.open(storeSubEvent.urls[itemId], '_blank').focus();
-      });
-      $('#json-tab-2-validate').on('click', function () {
-        openValidator(storeSubEventItem);
-      });
+      setJSONTabSubPanel(2, storeSubEvent, storeSubEventItemId, storeSubEventItem);
     }
   }
   else if (
-    storeSubEvent &&
-    storeSubEvent.items.hasOwnProperty(itemId)
+    storeIngressOrder1 &&
+    storeIngressOrder1.items.hasOwnProperty(itemId)
   ) {
-    document.getElementById('json-tab-1').innerHTML = `
-      <div class='flex_row'>
-          <h2 class='json-tab-heading'>${storeSubEvent.itemDataType}</h2>
-          <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
-          <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
-      </div>
-      <pre>${JSON.stringify(storeSubEvent.items[itemId], null, 2)}</pre>`;
-    $('#json-tab-1-source').on('click', function () {
-      window.open(storeSubEvent.urls[itemId], '_blank').focus();
-    });
-    $('#json-tab-1-validate').on('click', function () {
-      openValidator(storeSubEvent.items[itemId]);
-    });
+    setJSONTabSubPanel(1, storeIngressOrder1, itemId);
   }
   else if (
-    storeSuperEvent &&
-    storeSuperEvent.items.hasOwnProperty(itemId)
+    storeIngressOrder2 &&
+    storeIngressOrder2.items.hasOwnProperty(itemId)
   ) {
-    document.getElementById('json-tab-1').innerHTML = `
-      <div class='flex_row'>
-          <h2 class='json-tab-heading'>${storeSuperEvent.itemDataType}</h2>
-          <button id='json-tab-1-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
-          <button id='json-tab-1-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
-      </div>
-      <pre>${JSON.stringify(storeSuperEvent.items[itemId], null, 2)}</pre>`;
-    $('#json-tab-1-source').on('click', function () {
-      window.open(storeSuperEvent.urls[itemId], '_blank').focus();
-    });
-    $('#json-tab-1-validate').on('click', function () {
-      openValidator(storeSuperEvent.items[itemId]);
-    });
+    setJSONTabSubPanel(1, storeIngressOrder2, itemId);
   }
 
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function setJSONTabSubPanel(subPanelNumber, store, itemId, item=null) {
+  document.getElementById(`json-tab-${subPanelNumber}`).innerHTML = `
+    <div class='flex_row'>
+        <h2 class='json-tab-heading'>${store.itemDataType ? store.itemDataType : 'Unknown content type'}</h2>
+        <button id='json-tab-${subPanelNumber}-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
+        <button id='json-tab-${subPanelNumber}-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
+    </div>
+    <pre>${JSON.stringify(item ? item : store.items[itemId], null, 2)}</pre>`;
+  $(`#json-tab-${subPanelNumber}-source`).on('click', function () {
+    window.open(store.urls[itemId], '_blank').focus();
+  });
+  $(`#json-tab-${subPanelNumber}-validate`).on('click', function () {
+    openValidator(item ? item : store.items[itemId]);
+  });
 }
 
 // -------------------------------------------------------------------------------------------------
