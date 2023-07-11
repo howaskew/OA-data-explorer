@@ -472,8 +472,10 @@ app.get('/api/download', (req, res) => {
       if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
         for (const feed of feeds) {
           // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
+          if (feed.url !== '') { //Handle the empty url for All OpenActive Feeds
           await sleep(60000);
           harvest(feed.url);
+          }
         }
       }
 
