@@ -104,6 +104,7 @@ let storeIngressOrder1FirstPageFromUser = null; // Don't add this to clearGlobal
 let endpoint = undefined; // This is null for the case of showing all OpenActive feeds, so undefined is useful and distinct. Don't add this to clearGlobals(), let it be exclusively controlled by setEndpoint().
 let type; // This may be the feedType, itemDataType or itemKind, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
+let summary = {} // To hold total counts from database
 
 let cp = $("#combineProgress");
 
@@ -415,6 +416,7 @@ function clearCache(store) {
 // -------------------------------------------------------------------------------------------------
 
 function showSample() {
+  getSummary();
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
     console.log(sampleData);
@@ -1634,9 +1636,10 @@ function updateKeywords() {
 function getSummary() {
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/sum', function (response) {
-    console.log(`numParent: ${response.sum1}`);
-    console.log(`numChild: ${response.sum2}`);
-    console.log(`DQ_validActivity: ${response.sum3}`);
+    //console.log(`numParent: ${response.sum1}`);
+    //console.log(`numChild: ${response.sum2}`);
+    //console.log(`DQ_validActivity: ${response.sum3}`);
+    summary = response;
   })
     .fail(function (error) {
       console.error('Error retrieving sum values:', error);
