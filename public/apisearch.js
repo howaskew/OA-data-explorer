@@ -423,13 +423,14 @@ function showSample() {
   getSummary();
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
-    console.log(sampleData);
-    // Use the sampleData object as needed
+    //console.log(sampleData);
     storeSample.items = sampleData;
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
+
+    const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
       $('#progress').append('<h4>Exploring OpenActive Data</h4>');
-      $('#progress').append(`The metrics below are based on DQ analysis of ${'x'} out of ${'x'} feeds.</br>`);
+      $('#progress').append(`The metrics below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.</br>`);
       $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);
       $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);
       showingSample = true;
