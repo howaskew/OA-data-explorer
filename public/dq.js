@@ -79,12 +79,12 @@ function postResults(item) {
 
   if (storeDataQuality.numFilteredItems === 1) {
     setJSONButton(document.getElementById('json1'));
-    setJSONTab(item.id || item.data['@id'], false);
+    setJSONTab(item.id || item.data['@id'], showingSample ? item : null, false);
   }
 
   $(`#json${storeDataQuality.numFilteredItems}`).on('click', function () {
     setJSONButton(this);
-    setJSONTab(item.id || item.data['@id'], true);
+    setJSONTab(item.id || item.data['@id'], showingSample ? item : null, true);
   });
 
   if ((item.id && item.id.length > 8) || (item.data['@id'] && item.data['@id'].length > 8)) {
