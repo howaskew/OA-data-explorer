@@ -99,7 +99,7 @@ app.get('/fetch', cacheSuccesses, async (req, res, next) => {
 // additions for summary data storage
 
 const bodyParser = require('body-parser');
-const { Client } = require('pg');
+const { Pool } = require('pg');
 const { rejects } = require('assert');
 
 // Middleware
@@ -115,39 +115,36 @@ if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
 
 console.log(process.env.ENVIRONMENT + ' ' + ssl_string);
 
-// Create a new PostgreSQL client
-const client = new Client({
+// Create a new PostgreSQL pool
+const pool = new Pool({
   // Heroku provides the DATABASE_URL environment variable
   // Or locally, use a .env file with DATABASE_URL = postgres://{user}:{password}@{hostname}:{port}/{database-name}
   // host and port: localhost:5432
   connectionString: process.env.DATABASE_URL,
+  max: 20, // Maximum of 20 clients in the pool 
   ssl_string
 });
 
 async function createTableIfNotExists() {
   try {
-    await client.connect()
-      .then(() => {
-        console.log('Connected to the database!');
-      })
-      .catch((err) => {
-        console.error('Error connecting to the database:', err);
-      });
-
-    const checkTableQuery = `
-    SELECT EXISTS (
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+    try {
+      console.log('Connected to the database!');
+      const checkTableQuery = `
+      SELECT EXISTS (
       SELECT 1
       FROM information_schema.tables
       WHERE table_name = 'openactivedq'
-    );
-  `;
+      );
+      `;
 
-    const { rows } = await client.query(checkTableQuery);
+      const { rows } = await client.query(checkTableQuery);
 
-    const tableExists = rows[0].exists;
+      const tableExists = rows[0].exists;
 
-    if (!tableExists) {
-      const createTableQuery1 = `
+      if (!tableExists) {
+        const createTableQuery1 = `
         CREATE TABLE openactivedq (
           id VARCHAR(255) PRIMARY KEY,
           numParent INTEGER,
@@ -161,86 +158,91 @@ async function createTableIfNotExists() {
         );
       `;
 
-      await client.query(createTableQuery1);
+        await client.query(createTableQuery1);
 
-      const createTableQuery2 = `
+        const createTableQuery2 = `
       CREATE TABLE openactivesample (
         id VARCHAR(255) PRIMARY KEY,
         data JSONB
       );
     `;
 
-      await client.query(createTableQuery2);
+        await client.query(createTableQuery2);
 
-      console.log('Tables created successfully!');
-    } else {
-      console.log('Table already exists.');
+        console.log('Tables created successfully!');
+      } else {
+        console.log('Table already exists.');
 
-      //During development, may be convenient to recreate the database (when adding fields etc)
+        //During development, may be convenient to recreate the database (when adding fields etc)
 
-      // const deleteTablesQuery = `
-      // DROP TABLE IF EXISTS openactivedq;
-      // DROP TABLE IF EXISTS openactivesample;
-      //`;
+        // const deleteTablesQuery = `
+        // DROP TABLE IF EXISTS openactivedq;
+        // DROP TABLE IF EXISTS openactivesample;
+        //`;
 
-      // client.query(deleteTablesQuery);
+        // client.query(deleteTablesQuery);
 
 
-      //      const createTableQuery1 = `
-      //     CREATE TABLE openactivedq (
-      //      id VARCHAR(255) PRIMARY KEY,
-      //     numParent INTEGER,
-      //    numChild INTEGER,
-      //   DQ_validActivity INTEGER,
-      //  DQ_validGeo INTEGER,
-      // DQ_validDate INTEGER,
-      //DQ_validParentUrl INTEGER,
-      //DQ_validChildUrl INTEGER,
-      //dateUpdated INTEGER
-      //);
-      //`;
+        //      const createTableQuery1 = `
+        //     CREATE TABLE openactivedq (
+        //      id VARCHAR(255) PRIMARY KEY,
+        //     numParent INTEGER,
+        //    numChild INTEGER,
+        //   DQ_validActivity INTEGER,
+        //  DQ_validGeo INTEGER,
+        // DQ_validDate INTEGER,
+        //DQ_validParentUrl INTEGER,
+        //DQ_validChildUrl INTEGER,
+        //dateUpdated INTEGER
+        //);
+        //`;
 
-      //await client.query(createTableQuery1);
+        //await client.query(createTableQuery1);
 
-      //const createTableQuery2 = `
-      //CREATE TABLE openactivesample (
-      // id VARCHAR(255) PRIMARY KEY,
-      //data JSONB
-      //);
-      //`;
+        //const createTableQuery2 = `
+        //CREATE TABLE openactivesample (
+        // id VARCHAR(255) PRIMARY KEY,
+        //data JSONB
+        //);
+        //`;
 
-      //  await client.query(createTableQuery2);
+        //  await client.query(createTableQuery2);
 
-      //      console.log('Tables recreated');
+        //      console.log('Tables recreated');
 
+      }
+
+    } catch (err) {
+      console.error('Error creating table:', err);
+    } finally {
+      // IF testing for connection, can end connection HERE
+      await client.release();
     }
-
   } catch (err) {
-    console.error('Error creating table:', err);
-  } finally {
-    // IF testing for connection, can end connection HERE
-    //  await client.end();
+    console.error('Error acquiring a client from the pool:', err);
   }
-}
+
+};
 
 createTableIfNotExists();
 
 // API endpoint for inserting data
 app.post('/api/insert', async (req, res) => {
   try {
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+    try {
+      console.log('Connected to the database!');
+      // Sending the details in the request body
+      const { id, numParent, numChild, DQ_validActivity,
+        DQ_validGeo, DQ_validDate, DQ_validParentUrl,
+        DQ_validChildUrl, dateUpdated } = req.body;
 
-    // Test for existing connection HERE
+      // Validate and sanitize the input
+      // Implement appropriate validation logic based on your requirements
 
-    // Assuming the client sends the name and email in the request body
-    const { id, numParent, numChild, DQ_validActivity,
-      DQ_validGeo, DQ_validDate, DQ_validParentUrl,
-      DQ_validChildUrl, dateUpdated } = req.body;
-
-    // Validate and sanitize the input
-    // Implement appropriate validation logic based on your requirements
-
-    // Insert data into the database using a parameterized query
-    const insertQuery = `
+      // Insert data into the database using a parameterized query
+      const insertQuery = `
     INSERT INTO openactivedq (id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     ON CONFLICT (id)
@@ -256,95 +258,134 @@ app.post('/api/insert', async (req, res) => {
     RETURNING id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated;
     `;
 
-    const values = [id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated];
-    const result = await client.query(insertQuery, values);
+      const values = [id, numParent, numChild, DQ_validActivity, DQ_validGeo, DQ_validDate, DQ_validParentUrl, DQ_validChildUrl, dateUpdated];
+      const result = await client.query(insertQuery, values);
 
-    // Send the inserted data back to the client as a response
-    res.json(result.rows[0]);
+      // Send the inserted data back to the client as a response
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error('Error inserting data:', err);
+      res.status(500).json({ error: 'An error occurred while inserting data.' });
+    } finally {
+      // IF testing for connection, can end connection HERE
+      await client.release();
+    }
   } catch (err) {
-    console.error('Error inserting data:', err);
-    res.status(500).json({ error: 'An error occurred while inserting data.' });
+    console.error('Error acquiring a client from the pool:', err);
   }
 });
 
 // Define a route handler to retrieve the sum values
 app.get('/sum', async (req, res) => {
-
   try {
-    const sumQuery = `
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+    try {
+      console.log('Connected to the database!');
+      const sumQuery = `
       SELECT SUM(numParent) AS sumParent,
       SUM(numChild) AS sumChild,
       SUM(DQ_validActivity) AS sumDQ_validActivity
       FROM openactivedq;
     `;
-    const result = await client.query(sumQuery);
+      const result = await client.query(sumQuery);
 
-    if (result.rows.length === 0) {
-      console.log('No data found in the result.');
-      return res.status(404).json({ error: 'No data found' });
+      if (result.rows.length === 0) {
+        console.log('No data found in the result.');
+        return res.status(404).json({ error: 'No data found' });
+      }
+
+      const sum1 = Number(result.rows[0].sumparent);
+      const sum2 = Number(result.rows[0].sumchild);
+      const sum3 = Number(result.rows[0].sumdq_validactivity);
+
+      res.json({ sum1, sum2, sum3 });
+    } catch (error) {
+      console.error('Error executing the sum query:', error);
+      res.status(500).json({ error: 'An error occurred' });
+    } finally {
+      // IF testing for connection, can end connection HERE
+      await client.release();
     }
-
-    const sum1 = Number(result.rows[0].sumparent);
-    const sum2 = Number(result.rows[0].sumchild);
-    const sum3 = Number(result.rows[0].sumdq_validactivity);
-
-    res.json({ sum1, sum2, sum3 });
-  } catch (error) {
-    console.error('Error executing the sum query:', error);
-    res.status(500).json({ error: 'An error occurred' });
+  } catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
   }
 });
 
 // Route to handle the delete query to remove any existing sample data for a feed
 app.post('/api/delete', async (req, res) => {
-  const { deleteQuery } = req.body;
 
   try {
-    await client.query(deleteQuery);
-    res.status(200).json({ message: 'Deletion successful.' });
-  } catch (error) {
-    console.error('Error executing delete query:', error);
-    res.status(500).json({ error: 'An error occurred while executing delete query.' });
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+    const { deleteQuery } = req.body;
+    try {
+      console.log('Connected to the database!');
+      await client.query(deleteQuery);
+      res.status(200).json({ message: 'Deletion successful.' });
+    } catch (error) {
+      console.error('Error executing delete query:', error);
+      res.status(500).json({ error: 'An error occurred while executing delete query.' });
+    } finally {
+      // IF testing for connection, can end connection HERE
+      await client.release();
+    }
+  } catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
   }
 });
 
 // Route to handle the insert query to add to sample
 app.post('/api/insertsample', async (req, res) => {
-  const { insertQuery, values } = req.body;
-
   try {
-    await client.query(insertQuery, values);
-    res.status(200).json({ message: 'Insertion successful.' });
-  } catch (error) {
-    console.error('Error executing insert query:', error);
-    res.status(500).json({ error: 'An error occurred while executing insert query.' });
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+
+    const { insertQuery, values } = req.body;
+
+    try {
+      console.log('Connected to the database!');
+      await client.query(insertQuery, values);
+      res.status(200).json({ message: 'Insertion successful.' });
+    } catch (error) {
+      console.error('Error executing insert query:', error);
+      res.status(500).json({ error: 'An error occurred while executing insert query.' });
+    } finally {
+      // IF testing for connection, can end connection HERE
+      await client.release();
+    }
+  } catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
   }
 });
 
 // Route to handle the insert query to add to sample
 
-app.get('/api/download', (req, res) => {
-  const downloadQuery = 'SELECT * FROM openactivesample';
-
-  client.query(downloadQuery)
-    .then(result => {
+app.get('/api/download', async (req, res) => { 
+  try {
+    // Get a client from the pool (connection is acquired)
+    const client = await pool.connect();
+    try {
+      const downloadQuery = 'SELECT * FROM openactivesample';
+      const result = await client.query(downloadQuery);
       const rows = result.rows;
       const sampleData = {};
-
       rows.forEach(row => {
         const { id, data } = row;
         sampleData[id] = data;
       });
-
       res.json(sampleData);
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      res.status(500).json({ error: 'Failed to download sample data' });
-    });
+    } catch (err) {
+      console.error('Error:', err);
+      res.status(500).json({ err: 'Failed to download sample data' });
+    } finally {
+      // Release the client back to the pool (connection is returned)
+      await client.release();
+    }
+  } catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
+  }
 });
-
-
 
 
 // app.js resumes...
@@ -352,7 +393,8 @@ app.get('/api/download', (req, res) => {
 
 // Get all feeds on load
 // Note Heroku is restarted automatically nightly, so this collection is automatically updated each night
-(async () => {
+async function getFeedsOnLoad() {
+  console.log("async");
   try {
 
     const catalogueCollection = await axios.get(catalogueCollectionUrl);
@@ -442,50 +484,60 @@ app.get('/api/download', (req, res) => {
       // Query to fetch data from the PostgreSQL table
       const query = 'SELECT * FROM openactivedq';
 
-      // Fetch data from the table
-      client.query(query, (err, result) => {
-        if (err) {
+      try {
+        // Get a client from the pool (connection is acquired)
+        const client = await pool.connect();
+        try {
+          console.log('Connected to the database!');
+          // Fetch data from the table using the promise version of query
+          const result = await client.query(query);
+
+          // Merge data from the table with the existing feeds array
+          const rows = result.rows;
+          rows.forEach((row) => {
+            // Now only totaling for the first URL in the concatenated id - this will enable an accurate sum at the provider level
+            const existingFeed = feeds.find((feed) => feed.url === row.id.split(' ')[0]);
+            if (existingFeed) {
+              // Merge properties from the database row into the existing feed object
+              Object.assign(existingFeed, row);
+            } else {
+              // Only adding info to existing feeds at this stage
+              // feeds.push(row);
+            }
+          });
+
+          console.log('Data merged successfully');
+
+        } catch (err) {
           console.error('Error executing query:', err);
-          return;
+        } finally {
+          // Release the client back to the pool (connection is returned)
+          await client.release();
         }
+      } catch (err) {
+        console.error('Error acquiring a client from the pool:', err);
+      }
 
-        // Merge data from the table with the existing feeds array
-        const rows = result.rows;
-        rows.forEach((row) => {
-          //Now only totalling for the first url in the concatenated id - this will enable accurate sum at provider level
-          const existingFeed = feeds.find((feed) => feed.url === row.id.split(' ')[0]);
-          if (existingFeed) {
-            // Merge properties from the database row into the existing feed object
-            Object.assign(existingFeed, row);
-          } else {
-            // Only adding infor to existing feeds at this stage
-            // feeds.push(row);
-          }
-        });
-
-        // Do something after merging the data (e.g., send a response)
-        //console.log('Data merged successfully:', feeds);
-        console.log('Data merged successfully');
-      });
 
       // Prefetch pages into cache to reduce initial load (if not dev environment):
       if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
         for (const feed of feeds) {
           // Distribute the prefetching calls to ensure a single services is not overloaded if serving more than one dataset site:
           if (feed.url !== '') { //Handle the empty url for All OpenActive Feeds
-          await sleep(60000);
-          harvest(feed.url);
+            await sleep(60000);
+            harvest(feed.url);
           }
         }
       }
 
     }
-  }
-  catch (error) {
+  } catch (error) {
     console.error(error.stack);
     process.exit(1);
   }
-})();
+};
+
+getFeedsOnLoad();
 
 app.get('/feeds', function (req, res) {
   res.send({ "feeds": feeds });
