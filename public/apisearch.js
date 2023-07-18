@@ -209,7 +209,10 @@ function loadingComplete() {
   clearTimeout(loadingTimeout);
   $('#loading-time').hide();
   $('#progress').append('<div id="DQProgress"</div>');
-
+  $('#resultTab').text('Live Data');
+  $('#dq_label').fadeIn();
+  $('.explainer').fadeIn();
+  
   let funcs = [
     setStoreSuperEventAndStoreSubEvent,
     setStoreDataQualityItems,
@@ -292,6 +295,7 @@ function clearDisplay() {
   $('#loading-time').hide();
   $('#record-limit').hide();
   $('#filterRows').hide();
+  $('#filter_controls').hide();
   $('#output').hide();
   $('#tabs').hide();
   clearCharts();
@@ -421,6 +425,11 @@ function clearCache(store) {
 
 function showSample() {
   getSummary();
+  $('#resultTab').text('Sample Data');
+  $('#dq_label').hide();
+  $('#filter_controls').fadeOut();
+  $('.explainer').fadeOut();
+  
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
     //console.log(sampleData);
@@ -430,8 +439,8 @@ function showSample() {
 
     const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
       $('#progress').append('<h4>Exploring OpenActive Data</h4>');
-      $('#progress').append(`The metrics below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.</br>`);
-      $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);
+      $('#progress').append(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.</br>`);
+      $('#progress').append(`The sample data shown is drawn from a small sample taken from each feed.</br>`);
       $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);
       showingSample = true;
       clearStore(storeDataQuality);
