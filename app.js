@@ -361,7 +361,7 @@ app.post('/api/insertsample', async (req, res) => {
 
 // Route to handle the insert query to add to sample
 
-app.get('/api/download', async (req, res) => { 
+app.get('/api/download', async (req, res) => {
   try {
     // Get a client from the pool (connection is acquired)
     const client = await pool.connect();
@@ -560,13 +560,41 @@ app.post('/api/cache/clear', (req, res) => {
   // console.log(`Cache cleared for ${url}`);
 });
 
+// Function to introduce a wait using setTimeout
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function harvest(url) {
   console.log(`Prefetch: ${url}`);
-  const { data } = await axios.get(`http://localhost:${port}/fetch?url=${encodeURIComponent(url)}`);
-  if (!data.next) {
-    console.log(`Error prefetching: ${url}`);
-  } else if (data.next !== url) {
-    harvest(data.next);
+  try {
+    const { data } = await axios.get(`http://localhost:${port}/fetch?url=${encodeURIComponent(url)}`);
+    if (!data.next) {
+      console.log(`Error prefetching: ${url}`);
+    } else if (data.next !== url) {
+      // Generate a random wait time between 1 and 5 seconds (adjust the range as needed)
+      const randomWaitTime = Math.floor(Math.random() * 4000) + 1000; // 1000 ms = 1 second
+      // Wait for the specified time before making the next API call
+      await wait(randomWaitTime);
+      harvest(data.next);
+    }
+  } catch (error) {
+    // Handle the error gracefully
+    if (error.response) {
+      // The request was made, but the server responded with an error status code (4xx, 5xx)
+      console.error('Server responded with error:', error.response.status, error.response.statusText);
+      console.error('Response headers:', error.response.headers);
+      console.error('Response data:', error.response.data);
+    } else if (error.request) {
+      // The request was made, but no response was received
+      console.error('No response received:', error.request);
+    } else {
+      // Something else happened in making the request that triggered an error
+      console.error('Error occurred:', error.message);
+    }
+    // You can also throw the error or return a custom error response if needed.
+    // throw error;
+    // return { error: 'An error occurred while fetching data.' };
   }
 }
 
