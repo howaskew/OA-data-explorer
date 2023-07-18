@@ -2008,6 +2008,9 @@ function postDataQuality() {
   sleep(1600).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {
       $('#filterRows').fadeIn('slow');
+      if (!showingSample) {
+        $('#filter_controls').fadeIn();
+      }
     }
     enableFilters();
   });
