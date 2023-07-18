@@ -1182,7 +1182,7 @@ function getRelevantActivitySet(id) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setJSONTab(itemId, switchTab) {
+function setJSONTab(itemId, item, switchTab) {
 
   if (switchTab) {
     $("#resultTab").removeClass("active");
@@ -1194,8 +1194,13 @@ function setJSONTab(itemId, switchTab) {
 
   document.getElementById('json').innerHTML = "<div id='json-tab-1' class='json-tab-subpanel'></div><div id='json-tab-2' class='json-tab-subpanel'></div>";
 
-  // Output both relevant feeds if combined
   if (
+    showingSample &&
+    item
+  ) {
+    setJSONTabSubPanel(1, item, null);
+  }
+  else if (
     storeSuperEvent &&
     storeSubEvent &&
     link &&
@@ -1210,42 +1215,47 @@ function setJSONTab(itemId, switchTab) {
       String(storeSuperEventItem.data['@id']).split('/').at(-1) === storeSuperEventItemId
     );
     if (storeSuperEventItem) {
-      setJSONTabSubPanel(1, storeSuperEvent, storeSuperEventItemId, storeSuperEventItem);
+      setJSONTabSubPanel(1, storeSuperEventItem, storeSuperEvent?.urls?.[storeSuperEventItemId]);
     }
     if (storeSubEventItem) {
-      setJSONTabSubPanel(2, storeSubEvent, storeSubEventItemId, storeSubEventItem);
+      setJSONTabSubPanel(2, storeSubEventItem, storeSubEvent?.urls?.[storeSubEventItemId]);
     }
   }
   else if (
     storeIngressOrder1 &&
     storeIngressOrder1.items.hasOwnProperty(itemId)
   ) {
-    setJSONTabSubPanel(1, storeIngressOrder1, itemId);
+    setJSONTabSubPanel(1, storeIngressOrder1.items[itemId], storeIngressOrder1?.urls?.[itemId]);
   }
   else if (
     storeIngressOrder2 &&
     storeIngressOrder2.items.hasOwnProperty(itemId)
   ) {
-    setJSONTabSubPanel(1, storeIngressOrder2, itemId);
+    setJSONTabSubPanel(1, storeIngressOrder2.items[itemId], storeIngressOrder2?.urls?.[itemId]);
   }
 
 }
 
 // -------------------------------------------------------------------------------------------------
 
-function setJSONTabSubPanel(subPanelNumber, store, itemId, item=null) {
+function setJSONTabSubPanel(subPanelNumber, item, url) {
   document.getElementById(`json-tab-${subPanelNumber}`).innerHTML = `
     <div class='flex_row'>
-        <h2 class='json-tab-heading'>${store.itemDataType ? store.itemDataType : 'Unknown content type'}</h2>
+        <h2 class='json-tab-heading'>${item?.data?.type || item?.kind || 'Unknown content type'}</h2>
         <button id='json-tab-${subPanelNumber}-source' class='btn btn-secondary btn-sm json-tab-button'>Source</button>
         <button id='json-tab-${subPanelNumber}-validate' class='btn btn-secondary btn-sm json-tab-button'>Validate</button>
     </div>
-    <pre>${JSON.stringify(item ? item : store.items[itemId], null, 2)}</pre>`;
-  $(`#json-tab-${subPanelNumber}-source`).on('click', function () {
-    window.open(store.urls[itemId], '_blank').focus();
-  });
+    <pre>${JSON.stringify(item, null, 2)}</pre>`;
+  if (url) {
+    $(`#json-tab-${subPanelNumber}-source`).on('click', function () {
+      window.open(url, '_blank').focus();
+    });
+  }
+  else {
+    $(`#json-tab-${subPanelNumber}-source`).hide();
+  }
   $(`#json-tab-${subPanelNumber}-validate`).on('click', function () {
-    openValidator(item ? item : store.items[itemId]);
+    openValidator(item);
   });
 }
 
