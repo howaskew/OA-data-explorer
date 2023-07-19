@@ -18,22 +18,22 @@
 </head>
 
 <body style="overflow-y: scroll">
-    <div style="padding-left:2%; padding-right:2%; padding-top:5px; padding-bottom:5px; background-color: #253882;">
-        <h5 style="margin:0; color: white;">BETA Release</h5>
-        <p style="margin:0; color:white;">Please report any issues to <a href="mailto:hello@openactive.io" style="color:#74cbf3;">hello@openactive.io</a></p>
-    </div>
 
     <!-- Header image and text -->
-    <div class="container-fluid mainheading">
+    <div class="mainheading">
         <div class="flex_row">
-            <div class="col-md-6 col-sm-8">
-                <div class="flex_row top">
-                    <img src="images/OpenActive-Landscape-Logo-2.png" style="max-width: 100%;"></img>
-                </div>
+            <div class="col-md-6 col-sm-8" style="background-color: #253882;">
+                <img src="images/OpenActive-Landscape-Logo-White.svg" style="max-width: 100%; max-height:80px; margin-top: 15px;"></img>
             </div>
-            <div class="col-md-6 col-sm-8">
-                <div class="flex_row top">
-                    <h3 style="text-align:left;">Data Visualiser / Data Quality Explorer</h3>
+            <div class="col-md-6 col-sm-8" id="beta">
+                <div class="flex_row" style="justify-content: space-between";>
+                    <h3>Data Visualiser / Data Quality Explorer</h3>
+                    <h3>BETA Release</h3>
+                </div>
+                <div style="text-align: center;"><br/>
+                    <p>This tool works best on larger screens. Please send any feedback to
+                        <a href="mailto:hello@openactive.io" style="color:#74cbf3;">hello@openactive.io</a>
+                    </p>
                 </div>
             </div>
         </div>
@@ -48,10 +48,10 @@
 
                 <div class="flex_row top">
                     <div class="col-sm-5">
-                        <label>Data feed provider (No. of opportunities):</label>
+                        <label>Data Provider (No. of opportunities):</label>
                     </div>
                     <div class="col-sm-3">
-                        <label>Data feed type:</label>
+                        <label>Data Type:</label>
                     </div>
                     <div class="col-sm-2">
                     </div>
@@ -219,10 +219,7 @@
 
             <!-- Right column: Logs -->
             <div class="col-md-6 col-sm-8">
-                <div class="flex_row top">
-                    <label>Notes:</label>
-                </div>
-                <div style="height:250px; overflow-y: scroll;">
+                <div style="height:250px; overflow-y: auto;">
                     <div id="loading-time" style="display: none;">
                         <h5>Note: the initial query can take up to 5-10 minutes to read and process the largest
                             feeds.</h5>
@@ -230,7 +227,7 @@
                     <div id="record-limit" style="display: none;">
                         <h5>Note: only the first 25,000 items (approx.) from the API are being processed.</h5>
                     </div>
-                    <div id="progress" class="flex_row top">
+                    <div id="progress" class="top">
                     </div>
                 </div>
             </div>
@@ -246,7 +243,7 @@
             <div class="flex_row">
                 <div id="grad" class="col-md-12>">
                     <h2>DISCOVERY</h2>
-                    <h4>Data Quality Metrics linked to Use Cases</h4>
+                    <h4 id="dq_label" style="display:none;">Data Quality Metrics linked to Use Cases</h4>
                     <h2>BOOKING</h2>
                 </div>
             </div>
@@ -256,7 +253,7 @@
                     <div class="box box1">
                         <div id="apexchart1"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>Using the official activity list helps developers create better user experiences,
                             for
                             example, by grouping activities to simplify search.</p>
@@ -266,7 +263,7 @@
                     <div class="box box2">
                         <div id="apexchart2"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>As well as activity ID and name, adding a description can engage participants and
                             help
                             them decide if the activity is right for them.</p>
@@ -276,7 +273,7 @@
                     <div class="box box3">
                         <div id="apexchart3"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>Developers use postcodes or coordinates to display activities on a map and to
                             search by
                             location.</p>
@@ -286,7 +283,7 @@
                     <div class="box box4">
                         <div id="apexchart4"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>Activity finders focus on upcoming events.</p>
                     </div>
                 </div>
@@ -295,7 +292,7 @@
                         <div id="apexchart5a"></div>
                         <div id="apexchart5b"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>Having a URL link directly to the booking page for a specific series or session
                             significantly
                             improves user experience.</p>
@@ -305,58 +302,58 @@
                     <div class="box box6">
                         <div id="apexchart6"></div>
                     </div>
-                    <div class="explainer">
+                    <div class="explainer" style="display:none;">
                         <p>This charts shows the start dates of scheduled sessions or slots where available.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div class="flex_row">
+            <div class="flex_row" id="filter_controls" style="display: none;">
                 <div class="col-md-2">
                 </div>
                 <div class="col-md-2">
                     <div class='filter'>
-                        <p>Show<br/>All</p>
+                        <p>Show<br />All</p>
                         <!-- Rounded switch -->
                         <label class="switch">
                             <input type="checkbox" id="DQ_filterActivities">
                             <span class="slider round"></span>
                         </label>
-                        <p>Show<br/>Issues</p>
+                        <p>Show<br />Issues</p>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class='filter'>
-                        <p>Show<br/>All</p>
+                        <p>Show<br />All</p>
                         <!-- Rounded switch -->
                         <label class="switch">
                             <input type="checkbox" id="DQ_filterGeos">
                             <span class="slider round"></span>
                         </label>
-                        <p>Show<br/>Issues</p>
+                        <p>Show<br />Issues</p>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class='filter'>
-                        <p>Show<br/>All</p>
+                        <p>Show<br />All</p>
                         <!-- Rounded switch -->
                         <label class="switch">
                             <input type="checkbox" id="DQ_filterDates">
                             <span class="slider round"></span>
                         </label>
-                        <p>Show<br/>Issues</p>
+                        <p>Show<br />Issues</p>
                     </div>
                 </div>
                 <div class="col-md-2">
                     <div class='filter'>
-                        <p>Show<br/>All</p>
+                        <p>Show<br />All</p>
                         <!-- Rounded switch -->
                         <label class="switch">
                             <input type="checkbox" id="DQ_filterUrls">
                             <span class="slider round"></span>
                         </label>
-                        <p>Show<br/>Issues</p>
+                        <p>Show<br />Issues</p>
                     </div>
                 </div>
                 <div class="col-md-2">
@@ -426,7 +423,8 @@
     <script src="https://cdn.jsdelivr.net/npm/js-base64@3.6.0/base64.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@openactive/skos@1.4.3/dist/skos.min.js"></script>
     <script src="https://neofusion.github.io/hierarchy-select/v2/dist/hierarchy-select.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script> <!-- Add e.g. '@3.35.0' to the end of the URL to use a specific version number -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Add e.g. '@3.35.0' to the end of the URL to use a specific version number -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="apisearch.js"></script>

@@ -212,6 +212,9 @@ function loadingComplete() {
   clearTimeout(loadingTimeout);
   $('#loading-time').hide();
   $('#progress').append('<div id="DQProgress"</div>');
+  $('#resultTab').text('Live Data');
+  $('#dq_label').fadeIn();
+  $('.explainer').fadeIn();
 
   let funcs = [
     setStoreSuperEventAndStoreSubEvent,
@@ -242,7 +245,7 @@ function stop() {
 
 // -------------------------------------------------------------------------------------------------
 
-function clear(execute=false) {
+function clear(execute = false) {
   // console.warn(`${luxon.DateTime.now()} clear`);
   $('#execute').prop('disabled', true);
   $('#clear').prop('disabled', true);
@@ -295,6 +298,7 @@ function clearDisplay() {
   $('#loading-time').hide();
   $('#record-limit').hide();
   $('#filterRows').hide();
+  $('#filter_controls').hide();
   $('#output').hide();
   $('#tabs').hide();
   clearCharts();
@@ -424,6 +428,11 @@ function clearCache(store) {
 
 function showSample() {
   getSummary();
+  $('#resultTab').text('Sample Data');
+  $('#dq_label').hide();
+  $('#filter_controls').fadeOut();
+  $('.explainer').fadeOut();
+
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
     //console.log(sampleData);
@@ -431,11 +440,11 @@ function showSample() {
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
 
-    const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
+      const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
       $('#progress').append('<h4>Exploring OpenActive Data</h4>');
-      $('#progress').append(`The metrics below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.</br>`);
-      $('#progress').append(`The records shown are drawn from a small sample taken from each feed.</br>`);
-      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.</br>`);
+      $('#progress').append(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.<br/>`);
+      $('#progress').append(`The sample data shown is drawn from a small sample taken from each feed.<br/>`);
+      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.<br/>`);
       showingSample = true;
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
@@ -500,7 +509,7 @@ function disableFilters() {
 
 function setStoreItems(originalUrlStr, store) {
 
-  if (stopTriggered) {throw new Error('Stop triggered');}
+  if (stopTriggered) { throw new Error('Stop triggered'); }
 
   let results = $("#results");
   progress = $("#progress");
@@ -1867,7 +1876,7 @@ function setProviders() {
 // -------------------------------------------------------------------------------------------------
 
 function setEndpoints() {
-  // console.warn(`${luxon.DateTime.now()} setEndpoints: start`);
+  //console.warn(`${luxon.DateTime.now()} setEndpoints: start`);
   $.getJSON('/feeds', function (data) {
     $('#endpoint').empty();
     $.each(data.feeds, function (index, feed) {
@@ -1917,8 +1926,12 @@ function setEndpoint() {
 
   if (endpoint !== undefined) {
     $('#user-url').val(endpoint);
-    updateParameters('endpoint', endpoint);
-    clear();
+    if (getUrlParameter('execute') === 'true') {
+      execute();
+    } else {
+      updateParameters('endpoint', endpoint);
+      clear();
+    }
   }
   else {
     // We don't have a user-URL or a menu-URL if we previously had a user-URL (which removed the menu-URLS)
