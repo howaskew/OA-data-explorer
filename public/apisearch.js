@@ -14,6 +14,9 @@ let inProgress;
 let stopTriggered;
 let showingSample;
 
+let urlTriggered; // Don't add to clearGlobals(), only relevant for initial page load via setFeeds()
+let executeTriggered; // Don't add to clearGlobals(), only relevant for initial page load via setFeeds()
+
 let filters;
 let coverage;
 let proximity;
@@ -157,7 +160,7 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 async function execute() {
   if (!inProgress) {
-    updateParameters('execute', true); // DT: Is this necessary?
+    updateParameters('execute', true);
     clear(true);
     inProgress = true; // Here this must come after clear()
 
@@ -1817,10 +1820,11 @@ function setFeeds() {
     });
   })
     .done(function () {
-      //console.warn(`${luxon.DateTime.now()} setFeeds: end`);
+      // console.warn(`${luxon.DateTime.now()} setFeeds: end`);
+      urlTriggered = getUrlParameter('endpoint') in feeds;
+      executeTriggered = getUrlParameter('execute') === 'true';
       setProviders();
     });
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1862,19 +1866,10 @@ function setProviders() {
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setProviders: end`);
-      if (getUrlParameter('endpoint') === undefined | getUrlParameter('endpoint') === 'null') {
-        setEndpoints();
+      if (urlTriggered) {
+        $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
       }
-      else {
-        for (feedUrl in feeds) {
-          if (feedUrl === getUrlParameter('endpoint')) {
-            //console.log(feeds[feedUrl]);
-            $('#provider').val(feeds[feedUrl].publisherName);
-            break;
-          }
-        }
-        setEndpoints();
-      }
+      setEndpoints();
     });
 }
 
@@ -1892,22 +1887,28 @@ function setEndpoints() {
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
-
-      if (getUrlParameter('endpoint') === undefined | getUrlParameter('endpoint') === 'null') {
-        setEndpoint();
-      }
-      else {
-        endpoint = getUrlParameter('endpoint');
-        $('#endpoint').val(endpoint);
-        setEndpoint();
-      }
-    }
-    );
+      // updateEndpoint();
+      setEndpoint();
+    });
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function setEndpoint() {
+
+  if (urlTriggered) {
+    urlTriggered = false;
+    endpoint = getUrlParameter('endpoint');
+    $('#endpoint').val(endpoint);
+    $('#user-url').val(endpoint);
+    clear();
+    if (executeTriggered) {
+      executeTriggered = false;
+      execute();
+    }
+    return;
+  }
+
   // console.warn(`${luxon.DateTime.now()} setEndpoint: start`);
   endpoint = undefined;
 
