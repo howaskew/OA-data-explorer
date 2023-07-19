@@ -10,10 +10,6 @@
   flex-wrap: wrap;
 }
 
-div.col-md-2, div.col-md-6 {
-
-}
-
 #beta {
   padding: 5px 10px;
   background-color: #253882;
@@ -38,17 +34,10 @@ div.col-md-2, div.col-md-6 {
   display: none;
 }
 
-
-
 #api {
   margin-right: 10px;
   margin-left: 10px;
 }
-
-/* #progress {
-  margin-right: 10px;
-  margin-left: 10px;
-} */
 
 div.col-md-2, div.col-md-6 {
   margin-right: 0px;
