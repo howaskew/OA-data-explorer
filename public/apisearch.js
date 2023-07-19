@@ -437,7 +437,18 @@ function showSample() {
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
 
-      const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
+      //const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
+
+      const uniqueWords = new Set();
+      const totalUniqueItemCount = Object.keys(storeSample.items).reduce((count, key) => {
+        const words = key.split(" ");
+        words.forEach(word => uniqueWords.add(word));
+        return count + words.length;
+      }, 0);
+      
+      const totalItemCount = uniqueWords.size;
+      
+
       $('#progress').append('<h4>Exploring OpenActive Data</h4>');
       $('#progress').append(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.<br/>`);
       $('#progress').append(`The sample data shown is drawn from a small sample taken from each feed.<br/>`);
@@ -1855,7 +1866,7 @@ function setProviders() {
     // Output the sorted providers to HTML
     providerSums.forEach(providerSum => {
       // Round the combinedSum
-      const roundedSum = Math.round(providerSum.sum / 500) * 500;
+      const roundedSum = Math.round(providerSum.sum / 100) * 100;
       const formattedSum = roundedSum.toLocaleString() + (roundedSum !== 0 ? '+' : '');
       $('#provider').append(`<option value="${providerSum.provider}">${providerSum.provider} (${formattedSum})</option>`);
     });
