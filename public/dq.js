@@ -426,7 +426,7 @@ function setStoreDataQualityItemFlags() {
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
   const sortedStrings = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
-  const dqID= sortedStrings.join(' ');
+  const dqID = sortedStrings.join(' ');
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -601,39 +601,42 @@ function setStoreDataQualityItemFlags() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
-  // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
-  // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
-  // truly be the case and needs to be investigated.
+  if (!showingSample) {
 
-  for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
-    if (itemIdxs.length === 1) {
-      Object.values(storeDataQuality.dqFlags)[itemIdxs[0]].DQ_validChildUrl = true;
-      storeDataQuality.dqSummary.DQ_validChildUrl++;
-    }
-  }
+    // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
+    // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
+    // truly be the case and needs to be investigated.
 
-  // -------------------------------------------------------------------------------------------------
-
-  for (const [parentIdx, parent] of Object.values(parents).entries()) {
-    if (parent.url && typeof parent.url === 'string') {
-      if (!parentUrlsParentIdxs.hasOwnProperty(parent.url)) {
-        parentUrlsParentIdxs[parent.url] = [];
-      }
-      parentUrlsParentIdxs[parent.url].push(parentIdx);
-    }
-  }
-
-  for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
-    if (parentIdxs.length === 1) {
-      for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
-        Object.values(storeDataQuality.dqFlags)[itemIdx].DQ_validParentUrl = true;
-        storeDataQuality.dqSummary.DQ_validParentUrl++;
+    for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
+      if (itemIdxs.length === 1) {
+        Object.values(storeDataQuality.dqFlags)[itemIdxs[0]].DQ_validChildUrl = true;
+        storeDataQuality.dqSummary.DQ_validChildUrl++;
       }
     }
+
+    // -------------------------------------------------------------------------------------------------
+
+    for (const [parentIdx, parent] of Object.values(parents).entries()) {
+      if (parent.url && typeof parent.url === 'string') {
+        if (!parentUrlsParentIdxs.hasOwnProperty(parent.url)) {
+          parentUrlsParentIdxs[parent.url] = [];
+        }
+        parentUrlsParentIdxs[parent.url].push(parentIdx);
+      }
+    }
+
+    for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
+      if (parentIdxs.length === 1) {
+        for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
+          Object.values(storeDataQuality.dqFlags)[itemIdx].DQ_validParentUrl = true;
+          storeDataQuality.dqSummary.DQ_validParentUrl++;
+        }
+      }
+    }
+
+    storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
+
   }
-
-  storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
-
   // -------------------------------------------------------------------------------------------------
 
   parents = {};
@@ -1876,7 +1879,7 @@ function postDataQuality() {
         }
       },
       subtitle: {
-        text: ["Session Series","Facility Uses"],
+        text: ["Session Series", "Facility Uses"],
         align: 'left',
         offsetY: 40,
         style: {
@@ -1896,9 +1899,9 @@ function postDataQuality() {
       xaxis: {
         show: false,
         showForNullSeries: false,
-        labels : {
+        labels: {
           show: false
-       },
+        },
         floating: false, //true takes y axis out of plot space
         axisBorder: {
           show: false,
@@ -1923,7 +1926,7 @@ function postDataQuality() {
     chart1 = new ApexCharts(document.querySelector("#apexchart1"), sparkTotal1);
     chart1.render();
 
-   
+
     let spark6 = {
       chart: {
         id: 'sparkline1',
@@ -1984,7 +1987,7 @@ function postDataQuality() {
         }
       },
       subtitle: {
-        text: ["Scheduled Sessions","Facility Use Slots","Events"],
+        text: ["Scheduled Sessions", "Facility Use Slots", "Events"],
         align: 'right',
         offsetY: 40,
         style: {
