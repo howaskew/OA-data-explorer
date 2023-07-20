@@ -1199,7 +1199,7 @@ function setJSONTab(itemId, item, switchTab) {
     $("#resultPanel").removeClass("active");
     $("#jsonTab").addClass("active");
     $("#jsonPanel").addClass("active");
-    updateScrollResults();
+    // updateScrollResults();
   }
 
   document.getElementById('json').innerHTML = "<div id='json-tab-1' class='json-tab-subpanel'></div><div id='json-tab-2' class='json-tab-subpanel'></div>";
@@ -1426,25 +1426,25 @@ function addMapPanel(locations) {
 
 // Handle nav tabs smooth to fill page
 
-$('#resultsTab').on('click', function () {
-  updateScrollResults();
-});
-
-$('#jsonTab').on('click', function () {
-  updateScrollResults();
-});
-
-$('#apiTab').on('click', function () {
-  updateScrollResults();
-});
-
-$('#organizerTab').on('click', function () {
-  updateScrollResults();
-});
-
-$('#locationTab').on('click', function () {
-  updateScrollResults();
-});
+// $('#resultsTab').on('click', function () {
+//   updateScrollResults();
+// });
+//
+// $('#jsonTab').on('click', function () {
+//   updateScrollResults();
+// });
+//
+// $('#apiTab').on('click', function () {
+//   updateScrollResults();
+// });
+//
+// $('#organizerTab').on('click', function () {
+//   updateScrollResults();
+// });
+//
+// $('#locationTab').on('click', function () {
+//   updateScrollResults();
+// });
 
 // As well as the live code below, these variants also work:
 //   $('body').on('click', '#mapTab', function() {
@@ -1468,7 +1468,7 @@ $('#mapTab').on('show.bs.tab', function () {
     map.fitBounds(markerBounds, { padding: [50, 50] });
   }, 100); // Delay the fitBounds to ensure markers plotted
 
-  updateScrollResults();
+  // updateScrollResults();
 });
 
 // -------------------------------------------------------------------------------------------------
@@ -1480,12 +1480,15 @@ function updateScroll() {
 
 // -------------------------------------------------------------------------------------------------
 
-function updateScrollResults() {
-  window.scrollTo({
-    top: 480,
-    behavior: 'smooth' // You can change this to 'auto' for instant scrolling
-  });
-}
+// DT: Not sure if we need this now, disabled as was giving scroll behaviour that may not be so
+// desirable for all users.
+
+// function updateScrollResults() {
+//   window.scrollTo({
+//     top: 480,
+//     behavior: 'smooth' // You can change this to 'auto' for instant scrolling
+//   });
+// }
 
 // -------------------------------------------------------------------------------------------------
 
