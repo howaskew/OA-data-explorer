@@ -108,6 +108,8 @@ function setStoreSuperEventAndStoreSubEvent() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
+  // -------------------------------------------------------------------------------------------------
+
   storeSuperEvent = null;
   storeSubEvent = null;
   type = null;
@@ -219,6 +221,8 @@ function setStoreDataQualityItems() {
   // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItems`);
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
+
+  // -------------------------------------------------------------------------------------------------
 
   showingSample = false;
 
@@ -349,7 +353,11 @@ function setStoreDataQualityItems() {
     cp.empty();
   }
 
+  // -------------------------------------------------------------------------------------------------
+
   if (stopTriggered) { throw new Error('Stop triggered'); }
+
+  // -------------------------------------------------------------------------------------------------
 
   // Store sample of data
   const sortedStringsForFilter = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
@@ -425,8 +433,22 @@ function setStoreDataQualityItemFlags() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
+  // -------------------------------------------------------------------------------------------------
+
   const sortedStrings = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
   const dqID = sortedStrings.join(' ');
+
+  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
+  const dateNow = new Date().setHours(0, 0, 0, 0);
+
+  let parents = {};
+  let itemUrlsItemIdxs = {};
+  let parentIdsItemIdxs = {};
+  let parentUrlsParentIdxs = {};
+
+  let dqp = $("#DQProgress");
+
+  // -------------------------------------------------------------------------------------------------
 
   storeDataQuality.dqFlags = new Object();
   storeDataQuality.dqSummary = {
@@ -441,29 +463,22 @@ function setStoreDataQualityItemFlags() {
     dateUpdated: 0,
   }; // The order of keys here may be important for the PostgreSQL database, see '/api/insert' in app.js
 
-  let dqp = $("#DQProgress");
-
-  const ukPostalCodeRegex = /^[A-Z]{1,2}[0-9R][0-9A-Z]? [0-9][A-Z]{2}$/i;
-
-  const dateNow = new Date().setHours(0, 0, 0, 0);
-
-  let parents = {};
-  let itemUrlsItemIdxs = {};
-  let parentIdsItemIdxs = {};
-  let parentUrlsParentIdxs = {};
-
   // -------------------------------------------------------------------------------------------------
 
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
     if (stopTriggered) { throw new Error('Stop triggered'); }
 
+    // -------------------------------------------------------------------------------------------------
+
     storeDataQuality.dqFlags[item.id] = {
-      DQ_validOrganizer: false,
-      DQ_validLocation: false,
+      organizerName: '',
+      locationName: '',
       DQ_validActivity: false,
       DQ_validName: false,
       DQ_validDescription: false,
+      DQ_validCoords: false,
+      DQ_validPostalCode: false,
       DQ_validGeo: false,
       DQ_validDate: false,
       DQ_validParent: false,
@@ -471,35 +486,52 @@ function setStoreDataQualityItemFlags() {
       DQ_validParentUrl: false,
     };
 
+    // -------------------------------------------------------------------------------------------------
+
     // Organizer info
+    // https://developer.openactive.io/data-model/types/organization
 
     const organizer = resolveProperty(item, 'organizer');
 
-    storeDataQuality.dqFlags[item.id].DQ_validOrganizer =
-      typeof organizer === 'object' &&
-      !Array.isArray(organizer) &&
-      organizer !== null &&
-      typeof organizer.name === 'string' &&
-      organizer.name.trim().length > 0;
+    if (
+      typeof organizer?.name === 'string' &&
+      organizer.name.trim().length > 0
+    ) {
+      storeDataQuality.dqFlags[item.id].organizerName = organizer.name.trim();
+    }
 
     // -------------------------------------------------------------------------------------------------
 
     // Location info
+    // https://developer.openactive.io/data-model/types/place
 
     const location = resolveProperty(item, 'location');
 
-    storeDataQuality.dqFlags[item.id].DQ_validLocation =
-      typeof location === 'object' &&
-      !Array.isArray(location) &&
-      location !== null &&
-      typeof location.name === 'string' &&
-      location.name.trim().length > 0;
+    if (
+      typeof location?.name === 'string' &&
+      location.name.trim().length > 0
+    ) {
+      storeDataQuality.dqFlags[item.id].locationName = location.name.trim();
+    }
+    else if (
+      typeof location?.address?.streetAddress === 'string' &&
+      location.address.streetAddress.trim().length > 0
+    ) {
+      storeDataQuality.dqFlags[item.id].locationName = location.address.streetAddress.trim();
+    }
+    else if (
+      Number(location?.geo?.latitude) &&
+      Number(location?.geo?.longitude)
+    ) {
+      storeDataQuality.dqFlags[item.id].locationName = [location.geo.latitude, location.geo.longitude].join(',');
+    }
 
     // -------------------------------------------------------------------------------------------------
 
     // Activity info
+    // https://developer.openactive.io/guide-to-openactive-on-github/activity-list
+    // An item may be associated with many activities, but here we only care if there is at least one.
 
-    // An item may be associated with many activities, but here we only care if there is at least one:
     const activities = resolveProperty(item, 'activity');
 
     storeDataQuality.dqFlags[item.id].DQ_validActivity =
@@ -539,13 +571,17 @@ function setStoreDataQualityItemFlags() {
 
     // Geo info
 
-    const postalCode = getProperty(item, 'postalCode');
-    const latitude = getProperty(item, 'latitude');
-    const longitude = getProperty(item, 'longitude');
+    storeDataQuality.dqFlags[item.id].DQ_validCoords =
+      Number(location?.geo?.latitude) &&
+      Number(location?.geo?.longitude);
+
+    storeDataQuality.dqFlags[item.id].DQ_validPostalCode =
+      typeof location?.address?.postalCode === 'string' &&
+      ukPostalCodeRegex.test(location.address.postalCode);
 
     storeDataQuality.dqFlags[item.id].DQ_validGeo =
-      (typeof postalCode === 'string' && postalCode.length > 0 && ukPostalCodeRegex.test(postalCode)) ||
-      (typeof latitude === 'number' && typeof longitude === 'number');
+      storeDataQuality.dqFlags[item.id].DQ_validCoords ||
+      storeDataQuality.dqFlags[item.id].DQ_validPostalCode
 
     if (storeDataQuality.dqFlags[item.id].DQ_validGeo) {
       storeDataQuality.dqSummary.DQ_validGeo++;
@@ -555,7 +591,7 @@ function setStoreDataQualityItemFlags() {
 
     // Date info
 
-    const date = new Date(item.data.startDate);
+    const date = item?.data?.startDate ? new Date(item.data.startDate) : null;
 
     storeDataQuality.dqFlags[item.id].DQ_validDate =
       !isNaN(date) &&
@@ -601,6 +637,10 @@ function setStoreDataQualityItemFlags() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
+  // -------------------------------------------------------------------------------------------------
+
+  // TODO: This is a fix for an URL read issue with sample data. Needs to be investigated.
+
   if (!showingSample) {
 
     // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
@@ -637,6 +677,7 @@ function setStoreDataQualityItemFlags() {
     storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
 
   }
+
   // -------------------------------------------------------------------------------------------------
 
   parents = {};
@@ -648,12 +689,11 @@ function setStoreDataQualityItemFlags() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
-  // Write feed level data to database
+  // -------------------------------------------------------------------------------------------------
+
+  // Write feed level data to database:
 
   if (!showingSample) {
-    // console.log(storeDataQuality.dqSummary);
-    // console.log(storeDataQuality);
-
     (async () => {
       try {
         const response = await fetch('/api/insert', {
@@ -688,48 +728,35 @@ function postDataQuality() {
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
 
-  disableFilters();
-  clearCharts();
+  // -------------------------------------------------------------------------------------------------
 
   $("#tabs").hide();
+  clearCharts();
+  disableFilters();
+  getFilters();
 
-  $("#resultTab").addClass("active");
-  $("#resultPanel").addClass("active");
-  $("#jsonTab").removeClass("active disabled");
-  $("#jsonPanel").removeClass("active disabled");
-  $("#apiTab").removeClass("active disabled");
-  $("#apiPanel").removeClass("active disabled");
-  $("#organizerTab").removeClass("active disabled");
-  $("#organizerPanel").removeClass("active disabled");
-  $("#locationTab").removeClass("active disabled");
-  $("#locationPanel").removeClass("active disabled");
-  $("#mapTab").removeClass("active disabled");
-  $("#mapPanel").removeClass("active disabled");
-
-  results = $("#results");
+  // This needs to occur before postResults() which happens in the loop:
+  let results = $("#results");
   results.empty();
   results.append("<div id='resultsDiv'</div>");
   addResultsPanel();
 
   // -------------------------------------------------------------------------------------------------
 
-  getFilters();
-
-  storeDataQuality.showMap = false;
   storeDataQuality.filteredItemsUniqueOrganizers = new Object();
   storeDataQuality.filteredItemsUniqueLocations = new Object();
   storeDataQuality.filteredItemsUniqueActivityIds = new Object();
-  storeDataQuality.filteredItemsUniqueParentIds = new Set();
   storeDataQuality.filteredItemsUniqueDates = new Map();
-
+  storeDataQuality.filteredItemsUniqueParentIds = new Set();
   storeDataQuality.numFilteredItems = 0;
-  let numFilteredItemsWithValidActivity = 0;
-  let numFilteredItemsWithValidName = 0;
-  let numFilteredItemsWithValidDescription = 0;
-  let numFilteredItemsWithValidGeo = 0;
-  let numFilteredItemsWithValidDate = 0;
-  let numFilteredItemsWithValidChildUrl = 0;
-  let numFilteredItemsWithValidParentUrl = 0;
+  storeDataQuality.numFilteredItemsWithValidActivity = 0;
+  storeDataQuality.numFilteredItemsWithValidName = 0;
+  storeDataQuality.numFilteredItemsWithValidDescription = 0;
+  storeDataQuality.numFilteredItemsWithValidGeo = 0;
+  storeDataQuality.numFilteredItemsWithValidDate = 0;
+  storeDataQuality.numFilteredItemsWithValidChildUrl = 0;
+  storeDataQuality.numFilteredItemsWithValidParentUrl = 0;
+  storeDataQuality.showMap = false;
 
   // ----FOR-LOOP-PROCESSING--------------------------------------------------------------------------
 
@@ -737,67 +764,67 @@ function postDataQuality() {
 
     if (stopTriggered) { throw new Error('Stop triggered'); }
 
-    // Filters
+    // -------------------------------------------------------------------------------------------------
 
     let itemMatchesOrganizer =
-      !filters.organizer
+      !filters.organizerName
         ? true
-        : storeDataQuality.dqFlags[item.id].DQ_validOrganizer &&
-        resolveProperty(item, 'organizer').name === filters.organizer;
+        : storeDataQuality.dqFlags[item.id].organizerName === filters.organizerName;
 
     let itemMatchesLocation =
-      !filters.location
+      !filters.locationName
         ? true
-        : storeDataQuality.dqFlags[item.id].DQ_validLocation &&
-        resolveProperty(item, 'location').name === filters.location;
+        : storeDataQuality.dqFlags[item.id].locationName === filters.locationName;
 
     let itemMatchesActivity =
       !filters.relevantActivitySet
         ? true
         : storeDataQuality.dqFlags[item.id].DQ_validActivity &&
         (resolveProperty(item, 'activity') || [])
-          .filter(activity => filters.relevantActivitySet.has(activity['id'] || activity['@id'] || 'NONE'))
+          .map(activity => activity['id'] || activity['@id'])
+          .filter(activityId => activityId)
+          .filter(activityId => filters.relevantActivitySet.has(activityId))
           .length > 0;
 
-    let itemMatchesDay =
-      !filters.day
-        ? true
-        : item.data &&
-        item.data.eventSchedule &&
-        item.data.eventSchedule
-          .filter(x =>
-            x.byDay &&
-            x.byDay.includes(filters.day) ||
-            x.byDay.includes(filters.day.replace('https', 'http')))
-          .length > 0;
+    // let itemMatchesDay =
+    //   !filters.day
+    //     ? true
+    //     : item.data &&
+    //     item.data.eventSchedule &&
+    //     item.data.eventSchedule
+    //       .filter(x =>
+    //         x.byDay &&
+    //         x.byDay.includes(filters.day) ||
+    //         x.byDay.includes(filters.day.replace('https', 'http')))
+    //       .length > 0;
 
-    let itemMatchesGender =
-      !filters.gender
-        ? true
-        : resolveProperty(item, 'genderRestriction') === filters.gender;
+    // let itemMatchesGender =
+    //   !filters.gender
+    //     ? true
+    //     : resolveProperty(item, 'genderRestriction') === filters.gender;
 
     let itemMatchesDQActivityFilter =
       !filters.DQ_filterActivities ||
-      (filters.DQ_filterActivities && !storeDataQuality.dqFlags[item.id].DQ_validActivity);
+      !storeDataQuality.dqFlags[item.id].DQ_validActivity;
 
     let itemMatchesDQGeoFilter =
       !filters.DQ_filterGeos ||
-      (filters.DQ_filterGeos && !storeDataQuality.dqFlags[item.id].DQ_validGeo);
+      !storeDataQuality.dqFlags[item.id].DQ_validGeo;
 
     let itemMatchesDQDateFilter =
       !filters.DQ_filterDates ||
-      (filters.DQ_filterDates && !storeDataQuality.dqFlags[item.id].DQ_validDate);
+      !storeDataQuality.dqFlags[item.id].DQ_validDate;
 
     let itemMatchesDQUrlFilter =
       !filters.DQ_filterUrls ||
-      (filters.DQ_filterUrls && !storeDataQuality.dqFlags[item.id].DQ_validChildUrl);
+      !storeDataQuality.dqFlags[item.id].DQ_validChildUrl;
 
     if (
       itemMatchesOrganizer &&
       itemMatchesLocation &&
       itemMatchesActivity &&
-      itemMatchesDay &&
-      itemMatchesGender &&
+      // itemMatchesDay &&
+      // itemMatchesGender &&
       itemMatchesDQActivityFilter &&
       itemMatchesDQGeoFilter &&
       itemMatchesDQDateFilter &&
@@ -808,9 +835,10 @@ function postDataQuality() {
 
       // -------------------------------------------------------------------------------------------------
 
-      if (storeDataQuality.dqFlags[item.id].DQ_validOrganizer) {
-        let organizer = resolveProperty(item, 'organizer');
-        let organizerName = organizer.name.trim();
+      if (storeDataQuality.dqFlags[item.id].organizerName) {
+        const organizer = resolveProperty(item, 'organizer');
+        const organizerName = storeDataQuality.dqFlags[item.id].organizerName;
+
         if (!storeDataQuality.filteredItemsUniqueOrganizers.hasOwnProperty(organizerName)) {
           // Note that these sets are converted to arrays after looping through all items:
           storeDataQuality.filteredItemsUniqueOrganizers[organizerName] = {
@@ -820,29 +848,29 @@ function postDataQuality() {
           };
         }
 
-        // Note that this is 'const key of' rather than 'const key in':
-        for (const key of ['email', 'telephone']) {
-          const val = getProperty(organizer, key);
-          if (typeof val === 'string' && val.trim().length > 0) {
-            storeDataQuality.filteredItemsUniqueOrganizers[organizerName][key].add(val.trim());
+        for (const key of ['url', 'email', 'telephone']) {
+          let val;
+          if (key === 'url') {
+            val = organizer?.url;
           }
-          else if (typeof val === 'number') {
-            storeDataQuality.filteredItemsUniqueOrganizers[organizerName][key].add(val);
+          else {
+            val = getProperty(organizer, key);
           }
-        }
-
-        // Don't pull URLs for images, just top level organisation URLs:
-        const topUrl = organizer.url || null;
-        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
-          storeDataQuality.filteredItemsUniqueOrganizers[organizerName]['url'].add(topUrl.trim());
+          if (val) {
+            val = String(val).trim();
+            if (val.length > 0) {
+              storeDataQuality.filteredItemsUniqueOrganizers[organizerName][key].add(val);
+            }
+          }
         }
       }
 
       // -------------------------------------------------------------------------------------------------
 
-      if (storeDataQuality.dqFlags[item.id].DQ_validLocation) {
-        let location = resolveProperty(item, 'location');
-        let locationName = location.name.trim();
+      if (storeDataQuality.dqFlags[item.id].locationName) {
+        const location = resolveProperty(item, 'location');
+        const locationName = storeDataQuality.dqFlags[item.id].locationName;
+
         if (!storeDataQuality.filteredItemsUniqueLocations.hasOwnProperty(locationName)) {
           // Note that these sets are converted to arrays after looping through all items:
           storeDataQuality.filteredItemsUniqueLocations[locationName] = {
@@ -855,37 +883,40 @@ function postDataQuality() {
           };
         }
 
-        // Note that this is 'const key of' rather than 'const key in':
-        for (const key of ['email', 'telephone', 'streetAddress', 'postalCode']) {
-          const val = getProperty(location, key);
-          if (typeof val === 'string' && val.trim().length > 0) {
-            storeDataQuality.filteredItemsUniqueLocations[locationName][key].add(val.trim());
+        for (const key of ['url', 'email', 'telephone', 'streetAddress', 'postalCode']) {
+          let val;
+          if (key === 'url') {
+            val = location?.url;
           }
-          else if (typeof val === 'number') {
-            storeDataQuality.filteredItemsUniqueLocations[locationName][key].add(val);
+          else {
+            val = getProperty(location, key);
+          }
+          if (val) {
+            val = String(val).trim();
+            if (val.length > 0) {
+              storeDataQuality.filteredItemsUniqueLocations[locationName][key].add(val);
+            }
           }
         }
 
-        // Don't pull URLs for images, just top level location URLs:
-        const topUrl = location.url || null;
-        if (typeof topUrl === 'string' && topUrl.trim().length > 0) {
-          storeDataQuality.filteredItemsUniqueLocations[locationName]['url'].add(topUrl.trim());
+        if (storeDataQuality.dqFlags[item.id].DQ_validCoords) {
+          // The coordinates are stored as a single 'lat,lon' combined string in order to be a single element
+          // in the set, which is then relevant for comparing to further coordinates for only adding unique:
+          storeDataQuality.filteredItemsUniqueLocations[locationName]['coordinates'].add([location.geo.latitude, location.geo.longitude].join(','));
         }
-
-        // The coordinates are stored as a single 'lat,lon' combined string in order to be a single element
-        // in the set, which is then relevant for comparing to further coordinates for only adding unique:
-        const latitude = getProperty(location, 'latitude');
-        const longitude = getProperty(location, 'longitude');
-        if (typeof latitude === 'number' && typeof longitude === 'number') {
-          storeDataQuality.filteredItemsUniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
-          storeDataQuality.showMap = true;
-        }
+        // else if (storeDataQuality.dqFlags[item.id].DQ_validPostalCode) {
+        //   // Use API to turn postalCode into coords ...
+        //   let latitude = ...
+        //   let longitude = ...
+        //   storeDataQuality.filteredItemsUniqueLocations[locationName]['coordinates'].add([latitude, longitude].join(','));
+        //   storeDataQuality.showMap = true;
+        // }
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validActivity) {
-        let activities = resolveProperty(item, 'activity');
+        const activities = resolveProperty(item, 'activity');
         let itemUniqueActivityIds = new Set();
 
         activities
@@ -903,35 +934,35 @@ function postDataQuality() {
           });
 
         if (itemUniqueActivityIds.size > 0) {
-          numFilteredItemsWithValidActivity++;
+          storeDataQuality.numFilteredItemsWithValidActivity++;
         }
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validName) {
-        numFilteredItemsWithValidName++;
+        storeDataQuality.numFilteredItemsWithValidName++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validDescription) {
-        numFilteredItemsWithValidDescription++;
+        storeDataQuality.numFilteredItemsWithValidDescription++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validGeo) {
-        numFilteredItemsWithValidGeo++;
+        storeDataQuality.numFilteredItemsWithValidGeo++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validDate) {
-        numFilteredItemsWithValidDate++;
         const date = new Date(item.data.startDate);
         const dateString = date.toISOString().slice(0, 10); // 'YYYY-MM-DD'
         storeDataQuality.filteredItemsUniqueDates.set(dateString, (storeDataQuality.filteredItemsUniqueDates.get(dateString) || 0) + 1);
+        storeDataQuality.numFilteredItemsWithValidDate++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -946,13 +977,13 @@ function postDataQuality() {
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validChildUrl) {
-        numFilteredItemsWithValidChildUrl++;
+        storeDataQuality.numFilteredItemsWithValidChildUrl++;
       }
 
       // -------------------------------------------------------------------------------------------------
 
       if (storeDataQuality.dqFlags[item.id].DQ_validParentUrl) {
-        numFilteredItemsWithValidParentUrl++;
+        storeDataQuality.numFilteredItemsWithValidParentUrl++;
       }
 
       // -------------------------------------------------------------------------------------------------
@@ -971,11 +1002,26 @@ function postDataQuality() {
     } // If-statement selecting filtered items
   } // For-loop over all items
 
-  //console.log(storeDataQuality.items);
+  // console.log(storeDataQuality.items);
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
+
+  // -------------------------------------------------------------------------------------------------
+
+  $("#resultTab").addClass("active");
+  $("#resultPanel").addClass("active");
+  $("#jsonTab").removeClass("active disabled");
+  $("#jsonPanel").removeClass("active disabled");
+  $("#apiTab").removeClass("active disabled");
+  $("#apiPanel").removeClass("active disabled");
+  $("#organizerTab").removeClass("active disabled");
+  $("#organizerPanel").removeClass("active disabled");
+  $("#locationTab").removeClass("active disabled");
+  $("#locationPanel").removeClass("active disabled");
+  $("#mapTab").removeClass("active disabled");
+  $("#mapPanel").removeClass("active disabled");
 
   if (storeDataQuality.numFilteredItems === 0) {
     results.empty();
@@ -984,11 +1030,11 @@ function postDataQuality() {
       "    <div>No matching results found.</div>" +
       "</div>"
     );
-    $("#resultTab").addClass("active");
-    $("#resultPanel").addClass("active");
+    // $("#resultTab").addClass("active"); // Shouldn't be needed due to above settings ...
+    // $("#resultPanel").addClass("active"); // Shouldn't be needed due to above settings ...
     $("#jsonTab").addClass("disabled");
-    $("#apiTab").removeClass("active");
-    $("#apiPanel").removeClass("active");
+    // $("#apiTab").removeClass("active"); // Shouldn't be needed due to above settings ...
+    // $("#apiPanel").removeClass("active"); // Shouldn't be needed due to above settings ...
     $("#organizerTab").addClass("disabled");
     $("#locationTab").addClass("disabled");
     $("#mapTab").addClass("disabled");
@@ -1017,23 +1063,28 @@ function postDataQuality() {
   // Convert 'lat,lon' strings to [lat,lon] numeric arrays:
   for (const locationInfo of Object.values(storeDataQuality.filteredItemsUniqueLocations)) {
     locationInfo.coordinates = locationInfo.coordinates.map(x => x.split(',').map(x => Number(x)));
+    if (!storeDataQuality.showMap) {
+      if (locationInfo.coordinates.length > 0) {
+        storeDataQuality.showMap = true;
+      }
+    }
   }
 
-  // Create a new map from the first x entries:
+  // Create a new map from the first x activities:
   const topActivities = new Map(Object.entries(storeDataQuality.filteredItemsUniqueActivityIds).slice(0, 5));
 
   // -------------------------------------------------------------------------------------------------
 
-  updateOrganizerList(storeDataQuality.filteredItemsUniqueOrganizers);
-  $("#organizer").empty()
+  setOrganizers(storeDataQuality.filteredItemsUniqueOrganizers);
+  $("#organizer").empty();
   addOrganizerPanel(storeDataQuality.filteredItemsUniqueOrganizers);
   console.log(`Number of unique organizers: ${Object.keys(storeDataQuality.filteredItemsUniqueOrganizers).length}`);
   // console.dir(`storeDataQuality.filteredItemsUniqueOrganizers: ${Object.keys(storeDataQuality.filteredItemsUniqueOrganizers)}`);
 
-  updateLocationList(storeDataQuality.filteredItemsUniqueLocations);
-  $("#location").empty()
+  setLocations(storeDataQuality.filteredItemsUniqueLocations);
+  $("#location").empty();
   addLocationPanel(storeDataQuality.filteredItemsUniqueLocations);
-  $("#map").empty()
+  $("#map").empty();
   if (storeDataQuality.showMap === true) {
     addMapPanel(storeDataQuality.filteredItemsUniqueLocations);
   }
@@ -1043,7 +1094,7 @@ function postDataQuality() {
   console.log(`Number of unique locations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations).length}`);
   // console.dir(`storeDataQuality.filteredItemsUniqueLocations: ${Object.keys(storeDataQuality.filteredItemsUniqueLocations)}`);
 
-  updateActivityList(storeDataQuality.filteredItemsUniqueActivityIds);
+  setActivities(scheme_1.generateSubset(Object.keys(storeDataQuality.filteredItemsUniqueActivityIds)));
   console.log(`Number of unique activities: ${Object.keys(storeDataQuality.filteredItemsUniqueActivityIds).length}`);
   // console.dir(`storeDataQuality.filteredItemsUniqueActivityIds: ${Object.keys(storeDataQuality.filteredItemsUniqueActivityIds)}`);
 
@@ -1051,37 +1102,37 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with matching activities: ${numFilteredItemsWithValidActivity}`);
+  console.log(`Number of items with matching activities: ${storeDataQuality.numFilteredItemsWithValidActivity}`);
 
-  const percent3_a = (numFilteredItemsWithValidActivity / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent3_a = (storeDataQuality.numFilteredItemsWithValidActivity / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded3_a = percent3_a.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid name: ${numFilteredItemsWithValidName}`);
+  console.log(`Number of items with valid name: ${storeDataQuality.numFilteredItemsWithValidName}`);
 
-  const percent3_b = (numFilteredItemsWithValidName / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent3_b = (storeDataQuality.numFilteredItemsWithValidName / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded3_b = percent3_b.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid description: ${numFilteredItemsWithValidDescription}`);
+  console.log(`Number of items with valid description: ${storeDataQuality.numFilteredItemsWithValidDescription}`);
 
-  const percent3_c = (numFilteredItemsWithValidDescription / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent3_c = (storeDataQuality.numFilteredItemsWithValidDescription / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded3_c = percent3_c.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid postcode or lat-lon coordinates: ${numFilteredItemsWithValidGeo}`);
+  console.log(`Number of items with valid postcode or lat-lon coordinates: ${storeDataQuality.numFilteredItemsWithValidGeo}`);
 
-  const percent2 = (numFilteredItemsWithValidGeo / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent2 = (storeDataQuality.numFilteredItemsWithValidGeo / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded2 = percent2.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid present/future dates: ${numFilteredItemsWithValidDate}`);
+  console.log(`Number of items with valid present/future dates: ${storeDataQuality.numFilteredItemsWithValidDate}`);
 
-  const percent1 = (numFilteredItemsWithValidDate / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent1 = (storeDataQuality.numFilteredItemsWithValidDate / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded1 = percent1.toFixed(1);
 
   // Sort the storeDataQuality.filteredItemsUniqueDates Map by date, in ascending order
@@ -1095,16 +1146,16 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid URLs: ${numFilteredItemsWithValidChildUrl}`);
+  console.log(`Number of items with valid URLs: ${storeDataQuality.numFilteredItemsWithValidChildUrl}`);
 
-  const percent4_a = (numFilteredItemsWithValidChildUrl / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent4_a = (storeDataQuality.numFilteredItemsWithValidChildUrl / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded4_a = percent4_a.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
 
-  console.log(`Number of items with valid parent URLs: ${numFilteredItemsWithValidParentUrl}`);
+  console.log(`Number of items with valid parent URLs: ${storeDataQuality.numFilteredItemsWithValidParentUrl}`);
 
-  const percent4_b = (numFilteredItemsWithValidParentUrl / storeDataQuality.numFilteredItems) * 100 || 0;
+  const percent4_b = (storeDataQuality.numFilteredItemsWithValidParentUrl / storeDataQuality.numFilteredItems) * 100 || 0;
   const rounded4_b = percent4_b.toFixed(1);
 
   // -------------------------------------------------------------------------------------------------
@@ -1114,6 +1165,8 @@ function postDataQuality() {
   // -------------------------------------------------------------------------------------------------
 
   if (stopTriggered) { throw new Error('Stop triggered'); }
+
+  // -------------------------------------------------------------------------------------------------
 
   if (!showingSample) {
     let spark1Count;
@@ -1221,7 +1274,6 @@ function postDataQuality() {
         }
       }
     }
-
 
     // -------------------------------------------------------------------------------------------------
 
@@ -1513,7 +1565,6 @@ function postDataQuality() {
     }
 
     chart2 = new ApexCharts(document.querySelector("#apexchart2"), options_percentItemsWithActivity);
-
     sleep(200).then(() => { chart2.render().then(() => chart2rendered = true); });
 
     // -------------------------------------------------------------------------------------------------
@@ -1711,7 +1762,6 @@ function postDataQuality() {
       chart5a.render().then(() => chart5arendered = true);
       chart5b.render().then(() => chart5brendered = true);
     });
-
 
     // -------------------------------------------------------------------------------------------------
 
@@ -1926,6 +1976,7 @@ function postDataQuality() {
     chart1 = new ApexCharts(document.querySelector("#apexchart1"), sparkTotal1);
     chart1.render();
 
+    // -------------------------------------------------------------------------------------------------
 
     let spark6 = {
       chart: {
@@ -1999,6 +2050,7 @@ function postDataQuality() {
 
     chart6 = new ApexCharts(document.querySelector("#apexchart6"), spark6);
     chart6.render().then(() => chart6rendered = true);
+
     $("#apiTab").addClass("disabled");
     $("#apiPanel").addClass("disabled");
     $('#clear').prop('disabled', true);
