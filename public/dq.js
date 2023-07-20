@@ -639,38 +639,44 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
-  // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
-  // truly be the case and needs to be investigated.
+  // TODO: This is a fix for an URL read issue with sample data. Needs to be investigated.
 
-  for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
-    if (itemIdxs.length === 1) {
-      Object.values(storeDataQuality.dqFlags)[itemIdxs[0]].DQ_validChildUrl = true;
-      storeDataQuality.dqSummary.DQ_validChildUrl++;
-    }
-  }
+  if (!showingSample) {
 
-  // -------------------------------------------------------------------------------------------------
+    // TODO: This counts unique explicit URL strings. We are assuming these explicit URL strings are
+    // specific booking URLs in many/most cases for this to be the metric we're after, but this may not
+    // truly be the case and needs to be investigated.
 
-  for (const [parentIdx, parent] of Object.values(parents).entries()) {
-    if (parent.url && typeof parent.url === 'string') {
-      if (!parentUrlsParentIdxs.hasOwnProperty(parent.url)) {
-        parentUrlsParentIdxs[parent.url] = [];
-      }
-      parentUrlsParentIdxs[parent.url].push(parentIdx);
-    }
-  }
-
-  for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
-    if (parentIdxs.length === 1) {
-      for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
-        Object.values(storeDataQuality.dqFlags)[itemIdx].DQ_validParentUrl = true;
-        storeDataQuality.dqSummary.DQ_validParentUrl++;
+    for (const itemIdxs of Object.values(itemUrlsItemIdxs)) {
+      if (itemIdxs.length === 1) {
+        Object.values(storeDataQuality.dqFlags)[itemIdxs[0]].DQ_validChildUrl = true;
+        storeDataQuality.dqSummary.DQ_validChildUrl++;
       }
     }
-  }
 
-  storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
+    // -------------------------------------------------------------------------------------------------
+
+    for (const [parentIdx, parent] of Object.values(parents).entries()) {
+      if (parent.url && typeof parent.url === 'string') {
+        if (!parentUrlsParentIdxs.hasOwnProperty(parent.url)) {
+          parentUrlsParentIdxs[parent.url] = [];
+        }
+        parentUrlsParentIdxs[parent.url].push(parentIdx);
+      }
+    }
+
+    for (const parentIdxs of Object.values(parentUrlsParentIdxs)) {
+      if (parentIdxs.length === 1) {
+        for (const itemIdx of Object.values(parentIdsItemIdxs)[parentIdxs[0]]) {
+          Object.values(storeDataQuality.dqFlags)[itemIdx].DQ_validParentUrl = true;
+          storeDataQuality.dqSummary.DQ_validParentUrl++;
+        }
+      }
+    }
+
+    storeDataQuality.dqSummary.numParent = Object.keys(parents).length;
+
+  }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1923,7 +1929,7 @@ function postDataQuality() {
         }
       },
       subtitle: {
-        text: ["Session Series","Facility Uses"],
+        text: ["Session Series", "Facility Uses"],
         align: 'left',
         offsetY: 40,
         style: {
@@ -1943,9 +1949,9 @@ function postDataQuality() {
       xaxis: {
         show: false,
         showForNullSeries: false,
-        labels : {
+        labels: {
           show: false
-       },
+        },
         floating: false, //true takes y axis out of plot space
         axisBorder: {
           show: false,
@@ -2032,7 +2038,7 @@ function postDataQuality() {
         }
       },
       subtitle: {
-        text: ["Scheduled Sessions","Facility Use Slots","Events"],
+        text: ["Scheduled Sessions", "Facility Use Slots", "Events"],
         align: 'right',
         offsetY: 40,
         style: {
