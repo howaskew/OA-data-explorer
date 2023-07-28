@@ -2,14 +2,16 @@ let scheme_1 = null;
 let scheme_2 = null;
 
 let organizerListRefresh;
-let activityListRefresh;
 let locationListRefresh;
+let activityListRefresh;
 
 let retryCount;
 const retryCountMax = 3;
+let retryCountdown;
 const retryCountdownMax = 5;
 
 let loadingTimeout;
+let retryInterval;
 let inProgress;
 let stopTriggered;
 let showingSample;
@@ -27,7 +29,6 @@ let minAge;
 let maxAge;
 let keywords;
 
-let progress;
 let chart1;
 let chart2;
 let chart3;
@@ -46,11 +47,13 @@ let map;
 let activeJSONButton;
 const activeJSONButtonColor = '#009ee3';
 const inactiveJSONButtonColor = '#6c757d';
-const storeIngressOrder1ApiColor = '#009ee3';
-const storeIngressOrder2ApiColor = '#f6a635';
+const storeIngressOrder1ApiColor = '#2ebf68';
+const storeIngressOrder2ApiColor = '#28a770';
 
 let feeds = {};
 let providers = {};
+
+let summary = {}; // To hold total counts from database
 
 let storeIngressOrder1;
 let storeIngressOrder2;
@@ -61,6 +64,10 @@ let storeCombinedItems; // This is present only if we have valid storeSuperEvent
 // These will simply point to storeIngressOrder1 and storeIngressOrder2:
 let storeSuperEvent;
 let storeSubEvent;
+
+// These will simply point to the current store and URL being loaded, used for returning to in case of need to retry
+let storeCurrent;
+let originalUrlStrCurrent;
 
 const superEventContentTypesSeries = ['SessionSeries'];
 const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
@@ -109,9 +116,16 @@ let storeIngressOrder1FirstPageFromUser = null; // Don't add this to clearGlobal
 let endpoint = undefined; // This is null for the case of showing all OpenActive feeds, so undefined is useful and distinct. Don't add this to clearGlobals(), let it be exclusively controlled by setEndpoint().
 let type; // This may be the feedType, itemDataType or itemKind, depending on availability
 let link; // Linking variable between super-event and sub-event feeds
-let summary = {} // To hold total counts from database
 
-let cp = $("#combineProgress");
+let message;
+let messageStopTriggered = 'Stopping ...';
+let messageStopEnacted = 'Stop enacted';
+let messageStopDone = 'Stopped';
+let messageId;
+let messageIdProgress;
+
+let progressIndicator = "<img src='images/ajax-loader.gif' alt='In progress'>";
+$('#progress-indicator').append(progressIndicator);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -158,24 +172,79 @@ axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer
 
 // -------------------------------------------------------------------------------------------------
 
+// messageIn can be a string or an array. The array option is to allow a different message to be printed
+// to the user console than the dev console, if desired. The first element will go to the user console,
+// and the last element will go to the dev console. If a string is given instead of an array, then
+// both messages are the same. In all cases, messages are always printed to the user console but only
+// printed to the dev console if echoInDevConsole is true.
+function setLogMessage(messageIn, messageType, echoInDevConsole=false) {
+
+  // This global variable can be used to track and modify a particular user console message after it
+  // has been printed, if need be. It is returned from this function for that purpose, primarily intended
+  // for changing the colour of the status dot when status changes.
+  messageId++;
+
+  if (typeof messageIn === 'string') {
+    messageIn = [messageIn];
+  }
+
+  if (messageType === 'heading') {
+    messageOut = `<div id='log-message-${messageId}' class='top left-right log-heading'>${messageIn[0]}</div>`;
+  }
+  else {
+    messageOut = `<div id='log-message-${messageId}' class='left-right'><span id='log-dot-${messageId}' class='log-dot log-dot-${messageType}'></span>${messageIn[0]}</div>`;
+  }
+
+  $('#log').append(messageOut);
+  $('#log').scrollTop($('#log')[0].scrollHeight);
+
+  if (echoInDevConsole) {
+    switch (messageType) {
+      case ('heading'):
+        console.warn(messageIn[messageIn.length-1]);
+        break;
+      case ('warn'):
+        console.warn(messageIn[messageIn.length-1]);
+        break;
+      case ('error'):
+        console.warn(messageIn[messageIn.length-1]);
+        break;
+      default:
+        console.log(messageIn[messageIn.length-1]);
+        break;
+    }
+  }
+
+  return messageId;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+function updateLogMessage(messageIdCurrent, messageTypeIn, messageTypeOut) {
+  $(`#log-dot-${messageIdCurrent}`).removeClass(`log-dot-${messageTypeIn}`).addClass(`log-dot-${messageTypeOut}`);
+}
+
+// -------------------------------------------------------------------------------------------------
+
 async function execute() {
   if (!inProgress) {
-    updateParameters('execute', true);
     clear(true);
     inProgress = true; // Here this must come after clear()
+    $('#progress-indicator').show();
 
+    setLogMessage('Preparing', 'heading', true);
     await setStoreIngressOrder1FirstPage();
     await setStoreFeedType(storeIngressOrder1);
     await setStoreIngressOrder2FirstPage();
     await setStoreFeedType(storeIngressOrder2);
 
     if (storeIngressOrder1.firstPage) {
-      console.log(`Started loading storeIngressOrder1: ${storeIngressOrder1.firstPage}`);
       loadingStart();
     }
     else {
-      console.error('No valid first page for storeIngressOrder1, can\'t begin');
+      setLogMessage('Feed-1 has no valid first page, can\'t begin', 'error', true);
       $('#execute').prop('disabled', false);
+      $('#progress-indicator').hide();
       inProgress = false;
     }
   }
@@ -185,7 +254,6 @@ async function execute() {
 
 function loadingStart() {
   updateScroll();
-  $('#progress').append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
 
   loadingTimeout = setTimeout(
     () => {
@@ -196,11 +264,12 @@ function loadingStart() {
     5000
   );
 
+  setLogMessage('Loading', 'heading', true);
   try {
     setStoreItems(storeIngressOrder1.firstPage, storeIngressOrder1);
   }
   catch (error) {
-    console.error(error.message);
+    setLogMessage(error.message, 'error', true);
     stop();
     return;
   }
@@ -211,9 +280,8 @@ function loadingStart() {
 function loadingComplete() {
   clearTimeout(loadingTimeout);
   $('#loading-time').hide();
-  $('#progress').append('<div id="DQProgress"</div>');
   $('#resultTab').text('Live Data');
-  $('#dq_label').fadeIn();
+  $('#dq-label').fadeIn();
   $('.explainer').fadeIn();
 
   let funcs = [
@@ -223,12 +291,13 @@ function loadingComplete() {
     postDataQuality,
   ];
 
+  setLogMessage('Analysing', 'heading', true);
   for (const func of funcs) {
     try {
       func();
     }
     catch (error) {
-      console.error(error.message);
+      setLogMessage(error.message, 'error', true);
       stop();
       return;
     }
@@ -238,9 +307,10 @@ function loadingComplete() {
 // -------------------------------------------------------------------------------------------------
 
 function stop() {
+  setLogMessage(messageStopDone, 'warn', true);
+  $('#progress-indicator').hide();
   inProgress = false; // Here this must come before clear()
   clear();
-  console.warn('Stopped');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -251,6 +321,7 @@ function clear(execute = false) {
   $('#clear').prop('disabled', true);
   if (!inProgress) {
     clearForm();
+    clearRetry();
     clearDisplay();
     clearFilters();
     clearGlobals();
@@ -266,11 +337,19 @@ function clear(execute = false) {
   }
   else {
     stopTriggered = true;
+    setLogMessage(messageStopTriggered, 'warn', true);
+
     clearTimeout(loadingTimeout);
     $('#loading-time').hide();
-    $('#progress').append('<div id="stopping"></div>');
-    $('#stopping').append('<p>Stopping ...</p>');
-    $('#stopping').append('<img src="images/ajax-loader.gif" alt="Stopping ...">');
+
+    if (retryInterval) {
+      clearInterval(retryInterval);
+      // We have this message as 'error' rather than 'warn' as in general stop triggered is handled as a
+      // caught error:
+      setLogMessage(messageStopEnacted, 'error', true);
+      stop();
+      return;
+    }
   }
 }
 
@@ -292,13 +371,30 @@ function clearForm() {
 
 // -------------------------------------------------------------------------------------------------
 
+function clearRetry() {
+  // console.warn(`${luxon.DateTime.now()} clearRetry`);
+  retryCount = 0;
+  retryCountdown = retryCountdownMax;
+  $('#retryCount').text(retryCount);
+  $('#retryCountAuto').text(retryCount + 1);
+  $('#retryCountMax').text(retryCountMax);
+  $('#retryCountdown').text(retryCountdown);
+  $('#loading-error').hide();
+  $('#retry-auto').show();
+  $('#retry-manual').hide();
+  $('#retry').hide();
+}
+
+// -------------------------------------------------------------------------------------------------
+
 function clearDisplay() {
   // console.warn(`${luxon.DateTime.now()} clearDisplay`);
-  $('#progress').empty();
-  $('#loading-time').hide();
+  $('#log').empty();
+  $('#progress-indicator').hide();
   $('#record-limit').hide();
-  $('#filterRows').hide();
-  $('#filter_controls').hide();
+  $('#loading-time').hide();
+  $('#filter-menus').hide();
+  $('#filter-switches').hide();
   $('#output').hide();
   $('#tabs').hide();
   clearCharts();
@@ -356,11 +452,14 @@ function clearFilters() {
 
 function clearGlobals() {
   // console.warn(`${luxon.DateTime.now()} clearGlobals`);
+  message = '';
+  messageId = 0;
+  messageIdProgress = null;
   organizerListRefresh = 0;
   locationListRefresh = 0;
   activityListRefresh = 0;
-  retryCount = 0;
   loadingTimeout = null;
+  retryInterval = null;
   inProgress = false;
   stopTriggered = false;
   showingSample = false;
@@ -375,6 +474,8 @@ function clearGlobals() {
   storeCombinedItems = [];
   storeSuperEvent = null;
   storeSubEvent = null;
+  storeCurrent = null;
+  originalUrlStrCurrent = '';
   type = null;
   link = null;
   clearStore(storeIngressOrder1);
@@ -387,19 +488,19 @@ function clearGlobals() {
 
 function clearStore(store) {
   // console.warn(`${luxon.DateTime.now()} clearStore`);
-  store.timeHarvestStart = luxon.DateTime.now();
+  store.timeHarvestStart = null;
   store.items = {};
   store.urls = {};
-  store.feedType = null; // From the dataset page, not the RPDE feed
-  store.itemKind = null; // From the RPDE feed
-  store.itemDataType = null; // From the RPDE feed
-  store.eventType = null; // Either 'superEvent' or 'subEvent'
   store.firstPageOrigin = null;
   store.firstPage = null;
   store.penultimatePage = null;
   store.lastPage = null;
   store.numPages = 0;
   store.numItems = 0;
+  store.feedType = null; // From the dataset page, not the RPDE feed
+  store.itemKind = null; // From the RPDE feed
+  store.itemDataType = null; // From the RPDE feed
+  store.eventType = null; // Either 'superEvent' or 'subEvent'
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -435,37 +536,36 @@ function clearCache(store) {
 
 function showSample() {
   getSummary();
+
   $('#resultTab').text('Sample Data');
-  $('#dq_label').hide();
-  $('#filter_controls').fadeOut();
+  $('#dq-label').hide();
+  $('#filter-switches').fadeOut();
   $('.explainer').fadeOut();
 
   // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/download', function (sampleData) {
-    //console.log(sampleData);
     storeSample.items = sampleData;
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
+      showingSample = true;
 
-      //const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
-
+      // const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
       const uniqueWords = new Set();
       const totalUniqueItemCount = Object.keys(storeSample.items).reduce((count, key) => {
         const words = key.split(" ");
         words.forEach(word => uniqueWords.add(word));
         return count + words.length;
       }, 0);
-
       const totalItemCount = uniqueWords.size;
 
+      setLogMessage('Exploring OpenActive Data', 'heading');
+      setLogMessage(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.`, 'warn');
+      setLogMessage('The sample data shown below is drawn from a small sample taken from each feed.', 'warn');
+      setLogMessage('Explore the sample data or select a data provider and data type then press \'Go\' to load and view live data.', 'warn');
 
-      $('#progress').append('<h4>Exploring OpenActive Data</h4>');
-      $('#progress').append(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.<br/>`);
-      $('#progress').append(`The sample data shown is drawn from a small sample taken from each feed.<br/>`);
-      $('#progress').append(`Explore the sample data below or select a provider and feed to press 'Go' to load and view live data.<br/>`);
-      showingSample = true;
       clearStore(storeDataQuality);
       storeDataQuality.items = Object.values(storeSample.items);
+
       console.log('Processing sample data');
       setStoreDataQualityItemFlags();
       postDataQuality();
@@ -473,7 +573,6 @@ function showSample() {
   })
     .catch(error => {
       console.error('Error from sample:', error);
-      // Handle the error if needed
     });
 }
 
@@ -521,37 +620,38 @@ function disableFilters() {
 
 // -------------------------------------------------------------------------------------------------
 
-//This replaces the loadRPDE function in Nick's original visualiser adaptation
-//Note the displaying of results happens in dq.js now, to improve filtering
+// This replaces the loadRPDE function in Nick's original visualiser adaptation
+// Note the displaying of results happens in dq.js now, to improve filtering
 
 function setStoreItems(originalUrlStr, store) {
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
-  let results = $("#results");
-  progress = $("#progress");
-
-  if (store.ingressOrder === 1 && store.numItems === 0) {
-    results.empty();
-    results.append("<div id='resultsDiv'</div>");
-    progress.empty();
-    progress.append("<div id='progressDiv1'</div>");
-    $("#progressDiv1").append("<div><img src='images/ajax-loader.gif' alt='Loading'></div>");
+  // If we are retrying following an error, then arguments are not given to this function and we use
+  // the latest that were in use instead:
+  if (!originalUrlStr) {
+    originalUrlStr = originalUrlStrCurrent;
   }
-  else if (store.ingressOrder === 2 && store.numItems === 0) {
-    progress.append("<div id='progressDiv2'</div>");
+  else {
+    originalUrlStrCurrent = originalUrlStr;
   }
 
-  if (store.ingressOrder === 1) {
-    progress = $("#progressDiv1");
-  } else {
-    progress = $("#progressDiv2");
+  if (!store) {
+    store = storeCurrent;
+  }
+  else if (
+    store.numPages === 0 &&
+    retryCount === 0
+  ) {
+    storeCurrent = store;
+    store.timeHarvestStart = luxon.DateTime.now();
+    setLogMessage([
+      `Feed-${store.ingressOrder}: ${store.feedType || ''} <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a>`,
+      `Feed-${store.ingressOrder}: ${store.feedType || ''} ${store.firstPage}`], 'done', true);
   }
 
   let url = setUrlStr(originalUrlStr, store);
-  if (!url) {
-    throw new Error(`Invalid URL: ${originalUrlStr}`);
-  }
+  if (!url) { throw new Error(`Invalid URL: ${originalUrlStr}`); }
 
   // Note that the following commented example does not work as intended, as 'url' is a special
   // parameter name and becomes the actual URL of the GET request, so it doesn't end up going to
@@ -574,11 +674,21 @@ function setStoreItems(originalUrlStr, store) {
         response.data.hasOwnProperty('next')
       ) {
 
-        retryCount = 0;
+        if (retryCount > 0) {
+          clearRetry();
+        }
+
+        if (store.numPages === 0) {
+          messageIdProgress = setLogMessage(`Loaded <span id='numPages${store.ingressOrder}'>0</span> pages, containing <span id='numItems${store.ingressOrder}'>0</span> items, in <span id='timeTaken${store.ingressOrder}'>0.00</span> seconds...`, 'busy');
+          addApiPanel(`Feed-${store.ingressOrder}`, store.ingressOrder, true);
+        }
+
         store.numPages++;
         addApiPanel(url, store.ingressOrder);
 
         for (const item of response.data.items) {
+          // This is intentionally not decremented on item delete from the store, it is the count of all items
+          // encountered in the feed, not the count of items in the store at any one time:
           store.numItems++;
           // For those records that are 'live' in the feed ...
           if (item.state === 'updated') {
@@ -588,7 +698,7 @@ function setStoreItems(originalUrlStr, store) {
               store.urls[item.id] = url;
             }
           }
-          // For those records that are no longer 'live' ...
+          // For those records that are no longer 'live' in the feed ...
           else if ((item.state === 'deleted') && store.items.hasOwnProperty(item.id)) {
             // Delete any matching items from the store:
             delete store.items[item.id];
@@ -596,21 +706,22 @@ function setStoreItems(originalUrlStr, store) {
           }
         }
 
-        const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
+        const timeTaken = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
+        $(`#numPages${store.ingressOrder}`).text(store.numPages);
+        $(`#numItems${store.ingressOrder}`).text(store.numItems);
+        $(`#timeTaken${store.ingressOrder}`).text(timeTaken);
+
         if (
           originalUrlStr !== response.data.next &&
           url !== response.data.next &&
           store.numItems < 25000
         ) {
-          progress.empty();
-          progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
-          progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
           store.penultimatePage = url;
           try {
             setStoreItems(response.data.next, store);
           }
           catch (error) {
-            console.error(error.message);
+            setLogMessage(error.message, 'error', true);
             stop();
             return;
           }
@@ -618,16 +729,6 @@ function setStoreItems(originalUrlStr, store) {
         else {
           if (store.numItems === 25000) {
             $('#record-limit').fadeIn();
-          }
-          progress.empty();
-          progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
-          progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems}; Completed in ${elapsed} seconds. </br>`);
-
-          if (
-            response.data.items.length === 0 &&
-            store.ingressOrder === 1
-          ) {
-            results.append('<div><p>No results found</p></div>');
           }
 
           store.lastPage = url;
@@ -640,70 +741,54 @@ function setStoreItems(originalUrlStr, store) {
             store.feedType !== store.itemDataType ||
             store.itemKind !== store.itemDataType
           ) {
-            console.warn(
-              `storeIngressOrder${store.ingressOrder} mismatched content types:\n` +
-              `\tfeedType: ${store.feedType}\n` +
-              `\titemKind: ${store.itemKind}\n` +
-              `\titemDataType: ${store.itemDataType}`
-            );
+            message = `Feed-${store.ingressOrder} mismatched content types:<br>` +
+              `&emsp;&emsp;feedType: ${store.feedType}<br>` +
+              `&emsp;&emsp;itemKind: ${store.itemKind}<br>` +
+              `&emsp;&emsp;itemDataType: ${store.itemDataType}`;
+            setLogMessage([message, message.replace('<br>', '\n').replace('&emsp;&emsp;', '\t')], 'warn', true);
           }
 
-          console.log(`Finished loading storeIngressOrder${store.ingressOrder}`);
+          updateLogMessage(messageIdProgress, 'busy', 'done');
 
           if (
             store.ingressOrder === 1 &&
             storeIngressOrder2.firstPage
           ) {
-            console.log(`Started loading storeIngressOrder2: ${storeIngressOrder2.firstPage}`);
             try {
               setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
             }
             catch (error) {
-              console.error(error.message);
+              setLogMessage(error.message, 'error', true);
               stop();
               return;
             }
           }
           else {
-            progress.append('<div id="combineProgress"></div>');
-            cp = $('#combineProgress');
-            cp.text('Processing data feed...');
-            cp.append('<div><img src="images/ajax-loader.gif" alt="Loading"></div>');
             sleep(100).then(() => { loadingComplete(); });
           }
         }
       }
-    }).catch(error => {
-      const elapsed = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds;
-      clearTimeout(loadingTimeout);
-      $('#loading-time').hide();
-      progress.empty();
-      progress.append(`Reading ${store.feedType || ''} feed: <a href='${store.firstPage}' target='_blank'>${store.firstPage}</a></br>`);
-      progress.append(`Pages loaded: ${store.numPages}; Items: ${store.numItems} in ${elapsed} seconds...</br>`);
-      progress.append(`API Request failed with message: ${error.message}</br>`);
-      // inProgress = false; // Don't enable this here - we must treat the auto-retries of retryRequest() as still in progress in order to get the correct behaviour from clear()
+    })
+    .catch(error => {
+      if (retryCount === 0) {
+        clearTimeout(loadingTimeout);
+        $('#loading-time').hide();
+        $('#loading-error-message').text(error.message);
+      }
+      else if (retryCount === retryCountMax) {
+        $('#retry-auto').hide();
+        $('#retry-manual').show();
+        $('#retry').show();
+      }
 
       if (retryCount < retryCountMax) {
-        retryCount++;
-        retryRequest(url, store);
+        retryAuto();
       }
       else {
+        $('#retryCount').text(retryCount);
+        $('#retry').prop('disabled', false);
+        $('#progress-indicator').hide();
         inProgress = false;
-        progress.append(`<div>${retryCount} retries automatically attempted. Click to manually retry again.</div>`);
-        progress.append('<div><button class="show-error btn btn-success">Retry</button></div>');
-
-        $('.show-error').on('click', function () {
-          retryCount++;
-          inProgress = true;
-          try {
-            setStoreItems(url, store);
-          }
-          catch (error) {
-            console.error(error.message);
-            stop();
-            return;
-          }
-        });
       }
     });
 
@@ -711,20 +796,28 @@ function setStoreItems(originalUrlStr, store) {
 
 // -------------------------------------------------------------------------------------------------
 
-function retryRequest(url, store) {
-  let countdown = retryCountdownMax;
-  progress.append(`<div>Retrying (${retryCount} of ${retryCountMax}) in <span id="countdown">${countdown}</span> seconds...</div>`);
-  const countdownElement = $('#countdown');
-  const countdownInterval = setInterval(() => {
-    countdownElement.text(countdown);
-    countdown--;
-    if (countdown < 0) {
-      clearInterval(countdownInterval);
+function retryAuto() {
+  retryInterval = setInterval(() => {
+    if (retryCount === 0) {
+      $('#loading-error').show();
+    }
+    if (retryCountdown === retryCountdownMax) {
+      $('#retryCountAuto').text(retryCount + 1);
+    }
+    if (retryCountdown > 0) {
+      $('#retryCountdown').text(retryCountdown);
+      retryCountdown--;
+    }
+    else {
+      clearInterval(retryInterval);
+      retryInterval = null;
+      retryCountdown = retryCountdownMax;
+      retryCount++;
       try {
-        setStoreItems(url, store);
+        setStoreItems();
       }
       catch (error) {
-        console.error(error.message);
+        setLogMessage(error.message, 'error', true);
         stop();
         return;
       }
@@ -734,8 +827,24 @@ function retryRequest(url, store) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setUrlStr(originalUrlStr, store) {
+function retry() {
+  $('#retry').prop('disabled', true);
+  retryCount++;
+  inProgress = true;
+  $('#progress-indicator').show();
+  try {
+    setStoreItems();
+  }
+  catch (error) {
+    setLogMessage(error.message, 'error', true);
+    stop();
+    return;
+  }
+}
 
+// -------------------------------------------------------------------------------------------------
+
+function setUrlStr(originalUrlStr, store) {
   let urlStr;
   let urlSearchCounter = 0;
   let urlSearchComplete = false;
@@ -778,7 +887,6 @@ function setUrlStr(originalUrlStr, store) {
   }
 
   return null;
-
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -795,13 +903,15 @@ function setUrlObj(urlStr) {
 
 // -------------------------------------------------------------------------------------------------
 
-//Amended to handle embedded / nested superevents
+// Amended to handle embedded / nested superevents
 function resolveProperty(item, prop) {
-  return item.data && ((item.data.superEvent && item.data.superEvent[prop]) ||
+  return item.data && (
+    (item.data.superEvent && item.data.superEvent[prop]) ||
     (item.data.superEvent && item.data.superEvent.superEvent && item.data.superEvent.superEvent[prop]) ||
     (item.data.instanceOfCourse && item.data.instanceOfCourse[prop]) ||
     (item.data.facilityUse && item.data.facilityUse[prop]) ||
-    item.data[prop]);
+    item.data[prop]
+  );
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -815,24 +925,31 @@ function resolveDate(item, prop) {
 
 async function setStoreIngressOrder1FirstPage() {
   // console.warn(`${luxon.DateTime.now()} setStoreIngressOrder1FirstPage`);
+  let messageIdCurrent = setLogMessage(`Feed-1 URL: <span id='storeIngressOrder1FirstPage'>${progressIndicator}</span>`, 'busy');
+
   if (storeIngressOrder1FirstPageFromUser) {
     await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
       .then(response => {
         storeIngressOrder1.firstPage = (response.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
       })
       .catch(error => {
-        console.error(`Error from user URL: ${error.message}`);
+        setLogMessage(`Error from user URL: ${error.message}`, 'error', true);
       });
   }
   else {
     storeIngressOrder1.firstPage = $('#endpoint').val();
   }
+
+  $(`#storeIngressOrder1FirstPage`).text(storeIngressOrder1.firstPage);
+  updateLogMessage(messageIdCurrent, 'busy', 'done');
 }
 
 // -------------------------------------------------------------------------------------------------
 
 async function setStoreIngressOrder2FirstPage() {
   // console.warn(`${luxon.DateTime.now()} setStoreIngressOrder2FirstPage`);
+  let messageIdCurrent = setLogMessage(`Feed-2 URL: <span id='storeIngressOrder2FirstPage'>${progressIndicator}</span>`, 'busy');
+
   if (superEventContentTypesSeries.includes(storeIngressOrder1.feedType)) {
     await setStoreIngressOrder2FirstPageHelper(seriesUrlParts, sessionUrlParts);
   }
@@ -848,6 +965,9 @@ async function setStoreIngressOrder2FirstPage() {
   else {
     storeIngressOrder2.firstPage = null;
   }
+
+  $(`#storeIngressOrder2FirstPage`).text(storeIngressOrder2.firstPage);
+  updateLogMessage(messageIdCurrent, 'busy', 'done');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -889,11 +1009,12 @@ async function setStoreIngressOrder2FirstPageHelper(feedType1UrlParts, feedType2
 
 async function setStoreFeedType(store) {
   // console.warn(`${luxon.DateTime.now()} setStoreFeedType`);
+  let messageIdCurrent = setLogMessage(`Feed-${store.ingressOrder} type: <span id='storeIngressOrder${store.ingressOrder}FeedType'>${progressIndicator}</span>`, 'busy');
+
   if (!store.firstPage) {
     store.feedType = null;
-    return;
   }
-  if (storeIngressOrder1FirstPageFromUser) {
+  else if (storeIngressOrder1FirstPageFromUser) {
     if (seriesUrlParts.map(x => store.firstPage.includes(x)).includes(true)) {
       store.feedType = 'SessionSeries';
     }
@@ -913,11 +1034,16 @@ async function setStoreFeedType(store) {
   else {
     store.feedType = feeds[store.firstPage].type || null;
   }
+
+  $(`#storeIngressOrder${store.ingressOrder}FeedType`).text(store.feedType);
+  updateLogMessage(messageIdCurrent, 'busy', 'done');
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function setStoreItemKind(store) {
+  let messageIdCurrent = setLogMessage(`Feed-${store.ingressOrder} item kind: <span id='storeIngressOrder${store.ingressOrder}ItemKind'>${progressIndicator}</span>`, 'busy');
+
   let itemKinds = Object.values(store.items).map(item => {
     if (typeof item.kind === 'string') {
       return item.kind;
@@ -936,14 +1062,19 @@ function setStoreItemKind(store) {
       break;
     default:
       store.itemKind = 'mixed';
-      console.warn(`storeIngressOrder${store.ingressOrder} mixed item kinds: [${uniqueItemKinds}]`);
+      setLogMessage(`Feed-${store.ingressOrder} has mixed item kinds: [${uniqueItemKinds}]`, 'warn', true);
       break;
   }
+
+  $(`#storeIngressOrder${store.ingressOrder}ItemKind`).text(store.itemKind);
+  updateLogMessage(messageIdCurrent, 'busy', 'done');
 }
 
 // -------------------------------------------------------------------------------------------------
 
 function setStoreItemDataType(store) {
+  let messageIdCurrent = setLogMessage(`Feed-${store.ingressOrder} item data type: <span id='storeIngressOrder${store.ingressOrder}ItemDataType'>${progressIndicator}</span>`, 'busy');
+
   let itemDataTypes = Object.values(store.items).map(item => {
     if (item.data) {
       if (typeof item.data.type === 'string') {
@@ -967,9 +1098,12 @@ function setStoreItemDataType(store) {
       break;
     default:
       store.itemDataType = 'mixed';
-      console.warn(`storeIngressOrder${store.ingressOrder} mixed item data types: [${uniqueItemDataTypes}]`);
+      setLogMessage(`Feed-${store.ingressOrder} has mixed item data types: [${uniqueItemDataTypes}]`, 'warn', true);
       break;
   }
+
+  $(`#storeIngressOrder${store.ingressOrder}ItemDataType`).text(store.itemDataType);
+  updateLogMessage(messageIdCurrent, 'busy', 'done');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -978,11 +1112,11 @@ function setOrganizers(organizers) {
   organizerListRefresh++;
   let organizerListSelected = $('#organizer-list-selected').val() || '';
 
-  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  // Note: Removed classes [form-control, ml-1, mr-1] from the button, as they were messing with the button width. No apparent effect on functionality:
   $('#organizer-list-dropdown').empty();
   $('#organizer-list-dropdown').append(
     `<div id="organizer-list-dropdown-${organizerListRefresh}" class="dropdown hierarchy-select">
-        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button id="organizer-list-button" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="organizer-list-button">
             <div class="hs-searchbox">
@@ -1010,7 +1144,7 @@ function setOrganizers(organizers) {
   );
 
   $(`#organizer-list-dropdown-${organizerListRefresh}`).hierarchySelect({
-    width: '98%',
+    width: '100%',
     // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
     // Update other elements when a selection is made:
@@ -1034,11 +1168,11 @@ function setLocations(locations) {
   locationListRefresh++;
   let locationListSelected = $('#location-list-selected').val() || '';
 
-  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  // Note: Removed classes [form-control, ml-1, mr-1] from the button, as they were messing with the button width. No apparent effect on functionality:
   $('#location-list-dropdown').empty();
   $('#location-list-dropdown').append(
     `<div id="location-list-dropdown-${locationListRefresh}" class="dropdown hierarchy-select">
-          <button id="location-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <button id="location-list-button" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           </button>
           <div class="dropdown-menu" aria-labelledby="location-list-button">
               <div class="hs-searchbox">
@@ -1066,7 +1200,7 @@ function setLocations(locations) {
   );
 
   $(`#location-list-dropdown-${locationListRefresh}`).hierarchySelect({
-    width: '98%',
+    width: '100%',
     // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
     // Update other elements when a selection is made:
@@ -1090,11 +1224,11 @@ function setActivities(activities) {
   activityListRefresh++;
   let activityListSelected = $('#activity-list-selected').val() || '';
 
-  // Note: Removed class "form-control" from the button, as it was messing with the button width. No apparent effect on functionality:
+  // Note: Removed classes [form-control, ml-1, mr-1] from the button, as they were messing with the button width. No apparent effect on functionality:
   $('#activity-list-dropdown').empty();
   $('#activity-list-dropdown').append(
     `<div id="activity-list-dropdown-${activityListRefresh}" class="dropdown hierarchy-select">
-        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle ml-1 mr-1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <button id="activity-list-button" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         </button>
         <div class="dropdown-menu" aria-labelledby="activity-list-button">
             <div class="hs-searchbox">
@@ -1112,7 +1246,7 @@ function setActivities(activities) {
   $(`#activity-list-dropdown-${activityListRefresh} .hs-menu-inner`).append(renderTree(activities.getTopConcepts(), 1, []));
 
   $(`#activity-list-dropdown-${activityListRefresh}`).hierarchySelect({
-    width: '98%',
+    width: '100%',
     // Set initial dropdown state based on the hidden field's initial value:
     initialValueSet: true,
     // Update other elements when a selection is made:
@@ -1281,7 +1415,7 @@ function openValidator(item) {
 // -------------------------------------------------------------------------------------------------
 
 function addResultsPanel() {
-  let panel = $("#resultsDiv");
+  let panel = $("#results");
   panel.append(
     '<div class="row">' +
     '   <div class="col-md-1 col-sm-2 text-truncate">ID</div>' +
@@ -1297,12 +1431,20 @@ function addResultsPanel() {
 
 // -------------------------------------------------------------------------------------------------
 
-function addApiPanel(text, storeIngressOrder) {
+function addApiPanel(text, storeIngressOrder, isHeading=false) {
   let panel = $('#api');
-  let color = (storeIngressOrder === 1) ? storeIngressOrder1ApiColor : storeIngressOrder2ApiColor;
-  panel
-    .add(`<div style='margin:5px; padding: 5px; background-color: ${color};'><a href=${text} target='_blank' class='text-wrap' style='word-wrap: break-word; color: white;'>${text}</a></div>`)
-    .appendTo(panel);
+  if (isHeading) {
+    panel.append(
+      `<div class='api' style='background-color: ${(storeIngressOrder === 1) ? storeIngressOrder1ApiColor : storeIngressOrder2ApiColor}; color: white; text-align: center;'><h4 style='margin: 0;'>${text}</h4></div>`
+    );
+  }
+  else {
+    panel.append(
+      `<div class='api' style='background-color: ${(storeIngressOrder === 1) ? storeIngressOrder1ApiColor : storeIngressOrder2ApiColor};'>` +
+      `   <a href=${text} target='_blank' class='text-wrap' style='word-wrap: break-word; color: white;'>${text}</a>` +
+      `</div>`
+    );
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1474,7 +1616,7 @@ $('#mapTab').on('show.bs.tab', function () {
 // -------------------------------------------------------------------------------------------------
 
 function updateScroll() {
-  const element = document.getElementById('progress');
+  const element = document.getElementById('log');
   element.scrollTop = element.scrollHeight;
 }
 
@@ -1739,6 +1881,9 @@ function setPage() {
   });
   $("#clear").on("click", function () {
     clear();
+  });
+  $('#retry').on('click', function () {
+    retry();
   });
 
   $("#DQ_filterActivities").on("change", function () {
