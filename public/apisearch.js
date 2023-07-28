@@ -47,8 +47,8 @@ let map;
 let activeJSONButton;
 const activeJSONButtonColor = '#009ee3';
 const inactiveJSONButtonColor = '#6c757d';
-const storeIngressOrder1ApiColor = '#2ebf68';
-const storeIngressOrder2ApiColor = '#28a770';
+const storeIngressOrder1ApiColor = '#74cbf3';
+const storeIngressOrder2ApiColor = '#009ee3';
 
 let feeds = {};
 let providers = {};
