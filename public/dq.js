@@ -56,8 +56,7 @@ function setJSONButton(newActiveJSONButton) {
 // This is to allow the DQ filters to be applied along with original filters
 
 function postResults(item) {
-  results = $("#resultsDiv");
-  results.append(
+  $("#results").append(
     `<div id='row${storeDataQuality.numFilteredItems}' class='row rowhover'>` +
     `    <div id='text${storeDataQuality.numFilteredItems}' class='col-md-1 col-sm-2 text-truncate'>${item.id || item.data['@id']}</div>` +
     `    <div class='col'>${(resolveProperty(item, 'name') || '')}</div>` +
@@ -106,7 +105,7 @@ function postResults(item) {
 function setStoreSuperEventAndStoreSubEvent() {
   // console.warn(`${luxon.DateTime.now()} setStoreSuperEventAndStoreSubEvent`);
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -151,10 +150,10 @@ function setStoreSuperEventAndStoreSubEvent() {
     !storeSubEvent &&
     !type
   ) {
-    console.warn('Unknown content type, can\'t determine storeSuperEvent or storeSubEvent');
+    setLogMessage('Unknown content type, can\'t determine whether data refers to super-events or sub-events', 'warn', true);
   }
   else if (storeIngressOrder1[type] === storeIngressOrder2[type]) {
-    console.warn(`Matching content type for storeIngressOrder1 and storeIngressOrder2 of '${storeIngressOrder1[type]}', can\'t determine storeSuperEvent or storeSubEvent`);
+    setLogMessage(`Matching content type for feed-1 and feed-2 of '${storeIngressOrder1[type]}', can\'t determine whether data refers to super-events or sub-events`, 'warn', true);
     storeSuperEvent = null;
     storeSubEvent = null;
   }
@@ -168,8 +167,8 @@ function setStoreSuperEventAndStoreSubEvent() {
       // misleading and assessed before itemDataType
       // e.g. BwD (SessionSeries)
       // e.g. ANGUSalive (SessionSeries)
-      console.warn('DQ case 1: subEvent feed with embedded superEvent data');
-      cp.text('Unpacking data feed - subEvent feed with embedded superEvent data');
+      message = 'Identified a sub-event feed with embedded super-event data';
+      setLogMessage([message, `DQ case 1: ${message}`], 'done', true);
 
       if (storeSuperEvent.ingressOrder === 1) {
         storeSuperEvent = storeIngressOrder2;
@@ -198,7 +197,7 @@ function setStoreSuperEventAndStoreSubEvent() {
     }
     else {
       link = null;
-      console.warn('No feed linking variable, can\'t seek parents');
+      setLogMessage('No feed linking variable, can\'t seek parents', 'warn', true);
     }
 
     console.log(`Number of storeSuperEvent items: ${Object.keys(storeSuperEvent.items).length}`);
@@ -220,7 +219,7 @@ function setStoreSuperEventAndStoreSubEvent() {
 function setStoreDataQualityItems() {
   // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItems`);
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -237,14 +236,14 @@ function setStoreDataQualityItems() {
     // e.g. British Triathlon
     // e.g. SportSuite (SessionSeries)
     // e.g. Trafford (CourseInstance)
-    console.warn('DQ case 2: superEvent feed with embedded subEvent data');
-    cp.text('Unpacking data feed - superEvent feed with embedded subEvent data');
+    message = 'Identified a super-event feed with embedded sub-event data';
+    setLogMessage([message, `DQ case 2: ${message}`], 'done', true);
 
     clearStore(storeSubEvent);
     link = 'superEvent';
 
     for (const storeSuperEventItem of Object.values(storeSuperEvent.items)) {
-      if (stopTriggered) { throw new Error('Stop triggered'); }
+      if (stopTriggered) { throw new Error(messageStopEnacted); }
       if (storeSuperEventItem.data && storeSuperEventItem.data.subEvent && Array.isArray(storeSuperEventItem.data.subEvent)) {
         // Here subEvent is the array of all subEvents:
         const { subEvent, ...storeSuperEventItemDataReduced } = storeSuperEventItem.data;
@@ -281,12 +280,13 @@ function setStoreDataQualityItems() {
     Object.keys(storeSubEvent.items).length > 0 &&
     link
   ) {
-    console.warn('DQ case 3: storeSuperEvent and storeSubEvent both obtained and combined');
+    message = 'Identified separate super-event and sub-event feeds';
+    setLogMessage([message, `DQ case 3: ${message}`], 'done', true);
 
     storeCombinedItems = [];
-
+    let messageIdCurrent = setLogMessage(`Combining feeds: <span id='storeSubEventItemCount'>0</span> / <span>${Object.keys(storeSubEvent.items).length}</span> items`, 'busy');
     for (const [storeSubEventItemIdx, storeSubEventItem] of Object.values(storeSubEvent.items).entries()) {
-      if (stopTriggered) { throw new Error('Stop triggered'); }
+      if (stopTriggered) { throw new Error(messageStopEnacted); }
       if (storeSubEventItem.data && storeSubEventItem.data[link] && typeof storeSubEventItem.data[link] === 'string') {
         const storeSuperEventItemId = String(storeSubEventItem.data[link]).split('/').at(-1);
         const storeSuperEventItem = Object.values(storeSuperEvent.items).find(storeSuperEventItem =>
@@ -307,8 +307,9 @@ function setStoreDataQualityItems() {
         // If it is matched, we have the data in combined items so can delete...
         // Actually, don't try and delete anything, as may still need storeSuperEvent and storeSubEvent elsewhere e.g. setJSONTab()
       }
-      cp.text(`Combining Data Feeds: ${storeSubEventItemIdx + 1} of ${Object.keys(storeSubEvent.items).length} items`);
+      $('#storeSubEventItemCount').text(storeSubEventItemIdx + 1);
     }
+    updateLogMessage(messageIdCurrent, 'busy', 'done');
 
     storeDataQuality.items = storeCombinedItems;
     storeDataQuality.eventType = storeSubEvent.eventType;
@@ -317,45 +318,45 @@ function setStoreDataQualityItems() {
     storeSubEvent &&
     Object.keys(storeSubEvent.items).length > 0
   ) {
-    console.warn('DQ case 4: Data quality from storeSubEvent only');
+    message = 'Data quality from sub-events only';
+    setLogMessage([message, `DQ case 4: ${message}`], 'done', true);
     storeDataQuality.items = Object.values(storeSubEvent.items);
     storeDataQuality.eventType = storeSubEvent.eventType;
-    cp.empty();
   }
   else if (
     storeSuperEvent &&
     Object.keys(storeSuperEvent.items).length > 0
   ) {
-    console.warn('DQ case 5: Data quality from storeSuperEvent only');
+    message = 'Data quality from super-events only';
+    setLogMessage([message, `DQ case 5: ${message}`], 'done', true);
     storeDataQuality.items = Object.values(storeSuperEvent.items);
     storeDataQuality.eventType = storeSuperEvent.eventType;
-    cp.empty();
   }
   else if (
     storeIngressOrder1 &&
     Object.keys(storeIngressOrder1.items).length > 0
   ) {
-    console.warn('DQ case 6: Data quality from storeIngressOrder1 only');
+    message = 'Data quality from feed-1 only';
+    setLogMessage([message, `DQ case 6: ${message}`], 'done', true);
     storeDataQuality.items = Object.values(storeIngressOrder1.items);
-    cp.empty();
   }
   else if (
     storeIngressOrder2 &&
     Object.keys(storeIngressOrder2.items).length > 0
   ) {
-    console.warn('DQ case 7: Data quality from storeIngressOrder2 only');
+    message = 'Data quality from feed-2 only';
+    setLogMessage([message, `DQ case 7: ${message}`], 'done', true);
     storeDataQuality.items = Object.values(storeIngressOrder2.items);
-    cp.empty();
   }
   else {
-    console.warn('DQ case 8: No data for metrics');
+    message = 'No data for metrics';
+    setLogMessage([message, `DQ case 8: ${message}`], 'warn', true);
     storeDataQuality.items = [];
-    cp.empty();
   }
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -416,11 +417,9 @@ function setStoreDataQualityItems() {
       .then(response => response.json())
       .then(data => {
         console.log(data);
-        // Handle the server response if needed
       })
       .catch(error => {
         console.error('Error:', error);
-        // Handle the error if needed
       });
   }
 
@@ -431,7 +430,7 @@ function setStoreDataQualityItems() {
 function setStoreDataQualityItemFlags() {
   // console.warn(`${luxon.DateTime.now()} setStoreDataQualityItemFlags`);
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -445,8 +444,6 @@ function setStoreDataQualityItemFlags() {
   let itemUrlsItemIdxs = {};
   let parentIdsItemIdxs = {};
   let parentUrlsParentIdxs = {};
-
-  let dqp = $("#DQProgress");
 
   // -------------------------------------------------------------------------------------------------
 
@@ -465,9 +462,13 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
+  let messageIdCurrent;
+  if (!showingSample) {
+    messageIdCurrent = setLogMessage(`Measuring data quality: <span id='storeDataQualityItemCount'>0</span> / <span>${storeDataQuality.items.length}</span> items`, 'busy');
+  }
   for (const [itemIdx, item] of storeDataQuality.items.entries()) {
 
-    if (stopTriggered) { throw new Error('Stop triggered'); }
+    if (stopTriggered) { throw new Error(messageStopEnacted); }
 
     // -------------------------------------------------------------------------------------------------
 
@@ -630,12 +631,16 @@ function setStoreDataQualityItemFlags() {
 
     // -------------------------------------------------------------------------------------------------
 
-    dqp.text(`Measuring Data Quality: ${itemIdx + 1} of ${storeDataQuality.items.length} items`);
+    $('#storeDataQualityItemCount').text(itemIdx + 1);
+  }
+
+  if (!showingSample) {
+    updateLogMessage(messageIdCurrent, 'busy', 'done');
   }
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -687,7 +692,7 @@ function setStoreDataQualityItemFlags() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -726,7 +731,7 @@ function setStoreDataQualityItemFlags() {
 function postDataQuality() {
   // console.warn(`${luxon.DateTime.now()} postDataQuality`);
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -736,9 +741,7 @@ function postDataQuality() {
   getFilters();
 
   // This needs to occur before postResults() which happens in the loop:
-  let results = $("#results");
-  results.empty();
-  results.append("<div id='resultsDiv'</div>");
+  $("#results").empty();
   addResultsPanel();
 
   // -------------------------------------------------------------------------------------------------
@@ -762,7 +765,7 @@ function postDataQuality() {
 
   for (const item of storeDataQuality.items) {
 
-    if (stopTriggered) { throw new Error('Stop triggered'); }
+    if (stopTriggered) { throw new Error(messageStopEnacted); }
 
     // -------------------------------------------------------------------------------------------------
 
@@ -992,7 +995,7 @@ function postDataQuality() {
         postResults(item);
       }
       else if (storeDataQuality.numFilteredItems === 100) {
-        results.append(
+        $("#results").append(
           "<div class='row rowhover'>" +
           "    <div>Only the first 100 items are shown</div>" +
           "</div>"
@@ -1006,7 +1009,7 @@ function postDataQuality() {
 
   // ----END-OF-FOR-LOOP------------------------------------------------------------------------------
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1024,10 +1027,9 @@ function postDataQuality() {
   $("#mapPanel").removeClass("active disabled");
 
   if (storeDataQuality.numFilteredItems === 0) {
-    results.empty();
-    results.append(
+    $("#results").append(
       "<div class='row rowhover'>" +
-      "    <div>No matching results found.</div>" +
+      "    <div>No matching results found</div>" +
       "</div>"
     );
     // $("#resultTab").addClass("active"); // Shouldn't be needed due to above settings ...
@@ -1164,7 +1166,7 @@ function postDataQuality() {
 
   // -------------------------------------------------------------------------------------------------
 
-  if (stopTriggered) { throw new Error('Stop triggered'); }
+  if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // -------------------------------------------------------------------------------------------------
 
@@ -1559,7 +1561,6 @@ function postDataQuality() {
       }
 
     }
-
     else {
       options_percentItemsWithActivity = filter_chart;
     }
@@ -2062,18 +2063,18 @@ function postDataQuality() {
   sleep(1400).then(() => { $('#tabs').fadeIn('slow'); });
   sleep(1600).then(() => {
     if (storeDataQuality.numFilteredItems !== 0) {
-      $('#filterRows').fadeIn('slow');
+      $('#filter-menus').fadeIn('slow');
       if (!showingSample) {
-        $('#filter_controls').fadeIn();
+        $('#filter-switches').fadeIn('slow');
       }
     }
     enableFilters();
   });
   sleep(1800).then(() => {
-    inProgress = false;
-    $('#stopping').empty();
     $('#execute').prop('disabled', endpoint === null); // Ensure the execute button is disabled if we are showing sample data, as no valid endpoint to run
     $('#clear').prop('disabled', false); // Allow the clear button to be shown even if we are showing sample data, for clearing filters
+    $('#progress-indicator').hide();
+    inProgress = false;
   });
 
 }
