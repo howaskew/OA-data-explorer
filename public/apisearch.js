@@ -307,10 +307,16 @@ function loadingComplete() {
 // -------------------------------------------------------------------------------------------------
 
 function stop() {
-  setLogMessage(messageStopDone, 'warn', true);
   $('#progress-indicator').hide();
   inProgress = false; // Here this must come before clear()
-  clear();
+  if (stopTriggered) {
+    setLogMessage(messageStopDone, 'warn', true);
+    clear();
+  }
+  else {
+    $('#execute').prop('disabled', false);
+    $('#clear').prop('disabled', false);
+  }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -742,9 +748,9 @@ function setStoreItems(originalUrlStr, store) {
             store.itemKind !== store.itemDataType
           ) {
             message = `Feed-${store.ingressOrder} mismatched content types:<br>` +
-              `&emsp;&emsp;feedType: ${store.feedType}<br>` +
-              `&emsp;&emsp;itemKind: ${store.itemKind}<br>` +
-              `&emsp;&emsp;itemDataType: ${store.itemDataType}`;
+              `&emsp;&emsp;feed type: ${store.feedType}<br>` +
+              `&emsp;&emsp;item kind: ${store.itemKind}<br>` +
+              `&emsp;&emsp;item data type: ${store.itemDataType}`;
             setLogMessage([message, message.replace('<br>', '\n').replace('&emsp;&emsp;', '\t')], 'warn', true);
           }
 
@@ -940,8 +946,9 @@ async function setStoreIngressOrder1FirstPage() {
     storeIngressOrder1.firstPage = $('#endpoint').val();
   }
 
-  $(`#storeIngressOrder1FirstPage`).text(storeIngressOrder1.firstPage);
-  updateLogMessage(messageIdCurrent, 'busy', 'done');
+  $(`#storeIngressOrder1FirstPage`).empty();
+  $(`#storeIngressOrder1FirstPage`).append(storeIngressOrder1.firstPage ? `<a href='${storeIngressOrder1.firstPage}' target='_blank'>${storeIngressOrder1.firstPage}</a>` : 'None');
+  updateLogMessage(messageIdCurrent, 'busy', storeIngressOrder1.firstPage ? 'done' : 'warn');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -966,8 +973,9 @@ async function setStoreIngressOrder2FirstPage() {
     storeIngressOrder2.firstPage = null;
   }
 
-  $(`#storeIngressOrder2FirstPage`).text(storeIngressOrder2.firstPage);
-  updateLogMessage(messageIdCurrent, 'busy', 'done');
+  $(`#storeIngressOrder2FirstPage`).empty();
+  $(`#storeIngressOrder2FirstPage`).append(storeIngressOrder2.firstPage ? `<a href='${storeIngressOrder2.firstPage}' target='_blank'>${storeIngressOrder2.firstPage}</a>` : 'None');
+  updateLogMessage(messageIdCurrent, 'busy', storeIngressOrder2.firstPage ? 'done' : 'warn');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1035,8 +1043,8 @@ async function setStoreFeedType(store) {
     store.feedType = feeds[store.firstPage].type || null;
   }
 
-  $(`#storeIngressOrder${store.ingressOrder}FeedType`).text(store.feedType);
-  updateLogMessage(messageIdCurrent, 'busy', 'done');
+  $(`#storeIngressOrder${store.ingressOrder}FeedType`).text(store.feedType || 'None');
+  updateLogMessage(messageIdCurrent, 'busy', store.feedType ? 'done' : 'warn');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1066,8 +1074,8 @@ function setStoreItemKind(store) {
       break;
   }
 
-  $(`#storeIngressOrder${store.ingressOrder}ItemKind`).text(store.itemKind);
-  updateLogMessage(messageIdCurrent, 'busy', 'done');
+  $(`#storeIngressOrder${store.ingressOrder}ItemKind`).text(store.itemKind || 'None');
+  updateLogMessage(messageIdCurrent, 'busy', store.itemKind ? 'done' : 'warn');
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -1102,8 +1110,8 @@ function setStoreItemDataType(store) {
       break;
   }
 
-  $(`#storeIngressOrder${store.ingressOrder}ItemDataType`).text(store.itemDataType);
-  updateLogMessage(messageIdCurrent, 'busy', 'done');
+  $(`#storeIngressOrder${store.ingressOrder}ItemDataType`).text(store.itemDataType || 'None');
+  updateLogMessage(messageIdCurrent, 'busy', store.itemDataType ? 'done' : 'warn');
 }
 
 // -------------------------------------------------------------------------------------------------

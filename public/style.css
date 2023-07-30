@@ -79,11 +79,11 @@ html * {
 }
 
 .log-dot-busy {
-  background-color: #009ee3;
+  background-color: #931e80;
 }
 
 .log-dot-done {
-  background-color: #28a746;
+  background-color: #009ee3;
 }
 
 .log-dot-warn {
@@ -101,6 +101,13 @@ html * {
   border: 1px solid #f6a635;
   border-radius: 4px;
   background-color: #f7cf4c;
+}
+
+/* Controls */
+
+.btn-execute {
+  background-color: #931e80 !important;
+  border-color: #931e80 !important;
 }
 
 /* Other to sort ... */

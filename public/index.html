@@ -61,7 +61,7 @@
                         <select id="endpoint" class="form-control bottom"></select>
                     </div>
                     <div class="col-sm-2 top-auto">
-                        <button id="execute" class="btn btn-success form-control bottom" disabled="disabled">Go</button>
+                        <button id="execute" class="btn btn-success btn-execute form-control bottom" disabled="disabled">Go</button>
                     </div>
                     <div class="col-sm-2 top-auto">
                         <button id="clear" class="btn btn-secondary form-control bottom">Clear</button>
@@ -209,7 +209,7 @@
                         <div>API Request failed with message: <span id="loading-error-message"></span></div>
                         <div id="retry-auto">Auto-retry (<span id="retryCountAuto"></span> of <span id="retryCountMax"></span>) in <span id="retryCountdown"></span> seconds...</div>
                         <div id="retry-manual" style="display: none;"><span id="retryCount"></span> retries attempted. Click to retry again.</div>
-                        <button id="retry" class="btn btn-success" style="display: none;">Retry</button>
+                        <button id="retry" class="btn btn-success btn-execute" style="display: none;">Retry</button>
                     </div>
                 </div>
             </div>
