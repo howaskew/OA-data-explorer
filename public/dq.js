@@ -167,7 +167,7 @@ function setStoreSuperEventAndStoreSubEvent() {
       // misleading and assessed before itemDataType
       // e.g. BwD (SessionSeries)
       // e.g. ANGUSalive (SessionSeries)
-      message = 'Identified a sub-event feed with embedded super-event data';
+      message = 'Identified a sub-event feed with embedded super-event data. Switching initial sub/super categorisation from feed type.';
       setLogMessage([message, `DQ case 1: ${message}`], 'done', true);
 
       if (storeSuperEvent.ingressOrder === 1) {
@@ -236,7 +236,7 @@ function setStoreDataQualityItems() {
     // e.g. British Triathlon
     // e.g. SportSuite (SessionSeries)
     // e.g. Trafford (CourseInstance)
-    message = 'Identified a super-event feed with embedded sub-event data';
+    message = `Identified a super-event feed with embedded sub-event data. Extracting embedded data to use as Feed-${storeSubEvent.ingressOrder}.`;
     setLogMessage([message, `DQ case 2: ${message}`], 'done', true);
 
     clearStore(storeSubEvent);

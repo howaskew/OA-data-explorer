@@ -381,14 +381,15 @@ function clearRetry() {
   // console.warn(`${luxon.DateTime.now()} clearRetry`);
   retryCount = 0;
   retryCountdown = retryCountdownMax;
+  $('#loading-error').hide();
+  $('#loading-error-message').empty();
+  $('#retry-auto').show();
+  $('#retry-manual').hide();
+  $('#retry').hide();
   $('#retryCount').text(retryCount);
   $('#retryCountAuto').text(retryCount + 1);
   $('#retryCountMax').text(retryCountMax);
   $('#retryCountdown').text(retryCountdown);
-  $('#loading-error').hide();
-  $('#retry-auto').show();
-  $('#retry-manual').hide();
-  $('#retry').hide();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -565,7 +566,7 @@ function showSample() {
       const totalItemCount = uniqueWords.size;
 
       setLogMessage('Exploring OpenActive Data', 'heading');
-      setLogMessage(`The counts shown below are based on DQ analysis of ${totalItemCount} out of ${Object.keys(feeds).length} feeds.`, 'warn');
+      setLogMessage(`The counts shown below are based on DQ analysis of the first 25,000 items of ${totalItemCount} feeds.`, 'warn');
       setLogMessage('The sample data shown below is drawn from a small sample taken from each feed.', 'warn');
       setLogMessage('Explore the sample data or select a data provider and data type then press \'Go\' to load and view live data.', 'warn');
 
@@ -685,7 +686,7 @@ function setStoreItems(originalUrlStr, store) {
         }
 
         if (store.numPages === 0) {
-          messageIdProgress = setLogMessage(`Loaded <span id='numPages${store.ingressOrder}'>0</span> pages, containing <span id='numItems${store.ingressOrder}'>0</span> items, in <span id='timeTaken${store.ingressOrder}'>0.00</span> seconds...`, 'busy');
+          messageIdProgress = setLogMessage(`Loaded <span id='numPages${store.ingressOrder}'>0</span> pages, containing <span id='numItems${store.ingressOrder}'>0</span> items, in <span id='timeTaken${store.ingressOrder}'>0.00</span> seconds ...`, 'busy');
           addApiPanel(`Feed-${store.ingressOrder}`, store.ingressOrder, true);
         }
 
@@ -1886,9 +1887,15 @@ function setPage() {
 
   $("#execute").on("click", function () {
     execute();
+    // Useful for toggling hidden element visibility when testing:
+    // let element = 'loading-error';
+    // if ($(`#${element}`).is(':visible')) {$(`#${element}`).hide();} else {$(`#${element}`).show();}
   });
   $("#clear").on("click", function () {
     clear();
+    // Useful for toggling hidden element visibility when testing:
+    // let element = 'retry';
+    // if ($(`#${element}`).is(':visible')) {$(`#${element}`).hide();} else {$(`#${element}`).show();}
   });
   $('#retry').on('click', function () {
     retry();

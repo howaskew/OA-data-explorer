@@ -61,7 +61,7 @@
                         <select id="endpoint" class="form-control bottom"></select>
                     </div>
                     <div class="col-sm-2 top-auto">
-                        <button id="execute" class="btn btn-success btn-execute form-control bottom" disabled="disabled">Go</button>
+                        <button id="execute" class="btn btn-execute form-control bottom" disabled="disabled">Go</button>
                     </div>
                     <div class="col-sm-2 top-auto">
                         <button id="clear" class="btn btn-secondary form-control bottom">Clear</button>
@@ -206,10 +206,10 @@
                         Note: the initial query can take up to 5-10 minutes to read and process the largest feeds.
                     </div>
                     <div id="loading-error" class="bottom" style="display: none;">
-                        <div>API Request failed with message: <span id="loading-error-message"></span></div>
-                        <div id="retry-auto">Auto-retry (<span id="retryCountAuto"></span> of <span id="retryCountMax"></span>) in <span id="retryCountdown"></span> seconds...</div>
-                        <div id="retry-manual" style="display: none;"><span id="retryCount"></span> retries attempted. Click to retry again.</div>
-                        <button id="retry" class="btn btn-success btn-execute" style="display: none;">Retry</button>
+                        <div class="bottom">API Request failed with message: <span id="loading-error-message"></span></div>
+                        <div id="retry-auto" class="bottom">Auto-retry (<span id="retryCountAuto"></span> of <span id="retryCountMax"></span>) in <span id="retryCountdown"></span> seconds ...</div>
+                        <div id="retry-manual" class="bottom"><span id="retryCount"></span> retries attempted. Click to retry again.</div>
+                        <button id="retry" class="btn btn-execute left-right-auto" style="display: block; width: 100px; margin-bottom: 5px;">Retry</button>
                     </div>
                 </div>
             </div>

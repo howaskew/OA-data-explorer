@@ -108,6 +108,11 @@ html * {
 .btn-execute {
   background-color: #931e80 !important;
   border-color: #931e80 !important;
+  color: white !important;
+}
+
+.btn-execute:focus {
+  box-shadow: 0 0 0 3px #c794c780 !important;
 }
 
 /* Other to sort ... */
