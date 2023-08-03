@@ -675,24 +675,20 @@ function setStoreItems(originalUrlStr, store) {
   // )
   axios.get(`/fetch?url=${encodeURIComponent(url)}`)
     .then(response => {
-      if (
-        response.status === 200 &&
-        response.data.hasOwnProperty('items') &&
-        response.data.hasOwnProperty('next')
-      ) {
 
-        if (retryCount > 0) {
-          clearRetry();
-        }
+      if (retryCount > 0) {
+        clearRetry();
+      }
 
-        if (store.numPages === 0) {
-          messageIdProgress = setLogMessage(`Loaded <span id='numPages${store.ingressOrder}'>0</span> pages, containing <span id='numItems${store.ingressOrder}'>0</span> items, in <span id='timeTaken${store.ingressOrder}'>0.00</span> seconds ...`, 'busy');
-          addApiPanel(`Feed-${store.ingressOrder}`, store.ingressOrder, true);
-        }
+      if (store.numPages === 0) {
+        messageIdProgress = setLogMessage(`Loaded <span id='numPages${store.ingressOrder}'>0</span> pages, containing <span id='numItems${store.ingressOrder}'>0</span> items, in <span id='timeTaken${store.ingressOrder}'>0.00</span> seconds ...`, 'busy');
+        addApiPanel(`Feed-${store.ingressOrder}`, store.ingressOrder, true);
+      }
 
-        store.numPages++;
-        addApiPanel(url, store.ingressOrder);
+      store.numPages++;
+      addApiPanel(url, store.ingressOrder);
 
+      if (response?.data?.items) {
         for (const item of response.data.items) {
           // This is intentionally not decremented on item delete from the store, it is the count of all items
           // encountered in the feed, not the count of items in the store at any one time:
@@ -712,20 +708,59 @@ function setStoreItems(originalUrlStr, store) {
             delete store.urls[item.id];
           }
         }
+      }
 
-        const timeTaken = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
-        $(`#numPages${store.ingressOrder}`).text(store.numPages);
-        $(`#numItems${store.ingressOrder}`).text(store.numItems);
-        $(`#timeTaken${store.ingressOrder}`).text(timeTaken);
+      const timeTaken = luxon.DateTime.now().diff(store.timeHarvestStart, ['seconds']).toObject().seconds.toFixed(2);
+      $(`#numPages${store.ingressOrder}`).text(store.numPages);
+      $(`#numItems${store.ingressOrder}`).text(store.numItems);
+      $(`#timeTaken${store.ingressOrder}`).text(timeTaken);
+
+      if (
+        typeof response?.data?.next === 'string' &&
+        response.data.next !== originalUrlStr &&
+        response.data.next !== url &&
+        store.numItems < 25000
+      ) {
+        store.penultimatePage = url;
+        try {
+          setStoreItems(response.data.next, store);
+        }
+        catch (error) {
+          setLogMessage(error.message, 'error', true);
+          stop();
+          return;
+        }
+      }
+      else {
+        if (store.numItems === 25000) {
+          $('#record-limit').fadeIn();
+        }
+
+        store.lastPage = url;
+        clearCache(store);
+        setStoreItemKind(store);
+        setStoreItemDataType(store);
 
         if (
-          originalUrlStr !== response.data.next &&
-          url !== response.data.next &&
-          store.numItems < 25000
+          store.feedType !== store.itemKind ||
+          store.feedType !== store.itemDataType ||
+          store.itemKind !== store.itemDataType
         ) {
-          store.penultimatePage = url;
+          message = `Feed-${store.ingressOrder} mismatched content types:<br>` +
+            `&emsp;&emsp;feed type: ${store.feedType}<br>` +
+            `&emsp;&emsp;item kind: ${store.itemKind}<br>` +
+            `&emsp;&emsp;item data type: ${store.itemDataType}`;
+          setLogMessage([message, message.replace('<br>', '\n').replace('&emsp;&emsp;', '\t')], 'warn', true);
+        }
+
+        updateLogMessage(messageIdProgress, 'busy', 'done');
+
+        if (
+          store.ingressOrder === 1 &&
+          storeIngressOrder2.firstPage
+        ) {
           try {
-            setStoreItems(response.data.next, store);
+            setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
           }
           catch (error) {
             setLogMessage(error.message, 'error', true);
@@ -734,47 +769,10 @@ function setStoreItems(originalUrlStr, store) {
           }
         }
         else {
-          if (store.numItems === 25000) {
-            $('#record-limit').fadeIn();
-          }
-
-          store.lastPage = url;
-          clearCache(store);
-          setStoreItemKind(store);
-          setStoreItemDataType(store);
-
-          if (
-            store.feedType !== store.itemKind ||
-            store.feedType !== store.itemDataType ||
-            store.itemKind !== store.itemDataType
-          ) {
-            message = `Feed-${store.ingressOrder} mismatched content types:<br>` +
-              `&emsp;&emsp;feed type: ${store.feedType}<br>` +
-              `&emsp;&emsp;item kind: ${store.itemKind}<br>` +
-              `&emsp;&emsp;item data type: ${store.itemDataType}`;
-            setLogMessage([message, message.replace('<br>', '\n').replace('&emsp;&emsp;', '\t')], 'warn', true);
-          }
-
-          updateLogMessage(messageIdProgress, 'busy', 'done');
-
-          if (
-            store.ingressOrder === 1 &&
-            storeIngressOrder2.firstPage
-          ) {
-            try {
-              setStoreItems(storeIngressOrder2.firstPage, storeIngressOrder2);
-            }
-            catch (error) {
-              setLogMessage(error.message, 'error', true);
-              stop();
-              return;
-            }
-          }
-          else {
-            sleep(100).then(() => { loadingComplete(); });
-          }
+          sleep(100).then(() => { loadingComplete(); });
         }
       }
+
     })
     .catch(error => {
       if (retryCount === 0) {
