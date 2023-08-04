@@ -67,7 +67,7 @@ let storeSubEvent;
 
 // These will simply point to the current store and URL being loaded, used for returning to in case of need to retry
 let storeCurrent;
-let originalUrlStrCurrent;
+let urlOriginalCurrent;
 
 const superEventContentTypesSeries = ['SessionSeries'];
 const superEventContentTypesFacility = ['FacilityUse', 'IndividualFacilityUse'];
@@ -163,12 +163,26 @@ $('#progress-indicator').append(progressIndicator);
 // - https://stackoverflow.com/questions/49263559/using-javascript-axios-fetch-can-you-disable-browser-cache#comment132084883_69342671
 // - https://stackoverflow.com/questions/61224287/how-to-force-axios-to-not-cache-in-get-requests
 // - https://thewebdev.info/2021/11/18/how-to-disable-browser-cache-with-javascript-axios/
+
+// If the original headers are needed in order to later revert to or test against, use this approach
+// instead of the live approach:
+// let axiosDefaultsHeadersOriginal = JSON.parse(JSON.stringify(axios.defaults.headers));
+// let axiosDefaultsHeadersModified = {
+//   'Cache-Control': 'no-cache',
+//   'Pragma': 'no-cache',
+//   'Expires': '0',
+// };
+// axios.defaults.headers = axiosDefaultsHeadersModified;
 axios.defaults.headers = {
   'Cache-Control': 'no-cache',
   'Pragma': 'no-cache',
   'Expires': '0',
 };
 axios.defaults.timeout = 40000; // In ms. Default 0. Increase to wait for longer to receive response. Should be greater than the timeout in app.js which calls out to the actual feed.
+
+// Use this to test access to another client-side localhost instance. It will only work if a permissive
+// CORS policy has been set in the other instance, or with the original Axios headers set herein:
+// axios.get('http://localhost:5050/some-page').then(response => console.log(response.data));
 
 // -------------------------------------------------------------------------------------------------
 
@@ -482,7 +496,7 @@ function clearGlobals() {
   storeSuperEvent = null;
   storeSubEvent = null;
   storeCurrent = null;
-  originalUrlStrCurrent = '';
+  urlOriginalCurrent = '';
   type = null;
   link = null;
   clearStore(storeIngressOrder1);
@@ -630,17 +644,17 @@ function disableFilters() {
 // This replaces the loadRPDE function in Nick's original visualiser adaptation
 // Note the displaying of results happens in dq.js now, to improve filtering
 
-function setStoreItems(originalUrlStr, store) {
+function setStoreItems(urlOriginal, store) {
 
   if (stopTriggered) { throw new Error(messageStopEnacted); }
 
   // If we are retrying following an error, then arguments are not given to this function and we use
   // the latest that were in use instead:
-  if (!originalUrlStr) {
-    originalUrlStr = originalUrlStrCurrent;
+  if (!urlOriginal) {
+    urlOriginal = urlOriginalCurrent;
   }
   else {
-    originalUrlStrCurrent = originalUrlStr;
+    urlOriginalCurrent = urlOriginal;
   }
 
   if (!store) {
@@ -657,8 +671,8 @@ function setStoreItems(originalUrlStr, store) {
       `Feed-${store.ingressOrder}: ${store.feedType || ''} ${store.firstPage}`], 'done', true);
   }
 
-  let url = setUrlStr(originalUrlStr, store);
-  if (!url) { throw new Error(`Invalid URL: ${originalUrlStr}`); }
+  let url = setUrl(urlOriginal, store);
+  if (!url) { throw new Error(`Invalid URL: ${urlOriginal}`); }
 
   // Note that the following commented example does not work as intended, as 'url' is a special
   // parameter name and becomes the actual URL of the GET request, so it doesn't end up going to
@@ -673,7 +687,7 @@ function setStoreItems(originalUrlStr, store) {
   //     },
   //   }
   // )
-  axios.get(`/fetch?url=${encodeURIComponent(url)}`)
+  axios.get(url.includes('localhost') ? url : `/fetch?url=${encodeURIComponent(url)}`)
     .then(response => {
 
       if (retryCount > 0) {
@@ -717,7 +731,7 @@ function setStoreItems(originalUrlStr, store) {
 
       if (
         typeof response?.data?.next === 'string' &&
-        response.data.next !== originalUrlStr &&
+        response.data.next !== urlOriginal &&
         response.data.next !== url &&
         store.numItems < 25000
       ) {
@@ -849,43 +863,43 @@ function retry() {
 
 // -------------------------------------------------------------------------------------------------
 
-function setUrlStr(originalUrlStr, store) {
-  let urlStr;
+function setUrl(urlOriginal, store) {
+  let url;
   let urlSearchCounter = 0;
   let urlSearchComplete = false;
 
   while (!urlSearchComplete) {
     if (urlSearchCounter === 0) {
-      urlStr = originalUrlStr;
+      url = urlOriginal;
     }
     else if (urlSearchCounter === 1) {
-      urlStr = decodeURIComponent(originalUrlStr);
+      url = decodeURIComponent(urlOriginal);
     }
     else if (urlSearchCounter === 2) {
       // e.g. 'https://reports.gomammoth.co.uk/api/OpenData/Leagues?afterTimestamp=0'
       // Next URLs are like '/api/OpenData/Leagues?afterTimestamp=3879824531'
-      urlStr = store.firstPageOrigin + originalUrlStr;
+      url = store.firstPageOrigin + urlOriginal;
     }
     else if (urlSearchCounter === 3) {
       // e.g. 'https://www.goodgym.org/api/happenings'
       // Next URLs are like '%2Fapi%2Fhappenings%3FafterTimestamp%3D2015-01-13+16%3A56%3A14+%2B0000%26afterID%3D28'
-      urlStr = store.firstPageOrigin + decodeURIComponent(originalUrlStr);
+      url = store.firstPageOrigin + decodeURIComponent(urlOriginal);
     }
     else {
       urlSearchComplete = true;
     }
 
     if (!urlSearchComplete) {
-      let urlObj = setUrlObj(urlStr);
+      let urlObj = setUrlObj(url);
       if (urlObj) {
         // if (urlSearchCounter > 0) {
-        //   console.warn(`Invalid URL: ${originalUrlStr}\nValid modified URL: ${urlStr}`)
+        //   console.warn(`Invalid URL: ${urlOriginal}\nValid modified URL: ${url}`)
         // }
-        if (originalUrlStr === store.firstPage) {
+        if (urlOriginal === store.firstPage) {
           store.firstPageOrigin = urlObj.origin;
         }
         urlSearchComplete = true;
-        return urlStr;
+        return url;
       }
       urlSearchCounter++;
     }
@@ -896,9 +910,9 @@ function setUrlStr(originalUrlStr, store) {
 
 // -------------------------------------------------------------------------------------------------
 
-function setUrlObj(urlStr) {
+function setUrlObj(url) {
   try {
-    urlObj = new URL(urlStr);
+    urlObj = new URL(url);
     return urlObj;
   }
   catch {
@@ -933,7 +947,7 @@ async function setStoreIngressOrder1FirstPage() {
   let messageIdCurrent = setLogMessage(`Feed-1 URL: <span id='storeIngressOrder1FirstPage'>${progressIndicator}</span>`, 'busy');
 
   if (storeIngressOrder1FirstPageFromUser) {
-    await axios.get(`/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
+    await axios.get(storeIngressOrder1FirstPageFromUser.includes('localhost') ? storeIngressOrder1FirstPageFromUser : `/fetch?url=${encodeURIComponent(storeIngressOrder1FirstPageFromUser)}`)
       .then(response => {
         storeIngressOrder1.firstPage = (response.status === 200) ? storeIngressOrder1FirstPageFromUser : null;
       })
