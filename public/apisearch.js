@@ -731,6 +731,7 @@ function setStoreItems(urlOriginal, store) {
 
       if (
         typeof response?.data?.next === 'string' &&
+        response.data.next.length > 0 &&
         response.data.next !== urlOriginal &&
         response.data.next !== url &&
         store.numItems < 25000
