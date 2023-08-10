@@ -585,8 +585,9 @@ function showSample() {
       setLogMessage('Explore the sample data or select a data provider and data type then press \'Go\' to load and view live data.', 'warn');
 
       clearStore(storeDataQuality);
-      storeDataQuality.items = Object.values(storeSample.items);
-
+      // The sort operation here shuffles the items into a random order, just to present different results
+      // to the user each time:
+      storeDataQuality.items = Object.values(storeSample.items).sort(() => Math.random() - 0.5);
       console.log('Processing sample data');
       setStoreDataQualityItemFlags();
       postDataQuality();
