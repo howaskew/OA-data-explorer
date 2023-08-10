@@ -360,67 +360,70 @@ function setStoreDataQualityItems() {
 
   // -------------------------------------------------------------------------------------------------
 
-  // Store sample of data
-  const sortedStringsForFilter = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
-  const filterString = sortedStringsForFilter.join(' ');
-  const maxSampleSize = 5;
-  const keys = storeDataQuality.items.map(item => item.id);
+  // Store sample of data - if not using a custom url
+  if (!storeIngressOrder1FirstPageFromUser) {
 
-  if (keys.length > 0) {
-    // Delete existing IDs with the filter string
-    const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
-    fetch('/api/delete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ deleteQuery }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log(data);
-        // Handle the server response if needed
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        // Handle the error if needed
-      });
-    // Take random sample
+    const sortedStringsForFilter = [storeIngressOrder1.firstPage, storeIngressOrder2.firstPage].filter(Boolean).sort();
+    const filterString = sortedStringsForFilter.join(' ');
+    const maxSampleSize = 5;
     const keys = storeDataQuality.items.map(item => item.id);
-    const sampleSize = Math.min(keys.length, maxSampleSize);
-    const sampledKeys = sampleSize < keys.length
-      ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
-      : keys;
 
-    const insertQueryParts = [];
-    const values = [];
-
-    for (let i = 0; i < sampledKeys.length; i++) {
-      const key = sampledKeys[i];
-      const filteredKey = `${key}_${filterString}`;
-      const storeDataQualityItem = storeDataQuality.items.find(item => item.id === key);
-      const storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
-
-      insertQueryParts.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
-      values.push(filteredKey, storeItemCopy);
-    }
-
-    const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(', ')}`;
-
-    fetch('/api/insertsample', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ insertQuery, values }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        console.log(data);
+    if (keys.length > 0) {
+      // Delete existing IDs with the filter string
+      const deleteQuery = `DELETE FROM openactivesample WHERE id LIKE '%${filterString}%'`;
+      fetch('/api/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ deleteQuery }),
       })
-      .catch(error => {
-        console.error('Error:', error);
-      });
+        .then(response => response.json())
+        .then(data => {
+          console.log(data);
+          // Handle the server response if needed
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          // Handle the error if needed
+        });
+      // Take random sample
+      const keys = storeDataQuality.items.map(item => item.id);
+      const sampleSize = Math.min(keys.length, maxSampleSize);
+      const sampledKeys = sampleSize < keys.length
+        ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
+        : keys;
+
+      const insertQueryParts = [];
+      const values = [];
+
+      for (let i = 0; i < sampledKeys.length; i++) {
+        const key = sampledKeys[i];
+        const filteredKey = `${key}_${filterString}`;
+        const storeDataQualityItem = storeDataQuality.items.find(item => item.id === key);
+        const storeItemCopy = JSON.parse(JSON.stringify(storeDataQualityItem));
+
+        insertQueryParts.push(`($${i * 2 + 1}, $${i * 2 + 2})`);
+        values.push(filteredKey, storeItemCopy);
+      }
+
+      const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(', ')}`;
+
+      fetch('/api/insertsample', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ insertQuery, values }),
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log(data);
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
   }
 
 }
@@ -698,7 +701,7 @@ function setStoreDataQualityItemFlags() {
 
   // Write feed level data to database:
 
-  if (!showingSample) {
+  if (!showingSample & !storeIngressOrder1FirstPageFromUser) {
     (async () => {
       try {
         const response = await fetch('/api/insert', {
