@@ -45,7 +45,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-axios.defaults.timeout = 30000; // In ms. Default 0. Increase to wait for longer to receive response. Should be less than the timeout in apisearch.js which calls /fetch herein.
+axios.defaults.timeout = 30000; // Time in ms. Default 0. Increase to wait for longer to receive response. Should be less than the timeout in apisearch.js which calls /fetch herein.
 
 let cache = apicache.middleware;
 const onlyStatus200 = (req, res) => res.statusCode === 200;
@@ -387,17 +387,33 @@ app.get('/api/download', async (req, res) => {
   }
 });
 
-
 // app.js resumes...
 
+async function axiosGet(url, retryCount=0) {
+  const retryCountMax = 3;
+  const timeToWaitBetweenCalls = 5000; // Time in ms
+  try {
+    return await axios.get(url);
+  }
+  catch (error) {
+    if (retryCount < retryCountMax) {
+      console.log(`${new Date().toLocaleString()} Retry ${retryCount+1} of ${retryCountMax} for ${url}`);
+      await sleep(timeToWaitBetweenCalls);
+      return await axiosGet(url, retryCount+1);
+    }
+    else {
+      // console.log(`${new Date().toLocaleString()} Unsuccessful after ${retryCountMax+1} attempts to retrieve ${url}`);
+      throw error;
+    }
+  }
+}
 
 // Get all feeds on load
 // Note Heroku is restarted automatically nightly, so this collection is automatically updated each night
 async function getFeedsOnLoad() {
-  console.log("async");
   try {
 
-    const catalogueCollection = await axios.get(catalogueCollectionUrl);
+    const catalogueCollection = await axiosGet(catalogueCollectionUrl);
 
     if (!catalogueCollection.data || !catalogueCollection.data.hasPart) {
       throw new Error(`Error getting catalogue collection: ${catalogueCollectionUrl}`);
@@ -406,7 +422,7 @@ async function getFeedsOnLoad() {
 
       const datasetUrls = (await Promise.all(catalogueCollection.data.hasPart.map(async (catalogueUrl) => {
         try {
-          return await axios.get(catalogueUrl);
+          return await axiosGet(catalogueUrl);
         }
         catch (error) {
           console.log(`Error getting catalogue: ${catalogueUrl}: ${error.message}`);
@@ -418,9 +434,10 @@ async function getFeedsOnLoad() {
 
       const datasets = (await Promise.all(datasetUrls.map(async (datasetUrl) => {
         try {
+          const dataset = await axiosGet(datasetUrl);
           return extractJSONLDfromHTML(
             datasetUrl,
-            (await axios.get(datasetUrl)).data
+            dataset.data
           );
         }
         catch (error) {
@@ -430,11 +447,9 @@ async function getFeedsOnLoad() {
       })))
         .filter(dataset => dataset);
 
-      //console.log(datasets);
-
       console.log('Unique Types in feeds (untreated):');
-      const typeCounts = {};
 
+      const typeCounts = {};
       datasets.forEach(dataset => {
         (dataset?.distribution ?? []).forEach(feedInfo => {
           const { name } = feedInfo;
@@ -450,16 +465,16 @@ async function getFeedsOnLoad() {
 
       feeds = datasets.flatMap(dataset => (
         (dataset?.distribution ?? []).map(feedInfo => ({
-          name: dataset.name || '',
-          type: feedInfo.name || 'Unknown',
-          url: feedInfo.contentUrl || '',
-          datasetUrl: dataset.url || '',
-          discussionUrl: dataset.discussionUrl || '',
-          licenseUrl: dataset.license || '',
-          publisherName: dataset.publisher.name || '',
+          name: dataset?.name || '',
+          type: feedInfo?.name || 'Unknown',
+          url: feedInfo?.contentUrl || '',
+          datasetUrl: dataset?.url || '',
+          discussionUrl: dataset?.discussionUrl || '',
+          licenseUrl: dataset?.license || '',
+          publisherName: dataset?.publisher?.name || '',
         })
         )))
-        .filter(feed => feed.url && feed.name.substr(0, 1).trim())
+        .filter(feed => feed.url.trim() && feed.publisherName.trim()) // 2023/08/11 DT: Note that a number of feeds are removed at this point due to no publisherName
         .sort(function (feed1, feed2) {
           return feed1.name.toLowerCase().localeCompare(feed2.name.toLowerCase());
         });
@@ -517,7 +532,6 @@ async function getFeedsOnLoad() {
       } catch (err) {
         console.error('Error acquiring a client from the pool:', err);
       }
-
 
       // Prefetch pages into cache to reduce initial load (if not dev environment):
       if (process.env.ENVIRONMENT !== 'DEVELOPMENT') {
