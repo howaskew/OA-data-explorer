@@ -1996,7 +1996,7 @@ function setFeeds() {
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setFeeds: end`);
       publisherNames = [...new Set(Object.values(feeds).map(feed => feed.publisherName))];
-      urlTriggered = getUrlParameter('endpoint') in feeds;
+      urlTriggered = (getUrlParameter('endpoint') !== '') && (getUrlParameter('endpoint') in feeds);
       executeTriggered = getUrlParameter('execute') === 'true';
       setProviders();
     });
@@ -2046,7 +2046,7 @@ function setProviders(dqTriggered=false) {
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setProviders: end`);
       if (
-        getUrlParameter('endpoint') &&
+        getUrlParameter('endpoint') !== 'null' &&
         (dqTriggered || urlTriggered)
       ) {
         $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
@@ -2108,7 +2108,8 @@ function setEndpoint() {
     $('#user-url').val(endpoint);
     if (getUrlParameter('execute') === 'true') {
       execute();
-    } else {
+    }
+    else {
       updateParameters('endpoint', endpoint);
       clear();
     }
