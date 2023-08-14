@@ -2012,9 +2012,11 @@ function setProviders(dqTriggered=false) {
     const publisherSums = publisherNames.map(publisherName => {
       let publisherSumParentChild = 0;
       dqsummaries.forEach(dqsummary => {
+        const feedUrl = dqsummary.id.split(' ')[0];
         if (
-          publisherName === 'All OpenActive Feeds' ||
-          feeds[dqsummary.id.split(' ')[0]].publisherName === publisherName
+          feedUrl in feeds && // The database may contain publishers from previous runs that aren't in the current /feeds, so only use those that are
+          ( publisherName === 'All OpenActive Feeds' ||
+            publisherName === feeds[feedUrl].publisherName )
         ) {
           publisherSumParentChild += dqsummary.numparent + dqsummary.numchild;
         }
@@ -2043,10 +2045,10 @@ function setProviders(dqTriggered=false) {
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setProviders: end`);
+      if (dqTriggered || urlTriggered) {
+        $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
+      }
       if (!dqTriggered) {
-        if (urlTriggered) {
-          $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
-        }
         setEndpoints();
       }
     });
