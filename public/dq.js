@@ -381,14 +381,12 @@ function setStoreDataQualityItems() {
         .then(response => response.json())
         .then(data => {
           console.log(data);
-          // Handle the server response if needed
         })
         .catch(error => {
           console.error('Error:', error);
-          // Handle the error if needed
         });
+
       // Take random sample
-      const keys = storeDataQuality.items.map(item => item.id);
       const sampleSize = Math.min(keys.length, maxSampleSize);
       const sampledKeys = sampleSize < keys.length
         ? Array.from(new Set(Array(sampleSize).fill().map(() => keys[Math.floor(Math.random() * keys.length)])))
@@ -408,7 +406,6 @@ function setStoreDataQualityItems() {
       }
 
       const insertQuery = `INSERT INTO openactivesample (id, data) VALUES ${insertQueryParts.join(', ')}`;
-
       fetch('/api/insertsample', {
         method: 'POST',
         headers: {
@@ -424,6 +421,7 @@ function setStoreDataQualityItems() {
           console.error('Error:', error);
         });
     }
+
   }
 
 }
@@ -715,12 +713,15 @@ function setStoreDataQualityItemFlags() {
         if (response.ok) {
           const insertedData = await response.json();
           console.log('Success inserting DQ summary into database:', insertedData);
-        } else {
+        }
+        else {
           console.error('Error inserting DQ summary into database:', response.statusText);
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error:', error);
-      } finally {
+      }
+      finally {
       }
     })();
   }
@@ -2077,6 +2078,7 @@ function postDataQuality() {
     $('#execute').prop('disabled', endpoint === null); // Ensure the execute button is disabled if we are showing sample data, as no valid endpoint to run
     $('#clear').prop('disabled', false); // Allow the clear button to be shown even if we are showing sample data, for clearing filters
     $('#progress-indicator').hide();
+    setProviders(true);
     inProgress = false;
   });
 

@@ -51,7 +51,7 @@ const storeIngressOrder1ApiColor = '#74cbf3';
 const storeIngressOrder2ApiColor = '#009ee3';
 
 let feeds = {};
-let providers = {};
+let publisherNames = [];
 
 let summary = {}; // To hold total counts from database
 
@@ -564,7 +564,7 @@ function showSample() {
   $('.explainer').fadeOut();
 
   // Make a GET request to retrieve the sum values from the server
-  $.getJSON('/api/download', function (sampleData) {
+  $.getJSON('/api/get-sample', function (sampleData) {
     storeSample.items = sampleData;
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
@@ -1995,6 +1995,7 @@ function setFeeds() {
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setFeeds: end`);
+      publisherNames = [...new Set(Object.values(feeds).map(feed => feed.publisherName))];
       urlTriggered = getUrlParameter('endpoint') in feeds;
       executeTriggered = getUrlParameter('execute') === 'true';
       setProviders();
@@ -2003,47 +2004,51 @@ function setFeeds() {
 
 // -------------------------------------------------------------------------------------------------
 
-function setProviders() {
+function setProviders(dqTriggered=false) {
   // console.warn(`${luxon.DateTime.now()} setProviders: start`);
-  $.getJSON('/feeds', function (data) {
+  $.getJSON('/api/get-dqsummaries', function (dqsummaries) {
     $('#provider').empty();
-    // Extract unique providers
-    const providers = [...new Set(data.feeds.map(feed => feed.publisherName))];
-    // Calculate the combined sum for each unique provider
-    const providerSums = providers.map(provider => {
-      let combinedSum = 0;
-      data.feeds.forEach(feed => {
-        if (provider === 'All OpenActive Feeds' && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
-          combinedSum += feed.numparent + feed.numchild;
-        }
-        else if (feed.publisherName === provider && typeof feed.numparent === 'number' && typeof feed.numchild === 'number') {
-          combinedSum += feed.numparent + feed.numchild;
+
+    const publisherSums = publisherNames.map(publisherName => {
+      let publisherSumParentChild = 0;
+      dqsummaries.forEach(dqsummary => {
+        if (
+          publisherName === 'All OpenActive Feeds' ||
+          feeds[dqsummary.id.split(' ')[0]].publisherName === publisherName
+        ) {
+          publisherSumParentChild += dqsummary.numparent + dqsummary.numchild;
         }
       });
-      return { provider, sum: combinedSum };
+      return { name: publisherName, sum: publisherSumParentChild };
     });
-    // Sort providers by descending sum, then alphabetically
-    providerSums.sort((a, b) => {
+
+    // Sort publishers by descending sum, then alphabetically
+    publisherSums.sort((a, b) => {
       if (b.sum === a.sum) {
-        return a.provider.localeCompare(b.provider);
+        return a.name.localeCompare(b.name);
       }
-      return b.sum - a.sum;
-      // return a.provider.localeCompare(b.provider);
+      else {
+        return b.sum - a.sum;
+      }
+      // return a.name.localeCompare(b.name);
     });
-    // Output the sorted providers to HTML
-    providerSums.forEach(providerSum => {
-      // Round the combinedSum
-      const roundedSum = Math.round(providerSum.sum / 100) * 100;
-      const formattedSum = roundedSum.toLocaleString() + (roundedSum !== 0 ? '+' : '');
-      $('#provider').append(`<option value="${providerSum.provider}">${providerSum.provider} (${formattedSum})</option>`);
+
+    // Output the sorted publishers to HTML
+    publisherSums.forEach(publisherSum => {
+      // Round the publisherSums
+      const publisherSumRounded = Math.round(publisherSum.sum / 100) * 100;
+      const publisherSumFormatted = publisherSumRounded.toLocaleString() + (publisherSumRounded !== 0 ? '+' : '');
+      $('#provider').append(`<option value="${publisherSum.name}">${publisherSum.name} (${publisherSumFormatted})</option>`);
     });
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setProviders: end`);
-      if (urlTriggered) {
-        $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
+      if (!dqTriggered) {
+        if (urlTriggered) {
+          $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
+        }
+        setEndpoints();
       }
-      setEndpoints();
     });
 }
 
@@ -2051,19 +2056,15 @@ function setProviders() {
 
 function setEndpoints() {
   //console.warn(`${luxon.DateTime.now()} setEndpoints: start`);
-  $.getJSON('/feeds', function (data) {
-    $('#endpoint').empty();
-    $.each(data.feeds, function (index, feed) {
-      if (feed.publisherName === $('#provider option:selected').val()) {
-        $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
-      }
-    });
-  })
-    .done(function () {
-      // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
-      // updateEndpoint();
-      setEndpoint();
-    });
+  $('#endpoint').empty();
+  Object.values(feeds).forEach(feed => {
+    if (feed.publisherName === $('#provider option:selected').val()) {
+      $('#endpoint').append(`<option value='${feed.url}'>${feed.type}</option>`);
+    }
+  });
+  // console.warn(`${luxon.DateTime.now()} setEndpoints: end`);
+  // updateEndpoint();
+  setEndpoint();
 }
 
 // -------------------------------------------------------------------------------------------------
