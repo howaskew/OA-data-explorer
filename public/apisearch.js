@@ -2045,7 +2045,10 @@ function setProviders(dqTriggered=false) {
   })
     .done(function () {
       // console.warn(`${luxon.DateTime.now()} setProviders: end`);
-      if (dqTriggered || urlTriggered) {
+      if (
+        getUrlParameter('endpoint') &&
+        (dqTriggered || urlTriggered)
+      ) {
         $('#provider').val(feeds[getUrlParameter('endpoint')].publisherName);
       }
       if (!dqTriggered) {
