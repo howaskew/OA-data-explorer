@@ -151,7 +151,7 @@ async function createTables(client) {
 async function createTablesIfNotExist() {
   try {
     const client = await pool.connect();
-    console.log('Connected to the database');
+    console.log('Connected to the database: createTablesIfNotExist()');
     try {
       const checkTableQuery = `
         SELECT EXISTS (
@@ -288,44 +288,44 @@ async function getFeedsOnLoad() {
 
     // -------------------------------------------------------------------------------------------------
 
-    // console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
-    console.log('Got feeds, now reading data');
-
-    try {
-      // Query to fetch data from the PostgreSQL table
-      const client = await pool.connect();
-      console.log('Connected to the database');
-      try {
-        const query = 'SELECT * FROM openactivedq';
-        // Fetch data from the table using the promise version of query
-        const result = await client.query(query);
-        // Merge data from the table with the existing feeds array
-        const rows = result.rows;
-        rows.forEach((row) => {
-          // Now only totaling for the first URL in the concatenated id - this will enable an accurate sum at the provider level
-          const existingFeed = feeds.find((feed) => feed.url === row.id.split(' ')[0]);
-          if (existingFeed) {
-            // Merge properties from the database row into the existing feed object
-            Object.assign(existingFeed, row);
-          }
-          else {
-            // Only adding info to existing feeds at this stage
-            // feeds.push(row);
-          }
-        });
-        console.log('Data merged successfully');
-      }
-      catch (err) {
-        console.error('Error executing query:', err);
-      }
-      finally {
-        // Release the client back to the pool (connection is returned)
-        await client.release();
-      }
-    }
-    catch (err) {
-      console.error('Error acquiring a client from the pool:', err);
-    }
+    // // console.log("Got all feeds: " + JSON.stringify(feeds, null, 2));
+    // console.log('Got feeds, now reading data');
+    //
+    // try {
+    //   // Query to fetch data from the PostgreSQL table
+    //   const client = await pool.connect();
+    //   console.log('Connected to the database');
+    //   try {
+    //     const query = 'SELECT * FROM openactivedq';
+    //     // Fetch data from the table using the promise version of query
+    //     const result = await client.query(query);
+    //     // Merge data from the table with the existing feeds array
+    //     const rows = result.rows;
+    //     rows.forEach((row) => {
+    //       // Now only totaling for the first URL in the concatenated id - this will enable an accurate sum at the provider level
+    //       const existingFeed = feeds.find((feed) => feed.url === row.id.split(' ')[0]);
+    //       if (existingFeed) {
+    //         // Merge properties from the database row into the existing feed object
+    //         Object.assign(existingFeed, row);
+    //       }
+    //       else {
+    //         // Only adding info to existing feeds at this stage
+    //         // feeds.push(row);
+    //       }
+    //     });
+    //     console.log('Data merged successfully');
+    //   }
+    //   catch (err) {
+    //     console.error('Error executing query:', err);
+    //   }
+    //   finally {
+    //     // Release the client back to the pool (connection is returned)
+    //     await client.release();
+    //   }
+    // }
+    // catch (err) {
+    //   console.error('Error acquiring a client from the pool:', err);
+    // }
 
     // -------------------------------------------------------------------------------------------------
 
@@ -441,7 +441,7 @@ async function harvest(url) {
 app.post('/api/delete', async (req, res) => {
   try {
     const client = await pool.connect();
-    console.log('Connected to the database');
+    console.log('Connected to the database: /api/delete');
     try {
       const { deleteQuery } = req.body;
       await client.query(deleteQuery);
@@ -466,7 +466,7 @@ app.post('/api/delete', async (req, res) => {
 app.post('/api/insertsample', async (req, res) => {
   try {
     const client = await pool.connect();
-    console.log('Connected to the database');
+    console.log('Connected to the database: /api/insertsample');
     try {
       const { insertQuery, values } = req.body;
       await client.query(insertQuery, values);
@@ -491,7 +491,7 @@ app.post('/api/insertsample', async (req, res) => {
 app.post('/api/insert', async (req, res) => {
   try {
     const client = await pool.connect();
-    console.log('Connected to the database');
+    console.log('Connected to the database: /api/insert');
     try {
       // Sending the details in the request body
       const { id, numParent, numChild, DQ_validActivity,
@@ -540,11 +540,67 @@ app.post('/api/insert', async (req, res) => {
 
 // -------------------------------------------------------------------------------------------------
 
+app.get('/api/get-sample', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    console.log('Connected to the database: /api/get-sample');
+    try {
+      const downloadQuery = 'SELECT * FROM openactivesample';
+      const result = await client.query(downloadQuery);
+      const rows = result.rows;
+      const sampleData = {};
+      rows.forEach(row => {
+        const { id, data } = row;
+        sampleData[id] = data;
+      });
+      res.json(sampleData);
+    }
+    catch (err) {
+      console.error('Error:', err);
+      res.status(500).json({ err: 'Failed to download sample data' });
+    }
+    finally {
+      // Release the client back to the pool (connection is returned)
+      await client.release();
+    }
+  }
+  catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
+  }
+});
+
+// -------------------------------------------------------------------------------------------------
+
+app.get('/api/get-dqsummaries', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    console.log('Connected to the database: /api/get-dqsummaries');
+    try {
+      const downloadQuery = 'SELECT * FROM openactivedq';
+      const result = await client.query(downloadQuery);
+      res.json(result.rows);
+    }
+    catch (err) {
+      console.error('Error:', err);
+      res.status(500).json({ err: 'Failed to download all data' });
+    }
+    finally {
+      // Release the client back to the pool (connection is returned)
+      await client.release();
+    }
+  }
+  catch (err) {
+    console.error('Error acquiring a client from the pool:', err);
+  }
+});
+
+// -------------------------------------------------------------------------------------------------
+
 // Define a route handler to retrieve the sum values
 app.get('/sum', async (req, res) => {
   try {
     const client = await pool.connect();
-    console.log('Connected to the database');
+    console.log('Connected to the database: /sum');
     try {
       const sumQuery = `
         SELECT SUM(numParent) AS sumParent,
@@ -571,37 +627,6 @@ app.get('/sum', async (req, res) => {
     }
     finally {
       // IF testing for connection, can end connection HERE
-      await client.release();
-    }
-  }
-  catch (err) {
-    console.error('Error acquiring a client from the pool:', err);
-  }
-});
-
-// -------------------------------------------------------------------------------------------------
-
-app.get('/api/download', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    console.log('Connected to the database');
-    try {
-      const downloadQuery = 'SELECT * FROM openactivesample';
-      const result = await client.query(downloadQuery);
-      const rows = result.rows;
-      const sampleData = {};
-      rows.forEach(row => {
-        const { id, data } = row;
-        sampleData[id] = data;
-      });
-      res.json(sampleData);
-    }
-    catch (err) {
-      console.error('Error:', err);
-      res.status(500).json({ err: 'Failed to download sample data' });
-    }
-    finally {
-      // Release the client back to the pool (connection is returned)
       await client.release();
     }
   }
