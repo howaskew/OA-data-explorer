@@ -1,13 +1,18 @@
 {
   "name": "rpde-visualiser",
-  "version": "1.0.0",
-  "description": "Visualiser of RPDE feeds",
+  "version": "1.1.0",
+  "description": "Data Visualiser for RPDE feeds, including Data Quality Metrics",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Nick Evans",
+  "author": "Howard Askew",
+  "contributors" : [
+    "Howard Askew (https://github.com/howaskew)",
+    "Darren Temple (https://github.com/reikyo)",
+    "Nick Evans (https://github.com/nickevansuk)"
+  ],
   "license": "MIT",
   "dependencies": {
     "apexcharts": "^3.37.3",

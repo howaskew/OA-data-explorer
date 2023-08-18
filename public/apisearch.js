@@ -563,25 +563,21 @@ function showSample() {
   $('#filter-switches').fadeOut();
   $('.explainer').fadeOut();
 
-  // Make a GET request to retrieve the sum values from the server
   $.getJSON('/api/get-sample', function (sampleData) {
     storeSample.items = sampleData;
     console.log(`Number of sample items: ${Object.keys(storeSample.items).length}`);
     if (Object.keys(storeSample.items).length > 0) {
       showingSample = true;
 
-      // const totalItemCount = Object.keys(storeSample.items).reduce((count, key) => count + key.split(" ").length, 0);
-      const uniqueWords = new Set();
-      const totalUniqueItemCount = Object.keys(storeSample.items).reduce((count, key) => {
-        const words = key.split(" ");
-        words.forEach(word => uniqueWords.add(word));
-        return count + words.length;
-      }, 0);
-      const totalItemCount = uniqueWords.size;
+      const sampleUrls = new Set();
+      Object.keys(storeSample.items).forEach(id => {
+        const sampleUrlsCurrent = id.split('http').slice(1,3).map(url => 'http' + url.trim());
+        sampleUrlsCurrent.forEach(url => sampleUrls.add(url));
+      });
 
       setLogMessage('Exploring OpenActive Data', 'heading');
-      setLogMessage(`The counts shown below are based on DQ analysis of the first 25,000 items of ${totalItemCount} feeds.`, 'warn');
-      setLogMessage('The sample data shown below is drawn from a small sample taken from each feed.', 'warn');
+      setLogMessage(`The counts shown below are based on DQ analysis of the first 25,000 items of ${sampleUrls.size} feeds.`, 'warn');
+      setLogMessage('The sample data shown below is drawn from a very small sample of 5 records taken from each feed.', 'warn');
       setLogMessage('Explore the sample data or select a data provider and data type then press \'Go\' to load and view live data.', 'warn');
 
       clearStore(storeDataQuality);
